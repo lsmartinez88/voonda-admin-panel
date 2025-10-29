@@ -13,24 +13,27 @@ import { router } from "./routes";
 import { Spinner } from "./components/Spinner";
 import { AppProvider } from "./components/AppProvider";
 import { AppSnackbar } from "./components/AppSnackbar";
+import { LayoutProvider } from "./contexts/LayoutContext";
 
 function App() {
   return (
     <AuthProvider>
       <AppProvider>
-        <JumboTheme init={CONFIG.THEME}>
-          <CssBaseline />
-          <Suspense fallback={<Spinner />}>
-            <JumboRTL>
-              <JumboDialogProvider>
-                <JumboDialog />
-                <AppSnackbar>
-                  <RouterProvider router={router} />
-                </AppSnackbar>
-              </JumboDialogProvider>
-            </JumboRTL>
-          </Suspense>
-        </JumboTheme>
+        <LayoutProvider>
+          <JumboTheme init={CONFIG.THEME}>
+            <CssBaseline />
+            <Suspense fallback={<Spinner />}>
+              <JumboRTL>
+                <JumboDialogProvider>
+                  <JumboDialog />
+                  <AppSnackbar>
+                    <RouterProvider router={router} />
+                  </AppSnackbar>
+                </JumboDialogProvider>
+              </JumboRTL>
+            </Suspense>
+          </JumboTheme>
+        </LayoutProvider>
       </AppProvider>
     </AuthProvider>
   );

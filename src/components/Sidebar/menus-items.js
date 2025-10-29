@@ -1,8 +1,11 @@
 import { useTranslation } from "react-i18next"
+import { useLayout } from "../../contexts/LayoutContext"
 
 export function getMenus() {
     const { t } = useTranslation()
-    return [
+    const { showAllPanels } = useLayout()
+
+    const allMenus = [
         {
             label: t("sidebar.menu.home"),
             children: [
@@ -450,4 +453,11 @@ export function getMenus() {
             ]
         }
     ]
+
+    // Si showAllPanels es false, solo mostrar la sección de Voonda
+    if (!showAllPanels) {
+        return allMenus.filter((menu) => menu.label === "Voonda")
+    }
+
+    return allMenus
 }

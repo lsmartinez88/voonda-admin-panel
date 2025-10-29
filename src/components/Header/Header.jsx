@@ -17,6 +17,7 @@ import { SidebarToggleButton } from "../SidebarToggleButton";
 import { Logo } from "../Logo";
 import { Search } from "./Search";
 import { SearchIconButtonOnSmallScreen } from "./SearchIconButtonOnSmallScreen";
+import { PanelsToggleButton } from "./PanelsToggleButton";
 
 function Header() {
   const { isSidebarStyle } = useSidebarState();
@@ -38,6 +39,7 @@ function Header() {
       )}
       <Search show={searchVisibility} onClose={handleSearchVisibility} />
       <Stack direction="row" alignItems="center" gap={1.25} sx={{ ml: "auto" }}>
+        <PanelsToggleButton />
         <ThemeModeOption />
         <TranslationPopover />
         <SearchIconButtonOnSmallScreen onClick={handleSearchVisibility} />
