@@ -14,7 +14,7 @@ export const LayoutProvider = ({ children }) => {
     const [showAllPanels, setShowAllPanels] = useState(() => {
         // Leer del localStorage al inicializar
         const saved = localStorage.getItem('voonda-show-all-panels')
-        return saved ? JSON.parse(saved) : true // Por defecto muestra todos
+        return saved ? JSON.parse(saved) : false // Por defecto solo muestra Voonda
     })
 
     // Guardar en localStorage cada vez que cambie
