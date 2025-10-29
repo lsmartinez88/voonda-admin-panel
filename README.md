@@ -3,11 +3,13 @@
 Panel de administración (front-end) construido con Vite + React. Este repositorio contiene la app usada por Voonda.
 
 ## Contenido
+
 - Código fuente en `src/`
 - Configuración de build con Vite
 - Workflow de CI/CD en `.github/workflows/ci-cd.yml` que build y despliega a Vercel al pushear a `main`.
 
 ## Requisitos
+
 - Node.js 18+ (recomendado)
 - npm
 
@@ -61,6 +63,7 @@ Si ya tienes una app antigua en Vercel que quieres reemplazar por esta:
 Alternativa recomendada: Conectar este repositorio a Vercel y crear un nuevo proyecto apuntando al repo; luego puedes transferir dominio/ajustes del proyecto antiguo al nuevo.
 
 ## Documentación de despliegue
+
 Consulta `DEPLOYMENT.md` para pasos detallados sobre cómo obtener los secretos y configurar la automatización.
 
 ---
@@ -69,6 +72,7 @@ Si quieres, puedo:
 
 - Añadir un `README` más extenso con fotos y ejemplos.
 - Crear `DEPLOYMENT.md` con pasos paso a paso (lo crearé ahora).
+
 # Voonda Admin Panel# React + JavaScript + Vite
 
 Un panel de administración moderno y completo construido con React, Vite y Material-UI para gestionar las operaciones de Voonda.This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
