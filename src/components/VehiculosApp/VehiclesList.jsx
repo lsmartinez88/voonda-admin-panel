@@ -89,11 +89,11 @@ export const VehiclesList = ({
                         <Typography variant='h2'>
                             Inventario
                         </Typography>
-                        <Chip 
-                            label={`${totalVehiculos} vehículos`} 
-                            color='primary' 
+                        <Chip
+                            label={`${totalVehiculos} vehículos`}
+                            color='primary'
                             variant='outlined'
-                            size='small' 
+                            size='small'
                         />
                     </Stack>
                 }
@@ -102,29 +102,29 @@ export const VehiclesList = ({
                 sx={{ mb: 3 }}
             >
                 {/* Controles de vista y paginación */}
-                <Stack 
-                    direction={{ xs: 'column', md: 'row' }} 
-                    justifyContent='space-between' 
-                    alignItems={{ xs: 'stretch', md: 'center' }} 
+                <Stack
+                    direction={{ xs: 'column', md: 'row' }}
+                    justifyContent='space-between'
+                    alignItems={{ xs: 'stretch', md: 'center' }}
                     spacing={2}
                 >
                     {/* Tabs de vista */}
-                    <Tabs 
-                        value={viewMode} 
-                        onChange={(e, newValue) => setViewMode(newValue)} 
+                    <Tabs
+                        value={viewMode}
+                        onChange={(e, newValue) => setViewMode(newValue)}
                         sx={{ minHeight: 'auto' }}
                     >
-                        <Tab 
-                            value='cards' 
-                            icon={<ViewModuleIcon />} 
-                            label='Vista Cards' 
-                            sx={{ textTransform: 'none' }} 
+                        <Tab
+                            value='cards'
+                            icon={<ViewModuleIcon />}
+                            label='Vista Cards'
+                            sx={{ textTransform: 'none' }}
                         />
-                        <Tab 
-                            value='table' 
-                            icon={<TableRowsIcon />} 
-                            label='Vista Tabla' 
-                            sx={{ textTransform: 'none' }} 
+                        <Tab
+                            value='table'
+                            icon={<TableRowsIcon />}
+                            label='Vista Tabla'
+                            sx={{ textTransform: 'none' }}
                         />
                     </Tabs>
 

@@ -2,5 +2,5 @@
 import { VehiculosApp } from '@/components/VehiculosApp'
 
 export default function VehiculosPage() {
-  return <VehiculosApp />
+    return <VehiculosApp />
 }

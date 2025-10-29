@@ -65,20 +65,20 @@ export const VehicleTable = ({ vehiculos, onEdit, onDelete }) => {
                     {vehiculos.map((vehiculo, index) => {
                         const brandInfo = getCarBrandLogo(vehiculo.marca)
                         const brandColor = getBrandColor(vehiculo.marca)
-                        
+
                         const menuItems = [
-                            { 
-                                title: 'Ver detalles', 
+                            {
+                                title: 'Ver detalles',
                                 slug: 'view',
                                 onClick: () => console.log('Ver', vehiculo.id)
                             },
-                            { 
-                                title: 'Editar', 
+                            {
+                                title: 'Editar',
                                 slug: 'edit',
                                 onClick: () => onEdit(vehiculo)
                             },
-                            { 
-                                title: 'Eliminar', 
+                            {
+                                title: 'Eliminar',
                                 slug: 'delete',
                                 onClick: () => onDelete(vehiculo.id)
                             }
@@ -96,8 +96,8 @@ export const VehicleTable = ({ vehiculos, onEdit, onDelete }) => {
                                 {/* Vehículo */}
                                 <TableCell>
                                     <Stack direction='row' alignItems='center' spacing={2}>
-                                        <Avatar 
-                                            sx={{ 
+                                        <Avatar
+                                            sx={{
                                                 bgcolor: brandColor,
                                                 width: 32,
                                                 height: 32,
@@ -160,8 +160,8 @@ export const VehicleTable = ({ vehiculos, onEdit, onDelete }) => {
                                 <TableCell>
                                     <Stack direction='row' alignItems='center' spacing={0.5}>
                                         <Tooltip title='Editar'>
-                                            <IconButton 
-                                                size='small' 
+                                            <IconButton
+                                                size='small'
                                                 color='primary'
                                                 onClick={() => onEdit(vehiculo)}
                                             >

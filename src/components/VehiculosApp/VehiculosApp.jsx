@@ -321,7 +321,7 @@ export const VehiculosApp = () => {
                                 variant='outlined'
                                 startIcon={<SyncIcon />}
                                 disabled={loading}
-                                sx={{ 
+                                sx={{
                                     textTransform: 'none',
                                     borderRadius: 5,
                                     fontSize: 14,
@@ -337,7 +337,7 @@ export const VehiculosApp = () => {
                                 }}
                                 variant='contained'
                                 startIcon={<AddIcon />}
-                                sx={{ 
+                                sx={{
                                     textTransform: 'none',
                                     borderRadius: 5,
                                     fontSize: 14,

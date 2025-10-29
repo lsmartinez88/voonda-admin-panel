@@ -43,26 +43,26 @@ export const VehicleCard = ({ vehiculo, onEdit, onDelete }) => {
     const brandColor = getBrandColor(vehiculo.marca)
 
     const menuItems = [
-        { 
-            title: 'Ver detalles', 
+        {
+            title: 'Ver detalles',
             slug: 'view',
             onClick: () => console.log('Ver', vehiculo.id)
         },
-        { 
-            title: 'Editar', 
+        {
+            title: 'Editar',
             slug: 'edit',
             onClick: onEdit
         },
-        { 
-            title: 'Eliminar', 
+        {
+            title: 'Eliminar',
             slug: 'delete',
             onClick: onDelete
         }
     ]
 
     return (
-        <Card 
-            sx={{ 
+        <Card
+            sx={{
                 height: '100%',
                 display: 'flex',
                 flexDirection: 'column',
@@ -77,8 +77,8 @@ export const VehicleCard = ({ vehiculo, onEdit, onDelete }) => {
             <Box sx={{ p: 2, pb: 1 }}>
                 <Stack direction='row' justifyContent='space-between' alignItems='flex-start' spacing={1}>
                     <Stack direction='row' alignItems='center' spacing={1.5} flex={1}>
-                        <Avatar 
-                            sx={{ 
+                        <Avatar
+                            sx={{
                                 bgcolor: brandColor,
                                 width: 32,
                                 height: 32,
@@ -89,16 +89,16 @@ export const VehicleCard = ({ vehiculo, onEdit, onDelete }) => {
                             {brandInfo?.initials || 'VH'}
                         </Avatar>
                         <Box flex={1} minWidth={0}>
-                            <Typography 
-                                variant='subtitle1' 
+                            <Typography
+                                variant='subtitle1'
                                 fontWeight={600}
                                 noWrap
                                 title={vehiculo.marca}
                             >
                                 {vehiculo.marca}
                             </Typography>
-                            <Typography 
-                                variant='body2' 
+                            <Typography
+                                variant='body2'
                                 color='text.secondary'
                                 noWrap
                                 title={vehiculo.modelo_autos?.nombre || vehiculo.modelo || 'Modelo no especificado'}
@@ -107,7 +107,7 @@ export const VehicleCard = ({ vehiculo, onEdit, onDelete }) => {
                             </Typography>
                         </Box>
                     </Stack>
-                    
+
                     <JumboDdMenu
                         menuItems={menuItems}
                         icon={<Box sx={{ width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>⋮</Box>}
@@ -173,7 +173,7 @@ export const VehicleCard = ({ vehiculo, onEdit, onDelete }) => {
                     label={vehiculo.estado || 'Sin estado'}
                     color={getEstadoColor(vehiculo.estado)}
                     size='small'
-                    sx={{ 
+                    sx={{
                         textTransform: 'capitalize',
                         fontWeight: 500
                     }}

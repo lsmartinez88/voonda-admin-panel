@@ -33,11 +33,11 @@ const estadosFilterData = [
     { category: 'Reservado', slug: 'Reservado', count: 0 }
 ]
 
-export const VehiclesFilters = ({ 
-    filtros, 
-    setFiltros, 
-    aplicarFiltros, 
-    limpiarFiltros 
+export const VehiclesFilters = ({
+    filtros,
+    setFiltros,
+    aplicarFiltros,
+    limpiarFiltros
 }) => {
     const [selectedEstado, setSelectedEstado] = React.useState('')
 
@@ -75,7 +75,7 @@ export const VehiclesFilters = ({
                     placeholder='Marca'
                     value={filtros.marca}
                     onChange={(e) => setFiltros({ ...filtros, marca: e.target.value })}
-                    sx={{ 
+                    sx={{
                         '& .MuiOutlinedInput-root': { borderRadius: 4 },
                         minWidth: 100
                     }}
@@ -83,9 +83,9 @@ export const VehiclesFilters = ({
             </Stack>
 
             {/* Filtros desktop */}
-            <JumboCard 
-                title='Filtros de Búsqueda' 
-                contentWrapper 
+            <JumboCard
+                title='Filtros de Búsqueda'
+                contentWrapper
                 sx={{ mb: 3, display: { xs: 'none', lg: 'block' } }}
             >
                 <Grid container spacing={3} sx={{ mb: 3 }}>
@@ -227,10 +227,10 @@ export const VehiclesFilters = ({
 
                 {/* Botones de acción */}
                 <Stack direction='row' spacing={2}>
-                    <Button 
-                        onClick={aplicarFiltros} 
-                        variant='contained' 
-                        sx={{ 
+                    <Button
+                        onClick={aplicarFiltros}
+                        variant='contained'
+                        sx={{
                             textTransform: 'none',
                             borderRadius: 5,
                             fontSize: 14
@@ -239,10 +239,10 @@ export const VehiclesFilters = ({
                     >
                         Aplicar Filtros
                     </Button>
-                    <Button 
-                        onClick={limpiarFiltros} 
-                        variant='outlined' 
-                        sx={{ 
+                    <Button
+                        onClick={limpiarFiltros}
+                        variant='outlined'
+                        sx={{
                             textTransform: 'none',
                             borderRadius: 5,
                             fontSize: 14
