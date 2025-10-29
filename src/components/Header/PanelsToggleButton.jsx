@@ -1,29 +1,26 @@
-﻿import { IconButton, Tooltip } from '@mui/material'
+﻿import { Tooltip } from '@mui/material'
 import { ViewModule, ViewStream } from '@mui/icons-material'
+import { JumboIconButton } from "@jumbo/components/JumboIconButton"
+import { Span } from "@jumbo/shared"
 import { useLayout } from '../../contexts/LayoutContext'
 
 export const PanelsToggleButton = () => {
     const { showAllPanels, toggleAllPanels } = useLayout()
 
     return (
-        <Tooltip title={showAllPanels ? 'Mostrar solo Voonda' : 'Mostrar todos los paneles'}>
-            <IconButton
-                onClick={toggleAllPanels}
-                color="primary"
-                size="small"
-                sx={{
-                    borderRadius: 1,
-                    border: '1px solid',
-                    borderColor: showAllPanels ? 'primary.main' : 'primary.light',
-                    bgcolor: showAllPanels ? 'primary.light' : 'transparent',
-                    '&:hover': {
-                        bgcolor: showAllPanels ? 'primary.main' : 'primary.light',
-                        color: 'white'
-                    }
-                }}
-            >
-                {showAllPanels ? <ViewModule /> : <ViewStream />}
-            </IconButton>
-        </Tooltip>
+        <Span>
+            <Tooltip title={showAllPanels ? 'Mostrar solo Voonda' : 'Mostrar todos los paneles'}>
+                <JumboIconButton
+                    onClick={toggleAllPanels}
+                    elevation={23}
+                >
+                    {showAllPanels ? (
+                        <ViewModule sx={{ fontSize: "1.25rem" }} />
+                    ) : (
+                        <ViewStream sx={{ fontSize: "1.25rem" }} />
+                    )}
+                </JumboIconButton>
+            </Tooltip>
+        </Span>
     )
 }
