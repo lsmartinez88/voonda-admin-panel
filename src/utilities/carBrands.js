@@ -134,10 +134,32 @@ export const getCarBrandLogo = (brand) => {
 
 // Colores para avatares basados en marca
 export const getBrandColor = (brand) => {
-    const colors = ["#1976d2", "#d32f2f", "#388e3c", "#f57c00", "#7b1fa2", "#c2185b", "#00796b", "#303f9f", "#5d4037", "#455a64", "#e64a19", "#00acc1"]
+    const colors = [
+        "#1976d2", // Azul
+        "#d32f2f", // Rojo
+        "#388e3c", // Verde
+        "#f57c00", // Naranja
+        "#7b1fa2", // Púrpura
+        "#c2185b", // Rosa
+        "#00796b", // Verde azulado
+        "#303f9f", // Índigo
+        "#5d4037", // Marrón
+        "#455a64", // Gris azul
+        "#e64a19", // Naranja profundo
+        "#00acc1" // Cian
+    ]
 
     if (!brand) return colors[0]
 
-    const index = brand.toString().length % colors.length
+    // Crear un hash simple del nombre de la marca para consistencia
+    const normalizedBrand = brand.toString().toUpperCase().trim()
+    let hash = 0
+    for (let i = 0; i < normalizedBrand.length; i++) {
+        const char = normalizedBrand.charCodeAt(i)
+        hash = (hash << 5) - hash + char
+        hash = hash & hash // Convertir a 32bit integer
+    }
+
+    const index = Math.abs(hash) % colors.length
     return colors[index]
 }

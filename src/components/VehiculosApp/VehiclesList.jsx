@@ -82,82 +82,63 @@ export const VehiclesList = ({
 
     return (
         <>
-            {/* Header con controles */}
-            <JumboCard
-                title={
-                    <Stack direction='row' alignItems='center' spacing={2}>
-                        <Typography variant='h2'>
-                            Inventario
-                        </Typography>
-                        <Chip
-                            label={`${totalVehiculos} vehículos`}
-                            color='primary'
-                            variant='outlined'
-                            size='small'
-                        />
-                    </Stack>
-                }
-                action={headerActions}
-                contentWrapper
-                sx={{ mb: 3 }}
-            >
-                {/* Controles de vista y paginación */}
-                <Stack
-                    direction={{ xs: 'column', md: 'row' }}
-                    justifyContent='space-between'
-                    alignItems={{ xs: 'stretch', md: 'center' }}
-                    spacing={2}
-                >
+            {/* Controles superiores estilo ContactApp */}
+            <Stack direction='row' justifyContent='space-between' alignItems='center' sx={{ mb: 3 }}>
+                {/* Botones de acción para desktop */}
+                <Box sx={{ display: { xs: 'none', lg: 'block' } }}>
+                    {headerActions}
+                </Box>
+
+                {/* Controles de vista */}
+                <Stack direction='row' alignItems='center' spacing={2}>
+                    <FormControl size='small' sx={{ minWidth: 140 }}>
+                        <InputLabel>Elementos</InputLabel>
+                        <Select
+                            value={itemsPerPage}
+                            label='Elementos'
+                            onChange={(e) => handlePageSizeChange(e.target.value)}
+                        >
+                            {ITEMS_PER_PAGE_OPTIONS.map(option => (
+                                <MenuItem key={option.value} value={option.value}>
+                                    {option.label}
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+
                     {/* Tabs de vista */}
                     <Tabs
                         value={viewMode}
                         onChange={(e, newValue) => setViewMode(newValue)}
-                        sx={{ minHeight: 'auto' }}
+                        sx={{
+                            minHeight: 'auto',
+                            '& .MuiTab-root': {
+                                minHeight: 40,
+                                minWidth: 40,
+                                px: 2
+                            }
+                        }}
                     >
                         <Tab
                             value='cards'
                             icon={<ViewModuleIcon />}
-                            label='Vista Cards'
                             sx={{ textTransform: 'none' }}
                         />
                         <Tab
                             value='table'
                             icon={<TableRowsIcon />}
-                            label='Vista Tabla'
                             sx={{ textTransform: 'none' }}
                         />
                     </Tabs>
-
-                    {/* Controles de paginación */}
-                    <Stack direction='row' alignItems='center' spacing={2}>
-                        <FormControl size='small' sx={{ minWidth: 140 }}>
-                            <InputLabel>Elementos</InputLabel>
-                            <Select
-                                value={itemsPerPage}
-                                label='Elementos'
-                                onChange={(e) => handlePageSizeChange(e.target.value)}
-                            >
-                                {ITEMS_PER_PAGE_OPTIONS.map(option => (
-                                    <MenuItem key={option.value} value={option.value}>
-                                        {option.label}
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
-
-                        <Typography variant='body2' color='text.secondary'>
-                            Página {currentPage} de {totalPages}
-                        </Typography>
-                    </Stack>
                 </Stack>
-            </JumboCard>
+            </Stack>
 
             {/* Contenido principal */}
             {viewMode === 'cards' ? (
                 <>
                     <Grid container spacing={3} sx={{ mb: 4 }}>
                         {vehiculos.map((vehiculo) => (
-                            <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={vehiculo.id}>
+                            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={vehiculo.id}>
                                 <VehicleCard
                                     vehiculo={vehiculo}
                                     onEdit={() => onEdit(vehiculo)}

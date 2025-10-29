@@ -258,110 +258,90 @@ export const VehiculosApp = () => {
             disableGutters
         >
             <ContentLayout
+                contentOptions={{
+                    sx: {
+                        padding: '0 !important'
+                    }
+                }}
                 header={
                     <PageHeader
                         title='Gestión de Vehículos'
-                        subheader='Administra tu inventario de vehículos de manera eficiente'
+                        subheader={`${totalVehiculos} vehículos en total`}
+                        action={
+                            <Stack spacing={1} direction='row'>
+                                <Button
+                                    onClick={sincronizarConSheets}
+                                    variant='outlined'
+                                    startIcon={<SyncIcon />}
+                                    disabled={loading}
+                                    sx={{
+                                        textTransform: 'none',
+                                        borderRadius: 5,
+                                        fontSize: 14,
+                                        letterSpacing: 0
+                                    }}
+                                >
+                                    Sincronizar
+                                </Button>
+                                <Button
+                                    onClick={() => {
+                                        setSelectedVehicle(null)
+                                        setShowModal(true)
+                                    }}
+                                    variant='contained'
+                                    startIcon={<AddIcon />}
+                                    sx={{
+                                        textTransform: 'none',
+                                        borderRadius: 5,
+                                        fontSize: 14,
+                                        letterSpacing: 0
+                                    }}
+                                    disableElevation
+                                >
+                                    Agregar
+                                </Button>
+                            </Stack>
+                        }
                     />
                 }
             >
-                {/* Botones de acción en mobile */}
-                {lg && (
-                    <Stack spacing={2} direction='row' sx={{ mb: 3, mt: -2 }}>
-                        <Button
-                            onClick={sincronizarConSheets}
-                            variant='outlined'
-                            startIcon={<SyncIcon />}
-                            disabled={loading}
-                            sx={{ textTransform: 'none' }}
-                        >
-                            Sincronizar Sheets
-                        </Button>
-                        <Button
-                            onClick={() => {
-                                setSelectedVehicle(null)
-                                setShowModal(true)
-                            }}
-                            variant='contained'
-                            startIcon={<AddIcon />}
-                            sx={{ textTransform: 'none' }}
-                        >
-                            Nuevo Vehículo
-                        </Button>
-                    </Stack>
-                )}
-
-                {/* Filtros */}
-                <VehiclesFilters
-                    filtros={filtros}
-                    setFiltros={setFiltros}
-                    aplicarFiltros={aplicarFiltros}
-                    limpiarFiltros={limpiarFiltros}
-                />
-
-                {/* Lista de vehículos */}
-                <VehiclesList
-                    vehiculos={vehiculos}
-                    loading={loading}
-                    totalVehiculos={totalVehiculos}
-                    currentPage={currentPage}
-                    itemsPerPage={itemsPerPage}
-                    setItemsPerPage={setItemsPerPage}
-                    onPageChange={(page) => cargarVehiculos(page)}
-                    onEdit={(vehicle) => {
-                        setSelectedVehicle(vehicle)
-                        setShowModal(true)
-                    }}
-                    onDelete={eliminarVehiculo}
-                    // Botones de acción para desktop
-                    headerActions={!lg && (
-                        <Stack direction='row' spacing={2}>
-                            <Button
-                                onClick={sincronizarConSheets}
-                                variant='outlined'
-                                startIcon={<SyncIcon />}
-                                disabled={loading}
-                                sx={{
-                                    textTransform: 'none',
-                                    borderRadius: 5,
-                                    fontSize: 14,
-                                    letterSpacing: 0
-                                }}
-                            >
-                                Sincronizar Sheets
-                            </Button>
-                            <Button
-                                onClick={() => {
-                                    setSelectedVehicle(null)
-                                    setShowModal(true)
-                                }}
-                                variant='contained'
-                                startIcon={<AddIcon />}
-                                sx={{
-                                    textTransform: 'none',
-                                    borderRadius: 5,
-                                    fontSize: 14,
-                                    letterSpacing: 0
-                                }}
-                                disableElevation
-                            >
-                                Crear Vehículo
-                            </Button>
-                        </Stack>
-                    )}
-                />
-
-                {/* Modal */}
-                {showModal && (
-                    <VehicleModal
-                        vehicle={selectedVehicle}
-                        onSave={handleSave}
-                        onClose={() => {
-                            setShowModal(false)
-                            setSelectedVehicle(null)
-                        }}
+                <Container maxWidth={CONTAINER_MAX_WIDTH} disableGutters>
+                    {/* Filtros */}
+                    <VehiclesFilters
+                        filtros={filtros}
+                        setFiltros={setFiltros}
+                        aplicarFiltros={aplicarFiltros}
+                        limpiarFiltros={limpiarFiltros}
                     />
-                )}
+                </Container>
+
+                <Container maxWidth={CONTAINER_MAX_WIDTH} disableGutters>
+                    {/* Lista de Vehículos */}
+                    <VehiclesList
+                        vehiculos={vehiculos}
+                        loading={loading}
+                        totalVehiculos={totalVehiculos}
+                        currentPage={currentPage}
+                        itemsPerPage={itemsPerPage}
+                        setItemsPerPage={setItemsPerPage}
+                        onPageChange={(page) => cargarVehiculos(page)}
+                        onEdit={(vehicle) => {
+                            setSelectedVehicle(vehicle)
+                            setShowModal(true)
+                        }}
+                        onDelete={eliminarVehiculo}
+                    />                {/* Modal */}
+                    {showModal && (
+                        <VehicleModal
+                            vehicle={selectedVehicle}
+                            onSave={handleSave}
+                            onClose={() => {
+                                setShowModal(false)
+                                setSelectedVehicle(null)
+                            }}
+                        />
+                    )}
+                </Container>
             </ContentLayout>
         </Container>
     )

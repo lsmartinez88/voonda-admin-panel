@@ -42,7 +42,7 @@ export const VehiclesFilters = ({
     const [selectedEstado, setSelectedEstado] = React.useState('')
 
     return (
-        <>
+        <JumboCard contentWrapper sx={{ mb: 3 }}>
             {/* Filtros móviles */}
             <Stack
                 direction='row'
@@ -53,7 +53,7 @@ export const VehiclesFilters = ({
                     p: theme => theme.spacing(0.75, 1),
                     backgroundColor: theme => alpha(theme.palette.common.black, 0.05),
                     display: { lg: 'none' },
-                    mb: 2
+                    mb: { xs: 0, lg: 2 }
                 }}
             >
                 <FormControl size='small' sx={{ minWidth: 120 }}>
@@ -83,11 +83,10 @@ export const VehiclesFilters = ({
             </Stack>
 
             {/* Filtros desktop */}
-            <JumboCard
-                title='Filtros de Búsqueda'
-                contentWrapper
-                sx={{ mb: 3, display: { xs: 'none', lg: 'block' } }}
-            >
+            <Box sx={{ mb: 2, display: { xs: 'none', lg: 'block' } }}>
+                <Typography variant='h6' sx={{ mb: 2, fontWeight: 600 }}>
+                    Filtros de Búsqueda
+                </Typography>
                 <Grid container spacing={3} sx={{ mb: 3 }}>
                     <Grid size={{ xs: 12, md: 3 }}>
                         <TextField
@@ -177,13 +176,14 @@ export const VehiclesFilters = ({
 
                 {/* Chips de estado estilo Invoice */}
                 <Stack direction='row' spacing={2} alignItems='center' sx={{ mb: 2 }}>
-                    <Box
+                    <Stack
+                        direction='row'
                         display='flex'
                         alignItems='center'
+                        spacing={1}
                         borderRadius={2}
                         sx={{
                             p: theme => theme.spacing(0.75, 1, 0.75, 1.75),
-                            backgroundColor: theme => alpha(theme.palette.common.black, 0.05),
                         }}
                     >
                         <Typography
@@ -222,7 +222,7 @@ export const VehiclesFilters = ({
                                 }}
                             />
                         ))}
-                    </Box>
+                    </Stack>
                 </Stack>
 
                 {/* Botones de acción */}
@@ -251,7 +251,7 @@ export const VehiclesFilters = ({
                         Limpiar
                     </Button>
                 </Stack>
-            </JumboCard>
-        </>
+            </Box>
+        </JumboCard>
     )
 }

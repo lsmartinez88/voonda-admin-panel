@@ -1,184 +1,168 @@
 ﻿import React from 'react'
-import {
-    Card,
-    CardContent,
-    CardActions,
-    Typography,
-    Chip,
-    IconButton,
-    Stack,
-    Box,
-    Avatar,
-    Tooltip
-} from '@mui/material'
-import { JumboDdMenu } from '@jumbo/components'
-import { getCarBrandLogo, getBrandColor } from '@/utilities/carBrands'
-import { FaEdit, FaTrash, FaEye } from 'react-icons/fa'
+import { JumboCard } from '@jumbo/components'
+import { Box, Typography, IconButton, Chip, Avatar } from '@mui/material'
+import EditIcon from '@mui/icons-material/Edit'
+import DeleteIcon from '@mui/icons-material/Delete'
+import DriveEtaIcon from '@mui/icons-material/DriveEta'
 
-const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('es-CO', {
-        style: 'currency',
-        currency: 'COP',
-        minimumFractionDigits: 0
-    }).format(amount)
-}
-
-const getEstadoColor = (estado) => {
-    switch (estado?.toLowerCase()) {
-        case 'disponible':
-            return 'success'
-        case 'vendido':
-            return 'error'
-        case 'reservado':
-            return 'warning'
-        case 'mantenimiento':
-            return 'info'
-        default:
-            return 'default'
+// Función para obtener avatar de marca
+const getBrandLogo = (marca) => {
+    const brandColors = {
+        'toyota': '#eb0a1e',
+        'ford': '#003478',
+        'chevrolet': '#ffc72c',
+        'volkswagen': '#001e50',
+        'nissan': '#c3002f',
+        'honda': '#cc0000',
+        'hyundai': '#002c5f',
+        'kia': '#05141f',
+        'mazda': '#0c4c93',
+        'subaru': '#0054a6',
+        'mitsubishi': '#dc143c',
+        'suzuki': '#0066cc',
+        'default': '#6b7280'
     }
+
+    const brand = marca?.toLowerCase() || 'default'
+    const color = brandColors[brand] || brandColors.default
+    const initial = marca?.charAt(0)?.toUpperCase() || 'V'
+
+    return { color, initial }
 }
 
-export const VehicleCard = ({ vehiculo, onEdit, onDelete }) => {
-    const brandInfo = getCarBrandLogo(vehiculo.marca)
-    const brandColor = getBrandColor(vehiculo.marca)
+const VehicleCard = ({ vehiculo, onEdit, onDelete }) => {
+    const marcaReal = vehiculo.modelo_autos?.marca || vehiculo.marca
+    const { color, initial } = getBrandLogo(marcaReal)
 
-    const menuItems = [
-        {
-            title: 'Ver detalles',
-            slug: 'view',
-            onClick: () => console.log('Ver', vehiculo.id)
-        },
-        {
-            title: 'Editar',
-            slug: 'edit',
-            onClick: onEdit
-        },
-        {
-            title: 'Eliminar',
-            slug: 'delete',
-            onClick: onDelete
+    const getStateColor = (estado) => {
+        switch (estado?.toLowerCase()) {
+            case 'disponible': return 'success'
+            case 'vendido': return 'error'
+            case 'reservado': return 'warning'
+            case 'mantenimiento': return 'info'
+            default: return 'default'
         }
-    ]
+    }
+
+    const formatPrice = (price) => {
+        if (!price) return 'Consultar precio'
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        }).format(price)
+    }
 
     return (
-        <Card
+        <JumboCard
+            contentWrapper
             sx={{
                 height: '100%',
                 display: 'flex',
                 flexDirection: 'column',
-                transition: 'all 0.2s',
+                transition: 'transform 0.2s ease, box-shadow 0.2s ease',
                 '&:hover': {
-                    transform: 'translateY(-2px)',
-                    boxShadow: 4
+                    transform: 'translateY(-4px)',
+                    boxShadow: '0 8px 25px rgba(0,0,0,0.1)'
                 }
             }}
         >
-            {/* Header con marca y estado */}
-            <Box sx={{ p: 2, pb: 1 }}>
-                <Stack direction='row' justifyContent='space-between' alignItems='flex-start' spacing={1}>
-                    <Stack direction='row' alignItems='center' spacing={1.5} flex={1}>
-                        <Avatar
-                            sx={{
-                                bgcolor: brandColor,
-                                width: 32,
-                                height: 32,
-                                fontSize: '0.875rem',
-                                fontWeight: 600
-                            }}
-                        >
-                            {brandInfo?.initials || 'VH'}
-                        </Avatar>
-                        <Box flex={1} minWidth={0}>
-                            <Typography
-                                variant='subtitle1'
-                                fontWeight={600}
-                                noWrap
-                                title={vehiculo.marca}
-                            >
-                                {vehiculo.marca}
-                            </Typography>
-                            <Typography
-                                variant='body2'
-                                color='text.secondary'
-                                noWrap
-                                title={vehiculo.modelo_autos?.nombre || vehiculo.modelo || 'Modelo no especificado'}
-                            >
-                                {vehiculo.modelo_autos?.nombre || vehiculo.modelo || 'Modelo no especificado'}
-                            </Typography>
-                        </Box>
-                    </Stack>
-
-                    <JumboDdMenu
-                        menuItems={menuItems}
-                        icon={<Box sx={{ width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>⋮</Box>}
-                    />
-                </Stack>
+            {/* Header con avatar y acciones */}
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Avatar sx={{ bgcolor: color, width: 40, height: 40, fontSize: '1.1rem', fontWeight: 600 }}>
+                        {initial}
+                    </Avatar>
+                    <Box>
+                        <Typography variant='h6' sx={{ fontWeight: 600, mb: 0 }}>
+                            {vehiculo.modelo_autos?.marca || vehiculo.marca} {vehiculo.modelo_autos?.modelo || vehiculo.modelo}
+                        </Typography>
+                        <Typography variant='caption' color='text.secondary'>
+                            Año {vehiculo.modelo_autos?.año || vehiculo.vehiculo_ano}
+                        </Typography>
+                    </Box>
+                </Box>
+                <Box>
+                    <IconButton size='small' onClick={() => onEdit(vehiculo)} color='primary'>
+                        <EditIcon />
+                    </IconButton>
+                    <IconButton size='small' onClick={() => onDelete(vehiculo.id)} color='error'>
+                        <DeleteIcon />
+                    </IconButton>
+                </Box>
             </Box>
 
             {/* Contenido principal */}
-            <CardContent sx={{ pt: 0, pb: 1, flex: 1 }}>
-                <Stack spacing={2}>
-                    {/* Año y Motor */}
-                    <Stack direction='row' justifyContent='space-between'>
-                        <Box>
-                            <Typography variant='caption' color='text.secondary'>
-                                Año
-                            </Typography>
-                            <Typography variant='body2' fontWeight={500}>
-                                {vehiculo.vehiculo_ano || 'N/A'}
-                            </Typography>
-                        </Box>
-                        <Box>
-                            <Typography variant='caption' color='text.secondary'>
-                                Motor
-                            </Typography>
-                            <Typography variant='body2' fontWeight={500}>
-                                {vehiculo.motor || 'N/A'}
-                            </Typography>
-                        </Box>
-                    </Stack>
+            <Box sx={{ flexGrow: 1, mb: 2 }}>
+                {/* Estado y precio */}
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Chip
+                        label={vehiculo.estado || 'Sin estado'}
+                        color={getStateColor(vehiculo.estado)}
+                        size='small'
+                    />
+                    <Typography variant='h6' color='primary.main' sx={{ fontWeight: 600 }}>
+                        {formatPrice(vehiculo.valor)}
+                    </Typography>
+                </Box>
 
-                    {/* Combustible y Transmisión */}
-                    <Stack direction='row' justifyContent='space-between'>
+                {/* Información adicional */}
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, mb: 2 }}>
+                    {(vehiculo.modelo_autos?.combustible || vehiculo.combustible) && (
                         <Box>
-                            <Typography variant='caption' color='text.secondary'>
-                                Combustible
-                            </Typography>
-                            <Typography variant='body2' fontWeight={500}>
-                                {vehiculo.combustible || 'N/A'}
-                            </Typography>
+                            <Typography variant='caption' color='text.secondary'>Combustible</Typography>
+                            <Typography variant='body2'>{vehiculo.modelo_autos?.combustible || vehiculo.combustible}</Typography>
                         </Box>
+                    )}
+                    {vehiculo.kilometros && (
                         <Box>
-                            <Typography variant='caption' color='text.secondary'>
-                                Transmisión
-                            </Typography>
-                            <Typography variant='body2' fontWeight={500}>
-                                {vehiculo.transmision || 'N/A'}
-                            </Typography>
+                            <Typography variant='caption' color='text.secondary'>Kilometraje</Typography>
+                            <Typography variant='body2'>{vehiculo.kilometros.toLocaleString()} km</Typography>
                         </Box>
-                    </Stack>
+                    )}
+                    {(vehiculo.modelo_autos?.caja || vehiculo.caja || vehiculo.transmision) && (
+                        <Box>
+                            <Typography variant='caption' color='text.secondary'>Transmisión</Typography>
+                            <Typography variant='body2'>{vehiculo.modelo_autos?.caja || vehiculo.caja || vehiculo.transmision}</Typography>
+                        </Box>
+                    )}
+                    {vehiculo.motor && (
+                        <Box>
+                            <Typography variant='caption' color='text.secondary'>Motor</Typography>
+                            <Typography variant='body2'>{vehiculo.motor}</Typography>
+                        </Box>
+                    )}
+                </Box>
 
-                    {/* Precio */}
-                    <Box sx={{ textAlign: 'center', py: 1 }}>
-                        <Typography variant='h6' color='primary' fontWeight={700}>
-                            {vehiculo.valor ? formatCurrency(vehiculo.valor) : 'Precio no disponible'}
-                        </Typography>
-                    </Box>
-                </Stack>
-            </CardContent>
+                {/* Descripción */}
+                {vehiculo.descripcion && (
+                    <Typography variant='body2' color='text.secondary' sx={{
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                    }}>
+                        {vehiculo.descripcion}
+                    </Typography>
+                )}
+            </Box>
 
-            {/* Footer con estado */}
-            <CardActions sx={{ p: 2, pt: 0, justifyContent: 'center' }}>
-                <Chip
-                    label={vehiculo.estado || 'Sin estado'}
-                    color={getEstadoColor(vehiculo.estado)}
-                    size='small'
-                    sx={{
-                        textTransform: 'capitalize',
-                        fontWeight: 500
-                    }}
-                />
-            </CardActions>
-        </Card>
+            {/* Footer */}
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pt: 2, borderTop: 1, borderColor: 'divider' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <DriveEtaIcon color='action' fontSize='small' />
+                    <Typography variant='caption' color='text.secondary'>
+                        ID: {vehiculo.id}
+                    </Typography>
+                </Box>
+                <Typography variant='caption' color='text.secondary'>
+                    {vehiculo.created_at ? new Date(vehiculo.created_at).toLocaleDateString('es-AR') : 'Fecha N/A'}
+                </Typography>
+            </Box>
+        </JumboCard>
     )
 }
+
+export { VehicleCard }
