@@ -149,7 +149,15 @@ export const VehiclesList = ({
                     </Grid>
                 </>
             ) : (
-                <JumboCard contentWrapper sx={{ mb: 3 }}>
+                <JumboCard
+                    contentWrapper
+                    sx={{
+                        mb: 3,
+                        '& .MuiCardContent-root': {
+                            padding: '0 !important'
+                        }
+                    }}
+                >
                     <VehicleTable
                         vehiculos={vehiculos}
                         onEdit={onEdit}
