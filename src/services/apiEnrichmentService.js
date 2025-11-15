@@ -51,13 +51,11 @@ class ApiEnrichmentService {
                 console.log("📊 Distribución de niveles de confianza:", confidenceLevels)
             }
 
-            const vehiclesToEnrich = matchingResults.filter((result) => 
-                result.bestMatch && (result.bestMatch.confidence === "alto" || result.bestMatch.confidence === "medio")
-            )
+            const vehiclesToEnrich = matchingResults.filter((result) => result.bestMatch && (result.bestMatch.confidence === "alto" || result.bestMatch.confidence === "medio"))
 
             console.log(`📊 Vehículos a enriquecer: ${vehiclesToEnrich.length} de ${matchingResults.length} totales`)
-            console.log(`   - Con confianza alta: ${matchingResults.filter(r => r.bestMatch?.confidence === "alto").length}`)
-            console.log(`   - Con confianza media: ${matchingResults.filter(r => r.bestMatch?.confidence === "medio").length}`)
+            console.log(`   - Con confianza alta: ${matchingResults.filter((r) => r.bestMatch?.confidence === "alto").length}`)
+            console.log(`   - Con confianza media: ${matchingResults.filter((r) => r.bestMatch?.confidence === "medio").length}`)
 
             if (vehiclesToEnrich.length === 0) {
                 console.warn("⚠️ No hay vehículos con confianza 'alto' o 'medio' para enriquecer")
@@ -190,9 +188,7 @@ class ApiEnrichmentService {
                 }
             }
 
-            const notEnriched = matchingResults.filter((result) => 
-                !result.bestMatch || (result.bestMatch.confidence !== "alto" && result.bestMatch.confidence !== "medio")
-            )
+            const notEnriched = matchingResults.filter((result) => !result.bestMatch || (result.bestMatch.confidence !== "alto" && result.bestMatch.confidence !== "medio"))
 
             notEnriched.forEach((result) => {
                 const excelVehicleData = result.excelVehicle?.json || {}
@@ -223,9 +219,7 @@ class ApiEnrichmentService {
                         },
                         matchData: result.bestMatch || {},
                         enrichmentSuccess: false,
-                        enrichmentReason: result.bestMatch ? 
-                            `Confianza ${result.bestMatch.confidence}, se requiere 'alto' o 'medio'` : 
-                            "Sin matches encontrados",
+                        enrichmentReason: result.bestMatch ? `Confianza ${result.bestMatch.confidence}, se requiere 'alto' o 'medio'` : "Sin matches encontrados",
                         enrichmentTimestamp: new Date().toISOString()
                     }
                 })
