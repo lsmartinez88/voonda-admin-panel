@@ -210,13 +210,10 @@ class VehicleMatchingService {
     static calculateYearSimilarity(year1, year2) {
         const yearDiff = Math.abs(year1 - year2)
 
-        if (yearDiff === 0) return 1.0 // Año exacto
-        if (yearDiff === 1) return 0.9 // 1 año de diferencia
-        if (yearDiff === 2) return 0.7 // 2 años de diferencia
-        if (yearDiff === 3) return 0.5 // 3 años de diferencia
-        if (yearDiff <= 5) return 0.3 // Hasta 5 años
+        if (yearDiff === 0) return 1.0 // Año exacto - OBLIGATORIO
+        if (yearDiff === 1) return 0.3 // 1 año de diferencia - muy penalizado
 
-        return 0 // Más de 5 años de diferencia
+        return 0 // Más de 1 año de diferencia - no match
     }
 
     /**
@@ -232,14 +229,12 @@ class VehicleMatchingService {
         const maxKm = Math.max(km1, km2)
         const kmDiffPercent = kmDiff / maxKm
 
-        if (kmDiffPercent <= 0.05) return 1.0 // 5% diferencia
-        if (kmDiffPercent <= 0.1) return 0.9 // 10% diferencia
-        if (kmDiffPercent <= 0.15) return 0.8 // 15% diferencia
-        if (kmDiffPercent <= 0.25) return 0.6 // 25% diferencia
-        if (kmDiffPercent <= 0.4) return 0.4 // 40% diferencia
-        if (kmDiffPercent <= 0.6) return 0.2 // 60% diferencia
+        if (kmDiffPercent <= 0.02) return 1.0 // 2% diferencia - casi exacto
+        if (kmDiffPercent <= 0.05) return 0.8 // 5% diferencia
+        if (kmDiffPercent <= 0.1) return 0.5 // 10% diferencia
+        if (kmDiffPercent <= 0.15) return 0.3 // 15% diferencia
 
-        return 0 // Más del 60% de diferencia
+        return 0 // Más del 15% de diferencia - no match
     }
 
     /**
@@ -261,13 +256,13 @@ class VehicleMatchingService {
         const maxPrice = Math.max(excelPriceInPesos, price2)
         const priceDiffPercent = priceDiff / maxPrice
 
-        if (priceDiffPercent <= 0.05) return 1.0 // 5% diferencia
-        if (priceDiffPercent <= 0.1) return 0.9 // 10% diferencia
-        if (priceDiffPercent <= 0.2) return 0.7 // 20% diferencia
-        if (priceDiffPercent <= 0.3) return 0.5 // 30% diferencia
-        if (priceDiffPercent <= 0.5) return 0.3 // 50% diferencia
+        if (priceDiffPercent <= 0.03) return 1.0 // 3% diferencia - casi exacto
+        if (priceDiffPercent <= 0.05) return 0.8 // 5% diferencia
+        if (priceDiffPercent <= 0.1) return 0.6 // 10% diferencia
+        if (priceDiffPercent <= 0.15) return 0.4 // 15% diferencia
+        if (priceDiffPercent <= 0.2) return 0.2 // 20% diferencia
 
-        return 0 // Más del 50% de diferencia en precio
+        return 0 // Más del 20% de diferencia en precio - no match
     }
 
     /**
@@ -305,44 +300,44 @@ class VehicleMatchingService {
                 }
             }
 
-            // 1. Comparar marca (20% del peso total)
+            // 1. Comparar marca (15% del peso total)
             if (excelVehicle.marca && catalogVehicle.brand) {
                 matchDetails.marca = this.calculateSimilarity(excelVehicle.marca, catalogVehicle.brand)
-                score += matchDetails.marca * 0.2
+                score += matchDetails.marca * 0.15
             }
 
-            // 2. Comparar modelo (25% del peso total)
+            // 2. Comparar modelo (20% del peso total)
             if (excelVehicle.modelo && catalogVehicle.model) {
                 matchDetails.modelo = this.calculateSimilarity(excelVehicle.modelo, catalogVehicle.model)
-                score += matchDetails.modelo * 0.25
+                score += matchDetails.modelo * 0.2
             }
 
-            // 3. Comparar año (10% del peso total)
+            // 3. Comparar año (25% del peso total) - CRÍTICO
             if (excelVehicle.año && catalogVehicle.year) {
                 const yearScore = this.calculateYearSimilarity(excelVehicle.año, catalogVehicle.year)
                 matchDetails.año = yearScore
-                score += yearScore * 0.1
+                score += yearScore * 0.25
             }
 
-            // 4. Comparar kilómetros (10% del peso total)
+            // 4. Comparar kilómetros (20% del peso total) - CRÍTICO
             if (excelVehicle.kilometros && catalogVehicle.mileage) {
                 const kmScore = this.calculateMileageSimilarity(excelVehicle.kilometros, catalogVehicle.mileage)
                 matchDetails.kilometros = kmScore
-                score += kmScore * 0.1
+                score += kmScore * 0.2
             }
 
-            // 5. Comparar precio (8% del peso total)
+            // 5. Comparar precio (15% del peso total) - CRÍTICO
             if (excelVehicle.valor && catalogVehicle.price) {
                 const priceScore = this.calculatePriceSimilarity(excelVehicle.valor, catalogVehicle.price, excelVehicle.moneda)
                 matchDetails.precio = priceScore
-                score += priceScore * 0.08
+                score += priceScore * 0.15
             }
 
-            // 6. Comparar color (5% del peso total)
+            // 6. Comparar color (3% del peso total)
             if (excelVehicle.color && catalogVehicle.color) {
                 const colorScore = this.calculateSimilarity(excelVehicle.color, catalogVehicle.color)
                 matchDetails.color = colorScore
-                score += colorScore * 0.05
+                score += colorScore * 0.03
             }
 
             // 7. Comparar versión (2% del peso total)
@@ -352,8 +347,8 @@ class VehicleMatchingService {
                 score += versionScore * 0.02
             }
 
-            // Solo incluir matches con score mínimo del 40%
-            if (score >= 0.4) {
+            // Solo incluir matches con score mínimo del 30% (reducido por criterios más estrictos)
+            if (score >= 0.3) {
                 matches.push({
                     catalogVehicle,
                     score,
@@ -373,9 +368,9 @@ class VehicleMatchingService {
      * @returns {string} Nivel de confianza
      */
     static getConfidenceLevel(score) {
-        if (score >= 0.65) return "alto" // Bajado de 0.8 a 0.65 para ser más realista
-        if (score >= 0.45) return "medio" // Bajado de 0.6 a 0.45
-        if (score >= 0.25) return "bajo" // Bajado de 0.3 a 0.25
+        if (score >= 0.55) return "alto" // Criterios más estrictos: año exacto + km/precio precisos
+        if (score >= 0.4) return "medio" // Match decente con algunos criterios estrictos
+        if (score >= 0.25) return "bajo" // Match básico
         return "muy_bajo"
     }
 
