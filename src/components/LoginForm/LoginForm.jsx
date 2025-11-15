@@ -13,27 +13,38 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { validationSchema } from "./validation";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext"; // ✅ Usar AuthContext real
 
 const LoginForm = () => {
   const { enqueueSnackbar } = useSnackbar();
   const { t } = useTranslation();
-  const { loading, login } = useAuth();
+  const { login, isLoading } = useAuth(); // ✅ Usar AuthContext real
   const navigate = useNavigate();
   const [values, setValues] = React.useState({
     password: "",
     showPassword: false,
   });
+  
   async function handleLogin(data) {
-    const result = await login({
-      email: data?.email,
-      password: data?.password,
-    });
-    if (result) return navigate("/dashboards/misc");
-    else
-      enqueueSnackbar("invalid email or password!", {
+    try {
+      const result = await login({
+        email: data?.email,
+        password: data?.password,
+      });
+      
+      if (result.success) {
+        enqueueSnackbar("¡Login exitoso!", { variant: "success" });
+        return navigate("/dashboards/misc");
+      } else {
+        enqueueSnackbar(result.error || "Credenciales inválidas", {
+          variant: "error",
+        });
+      }
+    } catch (error) {
+      enqueueSnackbar(error.message || "Error al iniciar sesión", {
         variant: "error",
       });
+    }
   }
   const handleClickShowPassword = () => {
     setValues({
@@ -52,7 +63,7 @@ const LoginForm = () => {
           fullWidth
           fieldName={"email"}
           label={t("login.email")}
-          defaultValue="demo@example.com"
+          placeholder="Ingresa tu email"
         />
         <JumboOutlinedInput
           fieldName={"password"}
@@ -71,7 +82,7 @@ const LoginForm = () => {
             </InputAdornment>
           }
           sx={{ bgcolor: (theme) => theme.palette.background.paper }}
-          defaultValue={"zab#723"}
+          placeholder="Ingresa tu contraseña"
         />
 
         <Stack
@@ -95,7 +106,7 @@ const LoginForm = () => {
           type="submit"
           variant="contained"
           size="large"
-          loading={loading}
+          loading={isLoading}
         >
           {t("login.loggedIn")}
         </LoadingButton>

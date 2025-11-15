@@ -7,7 +7,7 @@ import JumboRTL from "@jumbo/components/JumboRTL/JumboRTL";
 import { CssBaseline } from "@mui/material";
 import { Suspense } from "react";
 import { RouterProvider } from "react-router-dom";
-import { AuthProvider } from "./components/AuthProvider";
+import { AuthProvider } from "./contexts/AuthContext"; // ✅ Usar AuthProvider real
 import { CONFIG } from "./config";
 import { router } from "./routes";
 import { Spinner } from "./components/Spinner";
