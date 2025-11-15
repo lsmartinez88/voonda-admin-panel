@@ -1,0 +1,203 @@
+import React, { useState, useEffect } from 'react'
+import { Container, Button, Alert, CircularProgress, Typography, Box } from '@mui/material'
+import { CONTAINER_MAX_WIDTH } from '@/config/layouts'
+import { ContentLayout } from '@/layouts/ContentLayout'
+import { PageHeader } from '@/components/PageHeader'
+import { useJumboDialog } from '@jumbo/components/JumboDialog/hooks/useJumboDialog'
+import { useApp } from '@/contexts'
+import apiClient from '@/services/api/apiClient'
+
+// Components
+//import { VehiclesList } from './VehiclesList'
+//import { VehiclesFilters } from './VehiclesFilters'
+//import VehicleModalEnhanced from '../Vehiculos/VehicleModalEnhanced'
+
+// Icons
+import AddIcon from '@mui/icons-material/Add'
+
+export const VehiculosApp = () => {
+    const { showConfirmDialog } = useJumboDialog()
+    const { showNotification, handleError } = useApp()
+
+    // Estados simples para probar la API
+    const [vehiculos, setVehiculos] = useState([])
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState(null)
+
+    // Función simple para probar la API
+    const loadVehiculos = async () => {
+        try {
+            setLoading(true)
+            setError(null)
+
+            console.log('Intentando cargar vehículos...')
+
+            // Llamada directa y simple a la API
+            const response = await apiClient.get('/api/vehiculos?limit=5')
+
+            console.log('Respuesta de vehículos:', response)
+            setVehiculos(response.vehiculos || [])
+
+        } catch (err) {
+            console.error('Error cargando vehículos:', err)
+            setError(err.message)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    useEffect(() => {
+        loadVehiculos()
+    }, [])
+    pagination,
+        filters,
+        updateFilters,
+        changePage,
+        refresh
+} = useVehiculos()
+
+// Mostrar errores usando el contexto de la app
+useEffect(() => {
+    if (error) {
+        handleError(error, 'Error cargando vehículos')
+    }
+}, [error, handleError])
+
+const eliminarVehiculo = async (id) => {
+    showConfirmDialog({
+        title: 'Confirmar eliminación',
+        message: '¿Estás seguro de que quieres eliminar este vehículo?',
+        onConfirm: async () => {
+            try {
+                const result = await vehiculosService.deleteVehiculo(id)
+
+                if (result.success) {
+                    showNotification('Vehículo eliminado correctamente', 'success')
+                    refresh()
+                } else {
+                    throw new Error(result.error)
+                }
+            } catch (error) {
+                handleError(error, 'Error eliminando vehículo')
+            }
+        }
+    })
+}
+
+const handleSave = async (vehicleData, publicaciones = []) => {
+    try {
+        let result
+
+        if (selectedVehicle) {
+            result = await vehiculosService.updateVehiculo(selectedVehicle.id, vehicleData)
+        } else {
+            result = await vehiculosService.createVehiculo(vehicleData)
+        }
+
+        if (result.success) {
+            // Si hay publicaciones, manejarlas por separado
+            if (publicaciones && publicaciones.length > 0) {
+                try {
+                    // Aquí podrías implementar el manejo de publicaciones si es necesario
+                    // Por ahora solo las mostramos en consola
+                    console.log('Publicaciones a procesar:', publicaciones)
+                } catch (pubError) {
+                    console.warn('Error procesando publicaciones:', pubError)
+                }
+            }
+
+            showNotification(
+                selectedVehicle ? 'Vehículo actualizado correctamente' : 'Vehículo creado correctamente',
+                'success'
+            )
+            setShowModal(false)
+            setSelectedVehicle(null)
+            refresh()
+        } else {
+            throw new Error(result.error)
+        }
+    } catch (error) {
+        handleError(error, 'Error guardando vehículo')
+    }
+}
+
+return (
+    <Container
+        maxWidth={false}
+        sx={{
+            maxWidth: CONTAINER_MAX_WIDTH,
+            display: 'flex',
+            minWidth: 0,
+            flex: 1,
+            flexDirection: 'column',
+        }}
+        disableGutters
+    >
+        <ContentLayout
+            contentOptions={{
+                sx: {
+                    padding: '0 !important'
+                }
+            }}
+            header={
+                <PageHeader
+                    title='Gestión de Vehículos'
+                    subheader={`${pagination.total || 0} vehículos en total`}
+                    action={
+                        <Button
+                            onClick={() => {
+                                setSelectedVehicle(null)
+                                setShowModal(true)
+                            }}
+                            variant='contained'
+                            startIcon={<AddIcon />}
+                            sx={{
+                                textTransform: 'none',
+                                borderRadius: 5,
+                                fontSize: 14,
+                                letterSpacing: 0
+                            }}
+                            disableElevation
+                        >
+                            Agregar
+                        </Button>
+                    }
+                />
+            }
+        >
+            <Container maxWidth={CONTAINER_MAX_WIDTH} disableGutters>
+                <VehiclesFilters
+                    filtros={filters}
+                    aplicarFiltros={(filtros) => updateFilters(filtros)}
+                    limpiarFiltros={() => updateFilters({ page: 1 })}
+                />
+            </Container>
+
+            <Container maxWidth={CONTAINER_MAX_WIDTH} disableGutters>
+                <VehiclesList
+                    vehiculos={vehiculos}
+                    loading={loading}
+                    pagination={pagination}
+                    onPageChange={changePage}
+                    onEdit={(vehicle) => {
+                        setSelectedVehicle(vehicle)
+                        setShowModal(true)
+                    }}
+                    onDelete={eliminarVehiculo}
+                />
+
+                {showModal && (
+                    <VehicleModalEnhanced
+                        vehicle={selectedVehicle}
+                        onSave={handleSave}
+                        onClose={() => {
+                            setShowModal(false)
+                            setSelectedVehicle(null)
+                        }}
+                    />
+                )}
+            </Container>
+        </ContentLayout>
+    </Container>
+)
+}

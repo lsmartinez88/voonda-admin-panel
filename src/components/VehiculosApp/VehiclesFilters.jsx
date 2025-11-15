@@ -8,38 +8,41 @@ import {
     FormControl,
     InputLabel,
     Stack,
-    alpha,
-    IconButton,
-    Chip,
-    Avatar,
     Typography
 } from '@mui/material'
 import { JumboCard } from '@jumbo/components'
 import Grid from '@mui/material/Grid2'
-import { RiFilterLine } from 'react-icons/ri'
 
 const estadosVehiculos = [
     { value: '', label: 'Todos los estados' },
-    { value: 'Disponible', label: 'Disponible' },
-    { value: 'Vendido', label: 'Vendido' },
-    { value: 'Reservado', label: 'Reservado' },
-    { value: 'Mantenimiento', label: 'Mantenimiento' }
-]
-
-const estadosFilterData = [
-    { category: 'Todos', slug: '', count: 0 },
-    { category: 'Disponible', slug: 'Disponible', count: 0 },
-    { category: 'Vendido', slug: 'Vendido', count: 0 },
-    { category: 'Reservado', slug: 'Reservado', count: 0 }
+    { value: 'salon', label: 'Salón' },
+    { value: 'consignacion', label: 'Consignación' }
 ]
 
 export const VehiclesFilters = ({
-    filtros,
-    setFiltros,
-    aplicarFiltros,
-    limpiarFiltros
+    filters = {},
+    onFiltersChange,
+    loading = false
 }) => {
-    const [selectedEstado, setSelectedEstado] = React.useState('')
+    
+    const handleFilterChange = (field, value) => {
+        if (onFiltersChange) {
+            onFiltersChange({ ...filters, [field]: value })
+        }
+    }
+
+    const handleClearFilters = () => {
+        if (onFiltersChange) {
+            onFiltersChange({
+                search: '',
+                marca: '',
+                modelo: '',
+                condicion: '',
+                sortBy: 'fecha_ingreso',
+                order: 'desc'
+            })
+        }
+    }
 
     return (
         <JumboCard contentWrapper sx={{ mb: 3 }}>
@@ -48,18 +51,22 @@ export const VehiclesFilters = ({
                 direction='row'
                 spacing={1}
                 alignItems='center'
-                borderRadius={2}
-                sx={{
-                    p: theme => theme.spacing(0.75, 1),
-                    backgroundColor: theme => alpha(theme.palette.common.black, 0.05),
-                    display: { lg: 'none' },
-                    mb: { xs: 0, lg: 2 }
-                }}
+                sx={{ mb: 2, display: { xs: 'flex', lg: 'none' } }}
             >
+                <TextField
+                    size='small'
+                    placeholder='Buscar...'
+                    value={filters.search || ''}
+                    onChange={(e) => handleFilterChange('search', e.target.value)}
+                    sx={{
+                        '& .MuiOutlinedInput-root': { borderRadius: 4 },
+                        minWidth: 200
+                    }}
+                />
                 <FormControl size='small' sx={{ minWidth: 120 }}>
                     <Select
-                        value={filtros.estado}
-                        onChange={(e) => setFiltros({ ...filtros, estado: e.target.value })}
+                        value={filters.condicion || ''}
+                        onChange={(e) => handleFilterChange('condicion', e.target.value)}
                         displayEmpty
                         sx={{ borderRadius: 4 }}
                     >
@@ -73,8 +80,8 @@ export const VehiclesFilters = ({
                 <TextField
                     size='small'
                     placeholder='Marca'
-                    value={filtros.marca}
-                    onChange={(e) => setFiltros({ ...filtros, marca: e.target.value })}
+                    value={filters.marca || ''}
+                    onChange={(e) => handleFilterChange('marca', e.target.value)}
                     sx={{
                         '& .MuiOutlinedInput-root': { borderRadius: 4 },
                         minWidth: 100
@@ -83,17 +90,37 @@ export const VehiclesFilters = ({
             </Stack>
 
             {/* Filtros desktop */}
-            <Box sx={{ mb: 2, display: { xs: 'none', lg: 'block' } }}>
+            <Box sx={{ display: { xs: 'none', lg: 'block' } }}>
                 <Typography variant='h6' sx={{ mb: 2, fontWeight: 600 }}>
                     Filtros de Búsqueda
                 </Typography>
+                
                 <Grid container spacing={3} sx={{ mb: 3 }}>
                     <Grid size={{ xs: 12, md: 3 }}>
                         <TextField
                             fullWidth
+                            label='Buscar'
+                            placeholder='Dominio, marca, modelo...'
+                            value={filters.search || ''}
+                            onChange={(e) => handleFilterChange('search', e.target.value)}
+                            size='small'
+                        />
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 3 }}>
+                        <TextField
+                            fullWidth
                             label='Marca'
-                            value={filtros.marca}
-                            onChange={(e) => setFiltros({ ...filtros, marca: e.target.value })}
+                            value={filters.marca || ''}
+                            onChange={(e) => handleFilterChange('marca', e.target.value)}
+                            size='small'
+                        />
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 3 }}>
+                        <TextField
+                            fullWidth
+                            label='Modelo'
+                            value={filters.modelo || ''}
+                            onChange={(e) => handleFilterChange('modelo', e.target.value)}
                             size='small'
                         />
                     </Grid>
@@ -101,9 +128,9 @@ export const VehiclesFilters = ({
                         <FormControl fullWidth size='small'>
                             <InputLabel>Estado</InputLabel>
                             <Select
-                                value={filtros.estado}
+                                value={filters.condicion || ''}
                                 label='Estado'
-                                onChange={(e) => setFiltros({ ...filtros, estado: e.target.value })}
+                                onChange={(e) => handleFilterChange('condicion', e.target.value)}
                             >
                                 {estadosVehiculos.map(estado => (
                                     <MenuItem key={estado.value} value={estado.value}>
@@ -113,145 +140,40 @@ export const VehiclesFilters = ({
                             </Select>
                         </FormControl>
                     </Grid>
-                    <Grid size={{ xs: 12, md: 2 }}>
-                        <TextField
-                            fullWidth
-                            type='number'
-                            label='Año desde'
-                            value={filtros.año_desde}
-                            onChange={(e) => setFiltros({ ...filtros, año_desde: e.target.value })}
-                            size='small'
-                        />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 2 }}>
-                        <TextField
-                            fullWidth
-                            type='number'
-                            label='Año hasta'
-                            value={filtros.año_hasta}
-                            onChange={(e) => setFiltros({ ...filtros, año_hasta: e.target.value })}
-                            size='small'
-                        />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 2 }}>
-                        <IconButton
-                            onClick={aplicarFiltros}
-                            sx={{
-                                border: 1,
-                                borderRadius: 1.5,
-                                fontSize: 18,
-                                width: 40,
-                                height: 40
-                            }}
-                            color='primary'
-                        >
-                            <RiFilterLine />
-                        </IconButton>
-                    </Grid>
                 </Grid>
 
-                {/* Filtros por precio */}
-                <Grid container spacing={3} sx={{ mb: 3 }}>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                        <TextField
-                            fullWidth
-                            type='number'
-                            label='Precio desde'
-                            value={filtros.precio_desde}
-                            onChange={(e) => setFiltros({ ...filtros, precio_desde: e.target.value })}
-                            size='small'
-                        />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                        <TextField
-                            fullWidth
-                            type='number'
-                            label='Precio hasta'
-                            value={filtros.precio_hasta}
-                            onChange={(e) => setFiltros({ ...filtros, precio_hasta: e.target.value })}
-                            size='small'
-                        />
-                    </Grid>
-                </Grid>
-
-                {/* Chips de estado estilo Invoice */}
-                <Stack direction='row' spacing={2} alignItems='center' sx={{ mb: 2 }}>
-                    <Stack
-                        direction='row'
-                        display='flex'
-                        alignItems='center'
-                        spacing={1}
-                        borderRadius={2}
-                        sx={{
-                            p: theme => theme.spacing(0.75, 1, 0.75, 1.75),
-                        }}
+                <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
+                    <Button
+                        variant="outlined"
+                        onClick={handleClearFilters}
+                        disabled={loading}
+                        size="small"
                     >
-                        <Typography
-                            variant='body1'
-                            sx={{
-                                textTransform: 'uppercase',
-                                fontSize: 12,
-                                letterSpacing: 1.5,
-                                mr: 1.25,
+                        Limpiar Filtros
+                    </Button>
+                    
+                    <FormControl size="small" sx={{ minWidth: 200 }}>
+                        <InputLabel>Ordenar por</InputLabel>
+                        <Select
+                            value={`${filters.sortBy || 'fecha_ingreso'}_${filters.order || 'desc'}`}
+                            label="Ordenar por"
+                            onChange={(e) => {
+                                const [sortBy, order] = e.target.value.split('_')
+                                onFiltersChange({ ...filters, sortBy, order })
                             }}
                         >
-                            VEHÍCULOS
-                        </Typography>
-                        {estadosFilterData.map((item, index) => (
-                            <Chip
-                                key={index}
-                                label={item.category}
-                                avatar={<Avatar>{item.count}</Avatar>}
-                                onClick={() => {
-                                    setSelectedEstado(item.slug)
-                                    setFiltros({ ...filtros, estado: item.slug })
-                                }}
-                                variant='outlined'
-                                color={selectedEstado === item.slug ? 'primary' : 'default'}
-                                sx={{
-                                    flexDirection: 'row-reverse',
-                                    borderRadius: '24px',
-                                    mr: 1,
-                                    '.MuiChip-label': {
-                                        paddingInline: 1.5,
-                                    },
-                                    '.MuiChip-avatar': {
-                                        mr: 0.75,
-                                        ml: -0.5,
-                                    },
-                                }}
-                            />
-                        ))}
-                    </Stack>
-                </Stack>
-
-                {/* Botones de acción */}
-                <Stack direction='row' spacing={2}>
-                    <Button
-                        onClick={aplicarFiltros}
-                        variant='contained'
-                        sx={{
-                            textTransform: 'none',
-                            borderRadius: 5,
-                            fontSize: 14
-                        }}
-                        disableElevation
-                    >
-                        Aplicar Filtros
-                    </Button>
-                    <Button
-                        onClick={limpiarFiltros}
-                        variant='outlined'
-                        sx={{
-                            textTransform: 'none',
-                            borderRadius: 5,
-                            fontSize: 14
-                        }}
-                    >
-                        Limpiar
-                    </Button>
+                            <MenuItem value="fecha_ingreso_desc">Más recientes</MenuItem>
+                            <MenuItem value="fecha_ingreso_asc">Más antiguos</MenuItem>
+                            <MenuItem value="marca_asc">Marca A-Z</MenuItem>
+                            <MenuItem value="marca_desc">Marca Z-A</MenuItem>
+                            <MenuItem value="precio_asc">Precio menor</MenuItem>
+                            <MenuItem value="precio_desc">Precio mayor</MenuItem>
+                        </Select>
+                    </FormControl>
                 </Stack>
             </Box>
         </JumboCard>
     )
 }
+
+export default VehiclesFilters

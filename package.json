@@ -27,7 +27,7 @@
     "@react-google-maps/api": "^2.20.5",
     "@react-jvectormap/core": "^1.0.4",
     "@react-jvectormap/world": "^1.1.2",
-    "@supabase/supabase-js": "^2.76.1",
+    "@supabase/supabase-js": "^2.78.0",
     "@tiptap/extension-color": "^2.11.5",
     "@tiptap/extension-list-item": "^2.11.5",
     "@tiptap/extension-text-style": "^2.11.5",
@@ -46,7 +46,7 @@
     "react-country-flag": "^3.1.0",
     "react-custom-scrollbars-2": "^4.5.0",
     "react-dom": "19.0.0",
-    "react-dropzone": "^14.3.5",
+    "react-dropzone": "^14.3.8",
     "react-flatpickr": "^4.0.11",
     "react-hook-form": "^7.65.0",
     "react-i18next": "^15.7.4",
@@ -58,6 +58,7 @@
     "stylis-plugin-rtl": "^2.1.1",
     "sweetalert2": "^11.6.13",
     "sweetalert2-react-content": "^5.1.0",
+    "xlsx": "^0.18.5",
     "yup": "^1.7.1"
   },
   "devDependencies": {

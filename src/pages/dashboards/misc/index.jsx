@@ -5,8 +5,8 @@ import { ExplorePlaceCard } from "@/components/ExplorePlaceCard";
 import { FeaturedCard1 } from "@/components/FeaturedCard1";
 import { LastMonthSales } from "@/components/LastMonthSales";
 import { LatestNotifications } from "@/components/LatestNotifications";
-import { MapProvider } from "@/components/maps/MapProvider";
-import { MarkerClustererMap } from "@/components/maps/MarkerClustererMap";
+// import { MapProvider } from "@/components/maps/MapProvider"; // COMENTADO - no se usa temporalmente
+// import { MarkerClustererMap } from "@/components/maps/MarkerClustererMap"; // COMENTADO - no se usa temporalmente
 import { NewConnections } from "@/components/NewConnections";
 import { NewVisitorsThisMonth } from "@/components/NewVisitorsThisMonth";
 import { OnlineSignupsFilled } from "@/components/OnlineSignupsFilled";
@@ -158,10 +158,18 @@ export default function MiscPage() {
         </Grid>
 
         {/* TODO: taking a lot of time  */}
+        {/* COMENTADO TEMPORALMENTE - CAUSA ERROR DE GOOGLE MAPS
         <Grid size={12}>
           <MapProvider>
             <MarkerClustererMap />
           </MapProvider>
+        </Grid>
+        */}
+        <Grid size={12}>
+          {/* Placeholder temporal para evitar errores de Google Maps */}
+          <div style={{ height: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f5f5f5', borderRadius: 8 }}>
+            <p style={{ color: '#666' }}>Mapa temporalmente deshabilitado (Google Maps no configurado)</p>
+          </div>
         </Grid>
       </Grid>
     </Container>

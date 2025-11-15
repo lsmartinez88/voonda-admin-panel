@@ -1,3 +1,4 @@
+import React, { lazy } from "react";
 import { Page } from "@/components/Page";
 import { ActiveLogin } from "@/components/settings/ActiveLogin";
 import { AdvertisingSettings } from "@/components/settings/AdvertisingSettings";
@@ -68,16 +69,20 @@ import RadarChartPage from "@/pages/modules/charts/radar";
 import RadialChartPage from "@/pages/modules/charts/radial";
 import ScatterChartPage from "@/pages/modules/charts/scatter";
 import TreeMapChartPage from "@/pages/modules/charts/treemap";
-import MarkerClustererPage from "@/pages/modules/maps/clustering";
-import DirectionsMapPage from "@/pages/modules/maps/directions";
-import DrawingViewMapPage from "@/pages/modules/maps/drawing";
-import GeoLocationMapPage from "@/pages/modules/maps/geo-location";
-import KmLayerMapPage from "@/pages/modules/maps/kml";
-import OverlayMapPage from "@/pages/modules/maps/overlay";
-import PopupInfoMapPage from "@/pages/modules/maps/popup-info";
-import SimpleMapPage from "@/pages/modules/maps/simple";
-import StreetViewPanoramaPage from "@/pages/modules/maps/street-view";
-import StyledMapPage from "@/pages/modules/maps/styled";
+
+// Lazy imports para componentes de mapas (evita cargar Google Maps innecesariamente)
+const MarkerClustererPage = lazy(() => import("@/pages/modules/maps/clustering"));
+const DirectionsMapPage = lazy(() => import("@/pages/modules/maps/directions"));
+const DrawingViewMapPage = lazy(() => import("@/pages/modules/maps/drawing"));
+const GeoLocationMapPage = lazy(() => import("@/pages/modules/maps/geo-location"));
+const KmLayerMapPage = lazy(() => import("@/pages/modules/maps/kml"));
+const OverlayMapPage = lazy(() => import("@/pages/modules/maps/overlay"));
+const PopupInfoMapPage = lazy(() => import("@/pages/modules/maps/popup-info"));
+const SimpleMapPage = lazy(() => import("@/pages/modules/maps/simple"));
+const StreetViewPanoramaPage = lazy(() => import("@/pages/modules/maps/street-view"));
+const StyledMapPage = lazy(() => import("@/pages/modules/maps/styled"));
+
+// import AccordionPage from "@/pages/modules/muiComponents/data-display/accordion"; // COMENTADO - archivo no existe
 import Onboarding1Page from "@/pages/onboarding-1";
 import Onboarding2Page from "@/pages/onboarding-2";
 import Onboarding3Page from "@/pages/onboarding-3";

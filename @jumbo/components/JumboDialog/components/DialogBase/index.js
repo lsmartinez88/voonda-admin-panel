@@ -1,1 +1,2 @@
-export * from "./DialogBase";
+export { default } from "./DialogBase"
+export * from "./DialogBase"

@@ -1,12 +1,9 @@
 ﻿import React, { useState, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
-import { Container, Stack, useMediaQuery, Button, IconButton } from '@mui/material'
+import { Container, Stack, useMediaQuery, Button, IconButton, Typography, Box } from '@mui/material'
 import { useJumboTheme } from '@jumbo/components/JumboTheme/hooks'
-import { CONTAINER_MAX_WIDTH } from '@/config/layouts'
-import { ContentLayout } from '@/layouts/ContentLayout'
-import { PageHeader } from '@/components/PageHeader'
 import { useJumboDialog } from '@jumbo/components/JumboDialog/hooks/useJumboDialog'
-import { syncSheetsService } from '@/services/sync-sheets'
+import { syncSheetsService } from '../../services/sync-sheets'
 
 // Components
 import { VehiclesList } from './VehiclesList'
@@ -29,320 +26,273 @@ export const VehiculosApp = () => {
 
     // Estados
     const [vehiculos, setVehiculos] = useState([])
-    const [loading, setLoading] = useState(true)
+    const [totalVehiculos, setTotalVehiculos] = useState(0)
+    const [loading, setLoading] = useState(false)
     const [showModal, setShowModal] = useState(false)
     const [selectedVehicle, setSelectedVehicle] = useState(null)
-    const [totalVehiculos, setTotalVehiculos] = useState(0)
-    const [currentPage, setCurrentPage] = useState(1)
-    const [itemsPerPage, setItemsPerPage] = useState(12)
-    const [filtros, setFiltros] = useState({
+    const [filters, setFilters] = useState({
+        search: '',
         marca: '',
-        estado: '',
-        año_desde: '',
-        año_hasta: '',
-        precio_desde: '',
-        precio_hasta: ''
+        modelo: '',
+        condicion: '',
+        sortBy: 'fecha_ingreso',
+        order: 'desc'
     })
 
-    // Cargar vehículos al inicializar
-    useEffect(() => {
-        cargarVehiculos()
-    }, [])
-
-    const cargarVehiculos = async (page = currentPage, pageSize = itemsPerPage) => {
+    // Fetch vehículos
+    const fetchVehiculos = async () => {
         try {
             setLoading(true)
 
-            // Construir query base
-            let countQuery = supabase
+            let query = supabase
                 .from('vehiculos')
-                .select('*', { count: 'exact', head: true })
-                .eq('activo', true)
-
-            let dataQuery = supabase
-                .from('vehiculos')
-                .select('*')
-                .eq('activo', true)
-                .order('created_at', { ascending: false })
+                .select('*', { count: 'exact' })
 
             // Aplicar filtros
-            const applyFilters = (query) => {
-                if (filtros.marca) query = query.ilike('marca', `%${filtros.marca}%`)
-                if (filtros.estado) query = query.eq('estado', filtros.estado)
-                if (filtros.año_desde) query = query.gte('vehiculo_ano', parseInt(filtros.año_desde))
-                if (filtros.año_hasta) query = query.lte('vehiculo_ano', parseInt(filtros.año_hasta))
-                if (filtros.precio_desde) query = query.gte('valor', parseFloat(filtros.precio_desde))
-                if (filtros.precio_hasta) query = query.lte('valor', parseFloat(filtros.precio_hasta))
-                return query
+            if (filters.search) {
+                query = query.or(`dominio.ilike.%${filters.search}%,marca.ilike.%${filters.search}%,modelo.ilike.%${filters.search}%`)
+            }
+            if (filters.marca) {
+                query = query.eq('marca', filters.marca)
+            }
+            if (filters.modelo) {
+                query = query.eq('modelo', filters.modelo)
+            }
+            if (filters.condicion) {
+                query = query.eq('estado', filters.condicion)
             }
 
-            countQuery = applyFilters(countQuery)
-            dataQuery = applyFilters(dataQuery)
+            // Ordenamiento
+            query = query.order(filters.sortBy, { ascending: filters.order === 'asc' })
 
-            // Obtener total
-            const { count, error: countError } = await countQuery
-            if (countError) throw countError
+            const { data, error, count } = await query
 
+            if (error) {
+                throw error
+            }
+
+            setVehiculos(data || [])
             setTotalVehiculos(count || 0)
-
-            // Aplicar paginación
-            const from = (page - 1) * pageSize
-            const to = from + pageSize - 1
-            dataQuery = dataQuery.range(from, to)
-
-            // Obtener datos
-            const { data: vehiculosData, error } = await dataQuery
-
-            if (error) throw error
-
-            // Cargar modelos relacionados
-            const modeloIds = vehiculosData
-                .filter(v => v.modelo_id)
-                .map(v => v.modelo_id)
-                .filter((id, index, arr) => arr.indexOf(id) === index)
-
-            let modelosMap = {}
-            if (modeloIds.length > 0) {
-                const { data: modelosData, error: modelosError } = await supabase
-                    .from('modelo_autos')
-                    .select('*')
-                    .in('id', modeloIds)
-
-                if (!modelosError) {
-                    modelosMap = modelosData.reduce((acc, modelo) => {
-                        acc[modelo.id] = modelo
-                        return acc
-                    }, {})
-                }
-            }
-
-            // Combinar datos
-            const vehiculosConModelos = vehiculosData.map(vehiculo => ({
-                ...vehiculo,
-                modelo_autos: vehiculo.modelo_id ? modelosMap[vehiculo.modelo_id] : null
-            }))
-
-            setVehiculos(vehiculosConModelos || [])
-            setCurrentPage(page)
-
         } catch (error) {
-            console.error('Error cargando vehículos:', error)
+            console.error('Error fetching vehicles:', error)
             showDialog({
                 title: 'Error',
-                content: `Error cargando vehículos: ${error.message}`
+                content: 'Error al cargar los vehículos: ' + error.message,
+                variant: 'error'
             })
         } finally {
             setLoading(false)
         }
     }
 
+    // Sincronizar con sheets
     const sincronizarConSheets = async () => {
         try {
             setLoading(true)
-            const result = await syncSheetsService.syncVehiculos()
-
             showDialog({
-                title: result.success ? '✅ Sincronización Exitosa' : '❌ Error en Sincronización',
-                content: result.message
+                title: 'Sincronizando...',
+                content: 'Actualizando datos con Google Sheets...',
+                variant: 'info'
             })
 
+            const result = await syncSheetsService.syncVehiculos()
+
             if (result.success) {
-                cargarVehiculos()
+                showDialog({
+                    title: 'Sincronización exitosa',
+                    content: `Se sincronizaron ${result.totalSynced} vehículos correctamente.`,
+                    variant: 'success'
+                })
+                await fetchVehiculos() // Recargar datos
+            } else {
+                throw new Error(result.error || 'Error en sincronización')
             }
         } catch (error) {
-            console.error('Error sincronizando:', error)
+            console.error('Error syncing:', error)
             showDialog({
-                title: '❌ Error',
-                content: `Error sincronizando: ${error.message}`
+                title: 'Error de sincronización',
+                content: 'No se pudo sincronizar con Google Sheets: ' + error.message,
+                variant: 'error'
             })
         } finally {
             setLoading(false)
         }
     }
 
-    const eliminarVehiculo = async (id) => {
-        showConfirmDialog({
-            title: 'Confirmar eliminación',
-            message: '¿Estás seguro de que quieres eliminar este vehículo? Esta acción no se puede deshacer.',
-            onConfirm: async () => {
-                try {
-                    const { error } = await supabase
-                        .from('vehiculos')
-                        .update({ activo: false })
-                        .eq('id', id)
-
-                    if (error) throw error
-
-                    showDialog({
-                        title: 'Éxito',
-                        content: 'Vehículo eliminado correctamente'
-                    })
-                    cargarVehiculos(currentPage)
-                } catch (error) {
-                    showDialog({
-                        title: 'Error',
-                        content: `Error eliminando vehículo: ${error.message}`
-                    })
-                }
-            }
-        })
-    }
-
-    const handleSave = async (vehicleData) => {
+    // Crear/actualizar vehículo
+    const handleSaveVehicle = async (vehicleData) => {
         try {
-            let error
+            setLoading(true)
 
             if (selectedVehicle) {
-                const result = await supabase
+                // Actualizar
+                const { error } = await supabase
                     .from('vehiculos')
-                    .update({
-                        ...vehicleData,
-                        updated_at: new Date().toISOString(),
-                        sincronizado_sheets: false
-                    })
+                    .update(vehicleData)
                     .eq('id', selectedVehicle.id)
-                error = result.error
+
+                if (error) throw error
+
+                showDialog({
+                    title: 'Éxito',
+                    content: 'Vehículo actualizado correctamente',
+                    variant: 'success'
+                })
             } else {
-                const result = await supabase.from('vehiculos').insert([{
-                    ...vehicleData,
-                    sincronizado_sheets: false
-                }])
-                error = result.error
+                // Crear
+                const { error } = await supabase
+                    .from('vehiculos')
+                    .insert([vehicleData])
+
+                if (error) throw error
+
+                showDialog({
+                    title: 'Éxito',
+                    content: 'Vehículo creado correctamente',
+                    variant: 'success'
+                })
             }
 
-            if (error) throw error
-
-            showDialog({
-                title: 'Éxito',
-                content: selectedVehicle ? 'Vehículo actualizado correctamente' : 'Vehículo creado correctamente'
-            })
             setShowModal(false)
             setSelectedVehicle(null)
-            cargarVehiculos()
+            await fetchVehiculos()
         } catch (error) {
+            console.error('Error saving vehicle:', error)
             showDialog({
                 title: 'Error',
-                content: `Error guardando vehículo: ${error.message}`
+                content: 'Error al guardar el vehículo: ' + error.message,
+                variant: 'error'
             })
+        } finally {
+            setLoading(false)
         }
     }
 
-    const aplicarFiltros = () => {
-        setCurrentPage(1)
-        cargarVehiculos(1)
+    // Eliminar vehículo
+    const handleDeleteVehicle = async (vehicleId) => {
+        const confirmed = await showConfirmDialog({
+            title: 'Confirmar eliminación',
+            content: '¿Estás seguro de que quieres eliminar este vehículo?'
+        })
+
+        if (confirmed) {
+            try {
+                setLoading(true)
+
+                const { error } = await supabase
+                    .from('vehiculos')
+                    .delete()
+                    .eq('id', vehicleId)
+
+                if (error) throw error
+
+                showDialog({
+                    title: 'Éxito',
+                    content: 'Vehículo eliminado correctamente',
+                    variant: 'success'
+                })
+
+                await fetchVehiculos()
+            } catch (error) {
+                console.error('Error deleting vehicle:', error)
+                showDialog({
+                    title: 'Error',
+                    content: 'Error al eliminar el vehículo: ' + error.message,
+                    variant: 'error'
+                })
+            } finally {
+                setLoading(false)
+            }
+        }
     }
 
-    const limpiarFiltros = () => {
-        setFiltros({
-            marca: '',
-            estado: '',
-            año_desde: '',
-            año_hasta: '',
-            precio_desde: '',
-            precio_hasta: ''
-        })
-        setCurrentPage(1)
-        setTimeout(() => cargarVehiculos(1), 100)
+    // Editar vehículo
+    const handleEditVehicle = (vehicle) => {
+        setSelectedVehicle(vehicle)
+        setShowModal(true)
     }
+
+    // Cargar datos iniciales
+    useEffect(() => {
+        fetchVehiculos()
+    }, [filters])
 
     return (
-        <Container
-            maxWidth={false}
-            sx={{
-                maxWidth: CONTAINER_MAX_WIDTH,
-                display: 'flex',
-                minWidth: 0,
-                flex: 1,
-                flexDirection: 'column',
-            }}
-            disableGutters
-        >
-            <ContentLayout
-                contentOptions={{
-                    sx: {
-                        padding: '0 !important'
-                    }
-                }}
-                header={
-                    <PageHeader
-                        title='Gestión de Vehículos'
-                        subheader={`${totalVehiculos} vehículos en total`}
-                        action={
-                            <Stack spacing={1} direction='row'>
-                                <Button
-                                    onClick={sincronizarConSheets}
-                                    variant='outlined'
-                                    startIcon={<SyncIcon />}
-                                    disabled={loading}
-                                    sx={{
-                                        textTransform: 'none',
-                                        borderRadius: 5,
-                                        fontSize: 14,
-                                        letterSpacing: 0
-                                    }}
-                                >
-                                    Sincronizar
-                                </Button>
-                                <Button
-                                    onClick={() => {
-                                        setSelectedVehicle(null)
-                                        setShowModal(true)
-                                    }}
-                                    variant='contained'
-                                    startIcon={<AddIcon />}
-                                    sx={{
-                                        textTransform: 'none',
-                                        borderRadius: 5,
-                                        fontSize: 14,
-                                        letterSpacing: 0
-                                    }}
-                                    disableElevation
-                                >
-                                    Agregar
-                                </Button>
-                            </Stack>
-                        }
-                    />
-                }
-            >
-                <Container maxWidth={CONTAINER_MAX_WIDTH} disableGutters>
-                    {/* Filtros */}
-                    <VehiclesFilters
-                        filtros={filtros}
-                        setFiltros={setFiltros}
-                        aplicarFiltros={aplicarFiltros}
-                        limpiarFiltros={limpiarFiltros}
-                    />
-                </Container>
+        <Container maxWidth="xl" sx={{ py: 4, minHeight: '100vh' }}>
+            {/* Header */}
+            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+                <Box>
+                    <Typography variant="h4" component="h1" color="primary" gutterBottom>
+                        Gestión de Vehículos
+                    </Typography>
+                    <Typography variant="body1" color="text.secondary">
+                        {totalVehiculos} vehículos en total
+                    </Typography>
+                </Box>
 
-                <Container maxWidth={CONTAINER_MAX_WIDTH} disableGutters>
-                    {/* Lista de Vehículos */}
-                    <VehiclesList
-                        vehiculos={vehiculos}
-                        loading={loading}
-                        totalVehiculos={totalVehiculos}
-                        currentPage={currentPage}
-                        itemsPerPage={itemsPerPage}
-                        setItemsPerPage={setItemsPerPage}
-                        onPageChange={(page) => cargarVehiculos(page)}
-                        onEdit={(vehicle) => {
-                            setSelectedVehicle(vehicle)
+                <Stack spacing={1} direction='row'>
+                    <Button
+                        onClick={sincronizarConSheets}
+                        variant='outlined'
+                        startIcon={<SyncIcon />}
+                        disabled={loading}
+                        sx={{
+                            textTransform: 'none',
+                            borderRadius: 5,
+                            fontSize: 14,
+                            letterSpacing: 0
+                        }}
+                    >
+                        Sincronizar
+                    </Button>
+                    <Button
+                        onClick={() => {
+                            setSelectedVehicle(null)
                             setShowModal(true)
                         }}
-                        onDelete={eliminarVehiculo}
-                    />                {/* Modal */}
-                    {showModal && (
-                        <VehicleModal
-                            vehicle={selectedVehicle}
-                            onSave={handleSave}
-                            onClose={() => {
-                                setShowModal(false)
-                                setSelectedVehicle(null)
-                            }}
-                        />
-                    )}
-                </Container>
-            </ContentLayout>
+                        variant='contained'
+                        startIcon={<AddIcon />}
+                        sx={{
+                            textTransform: 'none',
+                            borderRadius: 5,
+                            fontSize: 14,
+                            letterSpacing: 0
+                        }}
+                        disableElevation
+                    >
+                        Agregar Vehículo
+                    </Button>
+                </Stack>
+            </Stack>
+
+            {/* Filters */}
+            <VehiclesFilters
+                filters={filters}
+                onFiltersChange={setFilters}
+                loading={loading}
+            />
+
+            {/* Vehicles List */}
+            <VehiclesList
+                vehiculos={vehiculos}
+                loading={loading}
+                onEdit={handleEditVehicle}
+                onDelete={handleDeleteVehicle}
+            />
+
+            {/* Vehicle Modal */}
+            <VehicleModal
+                open={showModal}
+                vehicle={selectedVehicle}
+                onClose={() => {
+                    setShowModal(false)
+                    setSelectedVehicle(null)
+                }}
+                onSave={handleSaveVehicle}
+                loading={loading}
+            />
         </Container>
     )
 }
+
+export default VehiculosApp
