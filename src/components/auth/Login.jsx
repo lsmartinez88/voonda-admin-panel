@@ -28,8 +28,8 @@ const Login = () => {
     const location = useLocation()
 
     const [formData, setFormData] = useState({
-        email: 'admin@voonda.com',
-        password: 'admin123'
+        email: '',
+        password: ''
     })
     const [errors, setErrors] = useState({})
     const [showPassword, setShowPassword] = useState(false)
@@ -93,15 +93,15 @@ const Login = () => {
         }
     }
 
-    // Función para autocompletar con credenciales de prueba
-    const fillTestCredentials = () => {
-        setFormData({
-            email: 'admin@voonda.com',
-            password: 'admin123'
-        })
-        setErrors({})
-        setLoginError('')
-    }
+    // Función para autocompletar con credenciales de prueba (comentada para producción)
+    // const fillTestCredentials = () => {
+    //     setFormData({
+    //         email: 'admin@voonda.com', 
+    //         password: 'admin123'
+    //     })
+    //     setErrors({})
+    //     setLoginError('')
+    // }
 
     return (
         <Container component="main" maxWidth="sm">
@@ -221,14 +221,15 @@ const Login = () => {
 
                     {/* Información de conexión API */}
                     <Box sx={{ mt: 4, p: 2, bgcolor: 'info.50', borderRadius: 1, border: 1, borderColor: 'info.200' }}>
-                        <Typography variant="caption" color="info.main" sx={{ mb: 1, display: 'block', fontWeight: 'bold' }}>
+                        <Typography variant="caption" color="success.main" sx={{ mb: 1, display: 'block' }}>
                             🔗 Conectado a API: api.fratelli.voonda.net
                         </Typography>
                         <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
                             Usa tus credenciales de Voonda para acceder al sistema
                         </Typography>
 
-                        <Button
+                        {/* Botón de credenciales de prueba comentado para producción */}
+                        {/* <Button
                             variant="outlined"
                             size="small"
                             onClick={fillTestCredentials}
@@ -236,7 +237,7 @@ const Login = () => {
                             sx={{ mt: 1 }}
                         >
                             Usar credenciales de prueba
-                        </Button>
+                        </Button> */}
                     </Box>
 
                     {/* Footer */}

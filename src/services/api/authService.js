@@ -1,45 +1,8 @@
 ﻿import apiClient, { setStoredToken, removeStoredToken, getStoredToken, setStoredUser, getStoredUser, clearSession, makeApiRequest } from "./apiClient"
 
-// Credenciales de desarrollo
-const DEV_CREDENTIALS = {
-    email: "demo@voonda.com",
-    password: "demo123"
-}
-
-// Usuario de desarrollo simulado
-const DEV_USER = {
-    id: "dev-user-1",
-    nombre: "Usuario",
-    apellido: "Demo",
-    email: "demo@voonda.com",
-    telefono: "+54 11 1234-5678",
-    rol: {
-        id: "admin-role",
-        nombre: "administrador_general",
-        permisos: {
-            vehiculos: { leer: true, crear: true, editar: true, eliminar: true },
-            vendedores: { leer: true, crear: true, editar: true, eliminar: true },
-            compradores: { leer: true, crear: true, editar: true, eliminar: true },
-            operaciones: { leer: true, crear: true, editar: true, eliminar: true },
-            empresas: { leer: true, crear: true, editar: true, eliminar: true }
-        }
-    },
-    empresa: {
-        id: "voonda-empresa",
-        nombre: "Voonda Demo"
-    },
-    ultimo_login: new Date().toISOString()
-}
-
-const DEV_TOKEN = "dev-token-" + Date.now()
-
-// Verificar si estamos en modo desarrollo
-const isDevelopmentMode = () => {
-    return false // Siempre usar API real
-}
-
 /**
  * Servicio de autenticación que maneja login, logout y gestión de usuarios
+ * Configurado para usar API real tanto en desarrollo como en producción
  */
 class AuthService {
     /**
@@ -51,52 +14,38 @@ class AuthService {
      */
     async login(credentials) {
         try {
-            // En modo desarrollo, usar credenciales simuladas
-            if (isDevelopmentMode()) {
-                console.log("🔧 Modo desarrollo activado")
+            console.log("� Realizando login con API real:", credentials.email)
 
-                if (credentials.email === DEV_CREDENTIALS.email && credentials.password === DEV_CREDENTIALS.password) {
-                    // Simular delay de red
-                    await new Promise((resolve) => setTimeout(resolve, 1000))
+            // Usar API real para autenticación
+            const response = await apiClient.post("/api/auth/login", {
+                email: credentials.email,
+                password: credentials.password
+            })
 
-                    // Guardar token y datos del usuario en sessionStorage
-                    setStoredToken(DEV_TOKEN)
-                    setStoredUser(DEV_USER)
+            console.log("📡 Respuesta de la API:", response)
 
-                    return {
-                        success: true,
-                        message: "Login exitoso (modo desarrollo)",
-                        token: DEV_TOKEN,
-                        user: DEV_USER
-                    }
-                } else {
-                    return {
-                        success: false,
-                        error: "Credenciales inválidas. Usa: demo@voonda.com / demo123"
-                    }
-                }
-            }
+            // La respuesta de axios está en response.data
+            const apiData = response.data
 
-            // En producción, usar API real
-            const response = await apiClient.post("/api/auth/login", credentials)
-
-            if (response.success && response.token && response.user) {
+            if (apiData.success && apiData.token && apiData.user) {
                 // Guardar token y datos del usuario en sessionStorage
-                setStoredToken(response.token)
-                setStoredUser(response.user)
+                setStoredToken(apiData.token)
+                setStoredUser(apiData.user)
+
+                console.log("✅ Login exitoso, token guardado")
 
                 return {
                     success: true,
-                    message: response.message,
-                    token: response.token,
-                    user: response.user
+                    message: apiData.message || "Login exitoso",
+                    token: apiData.token,
+                    user: apiData.user
                 }
             }
 
             // Si la API devuelve success: false, manejar como error de credenciales
             return {
                 success: false,
-                error: response.error || response.message || "Error en el login"
+                error: apiData.error || apiData.message || "Credenciales inválidas"
             }
         } catch (error) {
             console.error("Error al iniciar sesión:", error)
@@ -140,39 +89,38 @@ class AuthService {
      */
     async getCurrentUser() {
         try {
-            // En modo desarrollo, devolver usuario simulado si hay token válido
-            if (isDevelopmentMode()) {
-                const storedToken = getStoredToken()
-                const storedUser = getStoredUser()
+            console.log("🔗 Verificando usuario actual con API")
 
-                if (storedToken && storedUser) {
-                    return {
-                        success: true,
-                        user: storedUser
-                    }
-                } else {
-                    return {
-                        success: false,
-                        error: "No hay sesión activa"
-                    }
+            // Verificar que tenemos token antes de hacer la request
+            const storedToken = getStoredToken()
+            if (!storedToken) {
+                return {
+                    success: false,
+                    error: "No hay token de autenticación"
                 }
             }
 
-            // En producción, usar API real
+            // Usar API real para obtener usuario actual
             const response = await apiClient.get("/api/auth/me")
+            console.log("📡 Respuesta de /api/auth/me:", response)
 
-            if (response.success && response.user) {
+            // La respuesta de axios está en response.data
+            const apiData = response.data
+
+            if (apiData.success && apiData.user) {
                 // Actualizar datos del usuario en sessionStorage
-                setStoredUser(response.user)
+                setStoredUser(apiData.user)
+                console.log("✅ Usuario actual obtenido correctamente")
+                
                 return {
                     success: true,
-                    user: response.user
+                    user: apiData.user
                 }
             }
 
             return {
                 success: false,
-                error: response.message || "Error al obtener usuario"
+                error: apiData.message || "Error al obtener usuario"
             }
         } catch (error) {
             console.error("Error al obtener información del usuario:", error)

@@ -17,4 +17,14 @@ export default defineConfig({
   optimizeDeps: {
     include: ['react-draft-wysiwyg'],
   },
+  server: {
+    proxy: {
+      // Proxy para la API en desarrollo
+      '/api': {
+        target: 'https://api.fratelli.voonda.net',
+        changeOrigin: true,
+        secure: true,
+      }
+    }
+  }
 });

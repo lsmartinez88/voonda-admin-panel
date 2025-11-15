@@ -2,7 +2,9 @@
 
 // Configuración base de la API
 const isDevelopment = import.meta.env.DEV
-const API_BASE_URL = isDevelopment ? "" : "https://api.fratelli.voonda.net" // Usar proxy en desarrollo
+const API_BASE_URL = isDevelopment 
+    ? "" // En desarrollo usar proxy de Vite (/api -> https://api.fratelli.voonda.net)
+    : (import.meta.env.VITE_API_BASE_URL || "https://api.fratelli.voonda.net")
 const TOKEN_KEY = "voonda_access_token"
 const USER_KEY = "voonda_user_data"
 
