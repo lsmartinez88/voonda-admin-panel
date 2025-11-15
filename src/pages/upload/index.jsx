@@ -532,7 +532,7 @@ const UploadPage = () => {
                                                     </Typography>
                                                 )}
                                                 <Typography variant="caption" display="block" color="text.secondary">
-                                                    {result?.excelVehicle?.json?.kilometros ? `${result.excelVehicle.json.kilometros.toLocaleString()} km` : 'N/A'} • 
+                                                    {result?.excelVehicle?.json?.kilometros ? `${result.excelVehicle.json.kilometros.toLocaleString()} km` : 'N/A'} •
                                                     {result?.excelVehicle?.json?.valor ? ` $${result.excelVehicle.json.valor.toLocaleString()} ${result?.excelVehicle?.json?.moneda || 'ARS'}` : ' Precio N/A'}
                                                 </Typography>
                                                 {result?.excelVehicle?.json?.dominio && (
@@ -554,7 +554,7 @@ const UploadPage = () => {
                                                         </Typography>
                                                     )}
                                                     <Typography variant="caption" display="block" color="text.secondary">
-                                                        {result.bestMatch.catalogVehicle.mileage ? `${result.bestMatch.catalogVehicle.mileage.toLocaleString()} km` : 'N/A'} • 
+                                                        {result.bestMatch.catalogVehicle.mileage ? `${result.bestMatch.catalogVehicle.mileage.toLocaleString()} km` : 'N/A'} •
                                                         {result.bestMatch.catalogVehicle.price ? ` $${result.bestMatch.catalogVehicle.price.toLocaleString()}` : ' Precio N/A'}
                                                     </Typography>
                                                     {result.bestMatch.catalogVehicle.license_plate && (
@@ -574,9 +574,9 @@ const UploadPage = () => {
                                                         label={`${Math.round(result.bestMatch.score * 100)}%`}
                                                         size="small"
                                                         color={
-                                                            result.bestMatch.confidence === 'alto' ? 'success' : 
-                                                            result.bestMatch.confidence === 'medio' ? 'warning' : 
-                                                            'error'
+                                                            result.bestMatch.confidence === 'alto' ? 'success' :
+                                                                result.bestMatch.confidence === 'medio' ? 'warning' :
+                                                                    'error'
                                                         }
                                                     />
                                                     <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
@@ -597,12 +597,12 @@ const UploadPage = () => {
                                                                 marca: 'Marca',
                                                                 modelo: 'Modelo',
                                                                 año: 'Año',
-                                                                kilometros: 'Kilómetros', 
+                                                                kilometros: 'Kilómetros',
                                                                 precio: 'Precio',
                                                                 color: 'Color',
                                                                 version: 'Versión'
                                                             }[key] || key;
-                                                            
+
                                                             return (
                                                                 <Typography key={key} variant="caption" display="block">
                                                                     {displayKey}: {Math.round(value * 100)}%

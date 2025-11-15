@@ -287,6 +287,39 @@ class VehicleMatchingService {
                 version: 0
             }
 
+            // FILTROS OBLIGATORIOS PRIMERO - Si no pasan, descartamos el vehículo
+
+            // 1. Verificar marca (OBLIGATORIO - mínimo 70% de similitud)
+            let marcaScore = 0
+            if (excelVehicle.marca && catalogVehicle.brand) {
+                marcaScore = this.calculateSimilarity(excelVehicle.marca, catalogVehicle.brand)
+                matchDetails.marca = marcaScore
+                if (marcaScore < 0.7) {
+                    // Si la marca no coincide suficientemente, descartar este vehículo
+                    return
+                }
+            } else if (!excelVehicle.marca || !catalogVehicle.brand) {
+                // Si falta la marca, descartar
+                return
+            }
+
+            // 2. Verificar modelo (OBLIGATORIO - mínimo 60% de similitud)
+            let modeloScore = 0
+            if (excelVehicle.modelo && catalogVehicle.model) {
+                modeloScore = this.calculateSimilarity(excelVehicle.modelo, catalogVehicle.model)
+                matchDetails.modelo = modeloScore
+                if (modeloScore < 0.6) {
+                    // Si el modelo no coincide suficientemente, descartar este vehículo
+                    return
+                }
+            } else if (!excelVehicle.modelo || !catalogVehicle.model) {
+                // Si falta el modelo, descartar
+                return
+            }
+
+            // Si llegamos aquí, marca y modelo pasaron los filtros obligatorios
+            // Ahora calculamos el score total
+
             // 0. Comparar dominio/patente (máxima prioridad - 40% si coincide exacto)
             if (excelVehicle.dominio && catalogVehicle.license_plate) {
                 const dominioScore = this.calculateExactMatch(excelVehicle.dominio, catalogVehicle.license_plate)
@@ -300,55 +333,73 @@ class VehicleMatchingService {
                 }
             }
 
-            // 1. Comparar marca (15% del peso total)
-            if (excelVehicle.marca && catalogVehicle.brand) {
-                matchDetails.marca = this.calculateSimilarity(excelVehicle.marca, catalogVehicle.brand)
-                score += matchDetails.marca * 0.15
-            }
+            // 1. Agregar score de marca (15% del peso total) - YA CALCULADO
+            score += marcaScore * 0.15
 
-            // 2. Comparar modelo (20% del peso total)
-            if (excelVehicle.modelo && catalogVehicle.model) {
-                matchDetails.modelo = this.calculateSimilarity(excelVehicle.modelo, catalogVehicle.model)
-                score += matchDetails.modelo * 0.2
-            }
+            // 2. Agregar score de modelo (20% del peso total) - YA CALCULADO  
+            score += modeloScore * 0.2
 
-            // 3. Comparar año (25% del peso total) - CRÍTICO
+            // 3. Comparar año (25% del peso total) - CRÍTICO - DEBE SER EXACTO
             if (excelVehicle.año && catalogVehicle.year) {
                 const yearScore = this.calculateYearSimilarity(excelVehicle.año, catalogVehicle.year)
                 matchDetails.año = yearScore
+                // Solo aceptar años exactos
+                if (yearScore < 1.0) {
+                    // Si el año no es exacto, descartar
+                    return
+                }
                 score += yearScore * 0.25
+            } else {
+                // Si falta el año, descartar
+                return
             }
 
-            // 4. Comparar kilómetros (20% del peso total) - CRÍTICO
+            // 4. Comparar kilómetros (20% del peso total) - CRÍTICO - DEBE SER MUY PRECISO
             if (excelVehicle.kilometros && catalogVehicle.mileage) {
                 const kmScore = this.calculateMileageSimilarity(excelVehicle.kilometros, catalogVehicle.mileage)
                 matchDetails.kilometros = kmScore
+                // Solo aceptar diferencias muy pequeñas en kilómetros  
+                if (kmScore < 0.8) {
+                    // Si los kilómetros difieren mucho, descartar
+                    return
+                }
                 score += kmScore * 0.2
+            } else {
+                // Si faltan los kilómetros, descartar
+                return
             }
 
-            // 5. Comparar precio (15% del peso total) - CRÍTICO
+            // 5. Comparar precio (15% del peso total) - CRÍTICO - DEBE SER MUY PRECISO
             if (excelVehicle.valor && catalogVehicle.price) {
                 const priceScore = this.calculatePriceSimilarity(excelVehicle.valor, catalogVehicle.price, excelVehicle.moneda)
                 matchDetails.precio = priceScore
+                // Solo aceptar diferencias pequeñas en precio
+                if (priceScore < 0.6) {
+                    // Si el precio difiere mucho, descartar
+                    return
+                }
                 score += priceScore * 0.15
+            } else {
+                // Si falta el precio, descartar
+                return
             }
 
-            // 6. Comparar color (3% del peso total)
+            // 6. Comparar color (3% del peso total) - OPCIONAL
             if (excelVehicle.color && catalogVehicle.color) {
                 const colorScore = this.calculateSimilarity(excelVehicle.color, catalogVehicle.color)
                 matchDetails.color = colorScore
                 score += colorScore * 0.03
             }
 
-            // 7. Comparar versión (2% del peso total)
+            // 7. Comparar versión (2% del peso total) - OPCIONAL
             if (excelVehicle.versión && catalogVehicle.version) {
                 const versionScore = this.calculateSimilarity(excelVehicle.versión, catalogVehicle.version)
                 matchDetails.version = versionScore
                 score += versionScore * 0.02
             }
 
-            // Solo incluir matches con score mínimo del 30% (reducido por criterios más estrictos)
-            if (score >= 0.3) {
+            // Solo incluir matches con score mínimo del 60% (más alto por filtros estrictos)
+            if (score >= 0.6) {
                 matches.push({
                     catalogVehicle,
                     score,
@@ -368,9 +419,9 @@ class VehicleMatchingService {
      * @returns {string} Nivel de confianza
      */
     static getConfidenceLevel(score) {
-        if (score >= 0.55) return "alto" // Criterios más estrictos: año exacto + km/precio precisos
-        if (score >= 0.4) return "medio" // Match decente con algunos criterios estrictos
-        if (score >= 0.25) return "bajo" // Match básico
+        if (score >= 0.80) return "alto" // Muy estricto: marca/modelo coinciden + año exacto + km/precio precisos
+        if (score >= 0.65) return "medio" // Match bueno con todos los filtros obligatorios pasados
+        if (score >= 0.50) return "bajo" // Match mínimo aceptable
         return "muy_bajo"
     }
 
