@@ -336,7 +336,7 @@ class VehicleMatchingService {
             // 1. Agregar score de marca (15% del peso total) - YA CALCULADO
             score += marcaScore * 0.15
 
-            // 2. Agregar score de modelo (20% del peso total) - YA CALCULADO  
+            // 2. Agregar score de modelo (20% del peso total) - YA CALCULADO
             score += modeloScore * 0.2
 
             // 3. Comparar año (25% del peso total) - CRÍTICO - DEBE SER EXACTO
@@ -358,7 +358,7 @@ class VehicleMatchingService {
             if (excelVehicle.kilometros && catalogVehicle.mileage) {
                 const kmScore = this.calculateMileageSimilarity(excelVehicle.kilometros, catalogVehicle.mileage)
                 matchDetails.kilometros = kmScore
-                // Solo aceptar diferencias muy pequeñas en kilómetros  
+                // Solo aceptar diferencias muy pequeñas en kilómetros
                 if (kmScore < 0.8) {
                     // Si los kilómetros difieren mucho, descartar
                     return
@@ -419,9 +419,9 @@ class VehicleMatchingService {
      * @returns {string} Nivel de confianza
      */
     static getConfidenceLevel(score) {
-        if (score >= 0.80) return "alto" // Muy estricto: marca/modelo coinciden + año exacto + km/precio precisos
+        if (score >= 0.8) return "alto" // Muy estricto: marca/modelo coinciden + año exacto + km/precio precisos
         if (score >= 0.65) return "medio" // Match bueno con todos los filtros obligatorios pasados
-        if (score >= 0.50) return "bajo" // Match mínimo aceptable
+        if (score >= 0.5) return "bajo" // Match mínimo aceptable
         return "muy_bajo"
     }
 
