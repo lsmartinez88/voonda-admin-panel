@@ -5,7 +5,7 @@ class ExcelExportService {
         // Columnas requeridas exactamente como las especificaste
         const headers = [
             "patente",
-            "kilometros", 
+            "kilometros",
             "vehiculo_ano",
             "valor",
             "moneda",
@@ -65,7 +65,7 @@ class ExcelExportService {
 
             // Extraer datos del enriquecimiento
             const enrichedData = vehicle.enrichedData || {}
-            
+
             // Extraer datos de OpenAI si están disponibles
             const openaiData = enrichedData.openai || {}
 
@@ -114,11 +114,11 @@ class ExcelExportService {
 
             // === CARACTERÍSTICAS DE SEGURIDAD ===
             excelRow.airbags = openaiData.airbags || catalogVehicle.airbags || enrichedData.airbags || ""
-            excelRow.abs = openaiData.abs !== null && openaiData.abs !== undefined ? openaiData.abs : (catalogVehicle.abs || enrichedData.abs || "")
-            excelRow.control_estabilidad = openaiData.control_estabilidad !== null && openaiData.control_estabilidad !== undefined ? openaiData.control_estabilidad : (catalogVehicle.stability_control || enrichedData.stability_control || "")
+            excelRow.abs = openaiData.abs !== null && openaiData.abs !== undefined ? openaiData.abs : catalogVehicle.abs || enrichedData.abs || ""
+            excelRow.control_estabilidad = openaiData.control_estabilidad !== null && openaiData.control_estabilidad !== undefined ? openaiData.control_estabilidad : catalogVehicle.stability_control || enrichedData.stability_control || ""
 
             // === CONFORT Y EQUIPAMIENTO ===
-            excelRow.climatizador = openaiData.climatizador !== null && openaiData.climatizador !== undefined ? openaiData.climatizador : (catalogVehicle.air_conditioning || enrichedData.air_conditioning || "")
+            excelRow.climatizador = openaiData.climatizador !== null && openaiData.climatizador !== undefined ? openaiData.climatizador : catalogVehicle.air_conditioning || enrichedData.air_conditioning || ""
             excelRow.multimedia = openaiData.multimedia || catalogVehicle.multimedia || enrichedData.multimedia || ""
 
             // === COMPONENTES ===

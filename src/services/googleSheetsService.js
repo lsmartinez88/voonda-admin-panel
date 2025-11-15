@@ -1,4 +1,4 @@
-﻿import ExcelExportService from './excelExportService.js'
+﻿import ExcelExportService from "./excelExportService.js"
 
 class GoogleSheetsService {
     /**
@@ -108,26 +108,26 @@ class GoogleSheetsService {
 
             // Generar datos para copiar directamente
             const sheetsData = this.formatForGoogleSheetsAPI(vehicleData.vehicleData || vehicleData, vehicleData.headers)
-            
+
             // Crear contenido para copiar al portapapeles
             const clipboardContent = this.generateClipboardContent(vehicleData.vehicleData || vehicleData)
-            
+
             // URL de Google Sheets
             const baseSheetUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`
-            
+
             // Intentar copiar al portapapeles
             try {
                 await navigator.clipboard.writeText(clipboardContent)
                 console.log("✅ Datos copiados al portapapeles")
-                
+
                 // Abrir Google Sheets
                 const sheetsWindow = window.open(baseSheetUrl, "_blank")
-                
+
                 // Mostrar instrucciones para pegar
                 setTimeout(() => {
                     this.showPasteInstructions(sheetName, spreadsheetId, vehicleData.length)
                 }, 2000)
-                
+
                 return {
                     success: true,
                     mode: "clipboard_paste",
@@ -138,21 +138,20 @@ class GoogleSheetsService {
                     recordsAdded: vehicleData.length,
                     message: `Datos copiados al portapapeles. Google Sheets abierto para pegar directamente.`
                 }
-                
             } catch (clipboardError) {
                 console.warn("⚠️ No se pudo copiar al portapapeles, usando método alternativo")
-                
+
                 // Fallback: Crear textarea temporal para copiar manualmente
                 const textArea = this.createCopyTextArea(clipboardContent)
-                
+
                 // Abrir Google Sheets
                 window.open(baseSheetUrl, "_blank")
-                
+
                 // Mostrar instrucciones para copiar manualmente
                 setTimeout(() => {
                     this.showManualCopyInstructions(sheetName, spreadsheetId, vehicleData.length, textArea)
                 }, 1500)
-                
+
                 return {
                     success: true,
                     mode: "manual_copy",
@@ -164,7 +163,6 @@ class GoogleSheetsService {
                     message: `Datos listos para copiar manualmente. Google Sheets abierto.`
                 }
             }
-
         } catch (error) {
             console.error("❌ Error preparando datos:", error)
             return {
@@ -183,42 +181,44 @@ class GoogleSheetsService {
         if (!vehicleData.length) return ""
 
         // Si vehicleData ya viene del ExcelExportService, usar ese formato
-        if (vehicleData[0] && typeof vehicleData[0] === 'object' && !Array.isArray(vehicleData[0])) {
+        if (vehicleData[0] && typeof vehicleData[0] === "object" && !Array.isArray(vehicleData[0])) {
             // Es un array de objetos del ExcelExportService
             const headers = Object.keys(vehicleData[0])
-            
+
             // Convertir objetos a formato tab-separated
-            const rows = vehicleData.map(row => 
-                headers.map(header => {
-                    const value = row[header] || ""
-                    // Limpiar valores para evitar problemas en Google Sheets
-                    return String(value).replace(/[\t\n\r]/g, ' ').trim()
-                }).join('\t')
+            const rows = vehicleData.map((row) =>
+                headers
+                    .map((header) => {
+                        const value = row[header] || ""
+                        // Limpiar valores para evitar problemas en Google Sheets
+                        return String(value)
+                            .replace(/[\t\n\r]/g, " ")
+                            .trim()
+                    })
+                    .join("\t")
             )
-            
+
             // Unir headers y rows
-            const content = [
-                headers.join('\t'),
-                ...rows
-            ].join('\n')
-            
+            const content = [headers.join("\t"), ...rows].join("\n")
+
             return content
         } else {
             // Fallback para formato anterior
             const headers = Object.keys(vehicleData[0] || {})
-            
-            const rows = vehicleData.map(row => 
-                headers.map(header => {
-                    const value = row[header] || ""
-                    return String(value).replace(/[\t\n\r]/g, ' ').trim()
-                }).join('\t')
+
+            const rows = vehicleData.map((row) =>
+                headers
+                    .map((header) => {
+                        const value = row[header] || ""
+                        return String(value)
+                            .replace(/[\t\n\r]/g, " ")
+                            .trim()
+                    })
+                    .join("\t")
             )
-            
-            const content = [
-                headers.join('\t'),
-                ...rows
-            ].join('\n')
-            
+
+            const content = [headers.join("\t"), ...rows].join("\n")
+
             return content
         }
     }
@@ -229,7 +229,7 @@ class GoogleSheetsService {
      * @returns {HTMLElement} Textarea element
      */
     static createCopyTextArea(content) {
-        const textArea = document.createElement('textarea')
+        const textArea = document.createElement("textarea")
         textArea.value = content
         textArea.style.cssText = `
             position: fixed;
@@ -246,10 +246,10 @@ class GoogleSheetsService {
             font-family: monospace;
             font-size: 12px;
         `
-        
+
         document.body.appendChild(textArea)
         textArea.select()
-        
+
         return textArea
     }
 
@@ -257,7 +257,7 @@ class GoogleSheetsService {
      * Muestra instrucciones para pegar directamente desde el portapapeles
      */
     static showPasteInstructions(sheetName, spreadsheetId, recordCount) {
-        const modal = document.createElement('div')
+        const modal = document.createElement("div")
         modal.style.cssText = `
             position: fixed;
             top: 0;
@@ -271,7 +271,7 @@ class GoogleSheetsService {
             justify-content: center;
             font-family: Arial, sans-serif;
         `
-        
+
         modal.innerHTML = `
             <div style="
                 background: white;
@@ -330,14 +330,14 @@ class GoogleSheetsService {
                 </div>
             </div>
         `
-        
+
         // Cerrar al hacer clic en el fondo
-        modal.addEventListener('click', (e) => {
+        modal.addEventListener("click", (e) => {
             if (e.target === modal) {
                 modal.remove()
             }
         })
-        
+
         document.body.appendChild(modal)
     }
 
@@ -345,7 +345,7 @@ class GoogleSheetsService {
      * Muestra instrucciones para copiar manualmente
      */
     static showManualCopyInstructions(sheetName, spreadsheetId, recordCount, textArea) {
-        const modal = document.createElement('div')
+        const modal = document.createElement("div")
         modal.style.cssText = `
             position: fixed;
             top: 0;
@@ -359,7 +359,7 @@ class GoogleSheetsService {
             justify-content: center;
             font-family: Arial, sans-serif;
         `
-        
+
         modal.innerHTML = `
             <div style="
                 background: white;
@@ -427,14 +427,14 @@ class GoogleSheetsService {
                 </div>
             </div>
         `
-        
-        modal.addEventListener('click', (e) => {
+
+        modal.addEventListener("click", (e) => {
             if (e.target === modal) {
                 modal.remove()
                 textArea.remove()
             }
         })
-        
+
         document.body.appendChild(modal)
     }
 
@@ -612,13 +612,13 @@ class GoogleSheetsService {
             const sheetsData = {
                 metadata: this.generateMetadata(originalStats),
                 vehicleData: excelData.rows, // Usar las mismas filas que Excel
-                headers: excelData.headers,   // Usar los mismos headers que Excel
+                headers: excelData.headers, // Usar los mismos headers que Excel
                 summary: this.generateSummary(enrichedData),
                 enrichmentStats: this.generateEnrichmentSummary(enrichedData)
             }
 
             console.log(`✅ Datos preparados: ${sheetsData.vehicleData.length} vehículos listos para export`)
-            console.log(`📋 Headers: ${sheetsData.headers.join(', ')}`)
+            console.log(`📋 Headers: ${sheetsData.headers.join(", ")}`)
 
             return {
                 success: true,

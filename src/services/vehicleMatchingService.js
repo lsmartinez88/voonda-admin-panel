@@ -149,6 +149,55 @@ class VehicleMatchingService {
     }
 
     /**
+     * Calcula similitud exacta para patentes/dominios
+     * @param {string} a - Dominio/patente del Excel
+     * @param {string} b - Patente del catálogo
+     * @returns {number} Score de similitud (0-1)
+     */
+    static calculateExactMatch(a, b) {
+        const normA = this.normalizeText(a).replace(/[\s\-\.]/g, "").toUpperCase()
+        const normB = this.normalizeText(b).replace(/[\s\-\.]/g, "").toUpperCase()
+
+        if (!normA || !normB) return 0
+        if (normA === normB) return 1
+
+        // Para patentes, también considerar coincidencias parciales
+        if (normA.length >= 3 && normB.length >= 3) {
+            if (normA.includes(normB) || normB.includes(normA)) {
+                return 0.8
+            }
+
+            // Verificar similitud de caracteres (para casos como ABC123 vs ABC-123)
+            const similarity = this.calculateCharacterSimilarity(normA, normB)
+            return similarity > 0.8 ? similarity : 0
+        }
+
+        return 0
+    }
+
+    /**
+     * Calcula similitud de caracteres para patentes
+     * @param {string} a - Primera cadena
+     * @param {string} b - Segunda cadena
+     * @returns {number} Score de similitud (0-1)
+     */
+    static calculateCharacterSimilarity(a, b) {
+        const maxLength = Math.max(a.length, b.length)
+        if (maxLength === 0) return 1
+
+        let matches = 0
+        const minLength = Math.min(a.length, b.length)
+
+        for (let i = 0; i < minLength; i++) {
+            if (a[i] === b[i]) {
+                matches++
+            }
+        }
+
+        return matches / maxLength
+    }
+
+    /**
      * Calcula similitud específica para años
      * @param {number} year1 - Año del Excel
      * @param {number} year2 - Año del catálogo
@@ -229,44 +278,74 @@ class VehicleMatchingService {
         catalog.forEach((catalogVehicle) => {
             let score = 0
             let matchDetails = {
+                dominio: 0,
                 marca: 0,
                 modelo: 0,
                 año: 0,
                 kilometros: 0,
-                precio: 0
+                precio: 0,
+                color: 0,
+                version: 0
             }
 
-            // 1. Comparar marca (25% del peso total)
+            // 0. Comparar dominio/patente (máxima prioridad - 40% si coincide exacto)
+            if (excelVehicle.dominio && catalogVehicle.license_plate) {
+                const dominioScore = this.calculateExactMatch(excelVehicle.dominio, catalogVehicle.license_plate)
+                matchDetails.dominio = dominioScore
+                if (dominioScore > 0.9) {
+                    // Si el dominio coincide casi exactamente, es un match muy fuerte
+                    score += dominioScore * 0.4
+                } else if (dominioScore > 0.7) {
+                    // Match parcial de dominio
+                    score += dominioScore * 0.2
+                }
+            }
+
+            // 1. Comparar marca (20% del peso total)
             if (excelVehicle.marca && catalogVehicle.brand) {
                 matchDetails.marca = this.calculateSimilarity(excelVehicle.marca, catalogVehicle.brand)
-                score += matchDetails.marca * 0.25
+                score += matchDetails.marca * 0.2
             }
 
-            // 2. Comparar modelo (35% del peso total)
+            // 2. Comparar modelo (25% del peso total)
             if (excelVehicle.modelo && catalogVehicle.model) {
                 matchDetails.modelo = this.calculateSimilarity(excelVehicle.modelo, catalogVehicle.model)
-                score += matchDetails.modelo * 0.35
+                score += matchDetails.modelo * 0.25
             }
 
-            // 3. Comparar año (15% del peso total)
+            // 3. Comparar año (10% del peso total)
             if (excelVehicle.año && catalogVehicle.year) {
                 const yearScore = this.calculateYearSimilarity(excelVehicle.año, catalogVehicle.year)
                 matchDetails.año = yearScore
-                score += yearScore * 0.15
+                score += yearScore * 0.1
             }
 
-            // 4. Comparar kilómetros (15% del peso total)
+            // 4. Comparar kilómetros (10% del peso total)
             if (excelVehicle.kilometros && catalogVehicle.mileage) {
                 const kmScore = this.calculateMileageSimilarity(excelVehicle.kilometros, catalogVehicle.mileage)
                 matchDetails.kilometros = kmScore
-                score += kmScore * 0.15
+                score += kmScore * 0.1
             }
 
-            // 5. Comparar precio (10% del peso total)
+            // 5. Comparar precio (8% del peso total)
             if (excelVehicle.valor && catalogVehicle.price) {
                 const priceScore = this.calculatePriceSimilarity(excelVehicle.valor, catalogVehicle.price, excelVehicle.moneda)
                 matchDetails.precio = priceScore
-                score += priceScore * 0.1
+                score += priceScore * 0.08
+            }
+
+            // 6. Comparar color (5% del peso total)
+            if (excelVehicle.color && catalogVehicle.color) {
+                const colorScore = this.calculateSimilarity(excelVehicle.color, catalogVehicle.color)
+                matchDetails.color = colorScore
+                score += colorScore * 0.05
+            }
+
+            // 7. Comparar versión (2% del peso total)
+            if (excelVehicle.versión && catalogVehicle.version) {
+                const versionScore = this.calculateSimilarity(excelVehicle.versión, catalogVehicle.version)
+                matchDetails.version = versionScore
+                score += versionScore * 0.02
             }
 
             // Solo incluir matches con score mínimo del 40%

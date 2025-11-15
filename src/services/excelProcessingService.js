@@ -77,10 +77,22 @@ class ExcelProcessingService {
                     const headers = jsonData[0]
                     const rows = jsonData.slice(1)
 
+                    // Log detallado de headers encontrados
+                    console.log("📋 Headers encontrados en Excel:", headers)
+                    console.log("📊 Total de filas de datos:", rows.length)
+
                     // Validar que tenga las columnas esperadas
                     const missingColumns = this.validateColumns(headers)
                     if (missingColumns.length > 0) {
-                        console.warn("Columnas faltantes:", missingColumns)
+                        console.warn("⚠️ Columnas faltantes:", missingColumns)
+                    }
+
+                    // Log muestra de los primeros registros
+                    if (rows.length > 0) {
+                        console.log("🔍 Muestra de los primeros 3 registros:")
+                        rows.slice(0, 3).forEach((row, i) => {
+                            console.log(`   Fila ${i + 2}:`, row)
+                        })
                     }
 
                     // Convertir filas a objetos
@@ -89,6 +101,11 @@ class ExcelProcessingService {
                         json: this.rowToObject(headers, row),
                         raw: row
                     }))
+
+                    console.log("📋 Muestra de objetos convertidos:")
+                    result.slice(0, 3).forEach((item, i) => {
+                        console.log(`   Objeto ${i + 1}:`, item.json)
+                    })
 
                     resolve(result)
                 } catch (error) {
@@ -133,26 +150,39 @@ class ExcelProcessingService {
      * @returns {Array} Array filtrado y normalizado
      */
     static normalizeCondition(items) {
-        return (
-            items
-                // Descartar la primera fila (títulos) - ya se hace en parseExcelFile
-                // .slice(1)
-                // Descartar las filas donde no hay nada en "Condicion"
-                .filter((item) => item.json.Condicion && item.json.Condicion.toString().trim() !== "")
-                // Normalizar
-                .map((item) => {
-                    const estadoOriginal = item.json.Condicion || ""
+        console.log("🔧 Iniciando normalización de condiciones...")
+        console.log(`📊 Total de items a procesar: ${items.length}`)
 
-                    const normalizado = estadoOriginal
-                        .toLowerCase()
-                        .normalize("NFD")
-                        .replace(/[\u0300-\u036f]/g, "")
-                        .trim()
+        // Log de condiciones encontradas
+        const condiciones = items.map((item) => item.json.Condicion).filter(Boolean)
+        console.log("📋 Condiciones encontradas:", [...new Set(condiciones)])
 
-                    item.json.EstadoNormalizado = normalizado
-                    return item
-                })
-        )
+        const result = items
+            // Descartar las filas donde no hay nada en "Condicion"
+            .filter((item) => {
+                const hasCondition = item.json.Condicion && item.json.Condicion.toString().trim() !== ""
+                if (!hasCondition) {
+                    console.log(`⚠️ Fila ${item.rowIndex} sin condición válida:`, item.json)
+                }
+                return hasCondition
+            })
+            // Normalizar
+            .map((item) => {
+                const estadoOriginal = item.json.Condicion || ""
+
+                const normalizado = estadoOriginal
+                    .toLowerCase()
+                    .normalize("NFD")
+                    .replace(/[\u0300-\u036f]/g, "")
+                    .trim()
+
+                item.json.EstadoNormalizado = normalizado
+                console.log(`🔄 Fila ${item.rowIndex}: "${estadoOriginal}" → "${normalizado}"`)
+                return item
+            })
+
+        console.log(`✅ Normalización completada: ${result.length} items con condición válida`)
+        return result
     }
 
     /**
@@ -161,7 +191,10 @@ class ExcelProcessingService {
      * @returns {Array} Array con datos normalizados
      */
     static normalizeAllData(items) {
-        return items
+        console.log("🔧 Iniciando normalización de todos los datos...")
+        console.log(`📊 Items a normalizar: ${items.length}`)
+
+        const result = items
             .map(({ json, rowIndex }) => {
                 const { valor: valorNum, moneda } = this.parseValor(json.Valor)
 
@@ -173,7 +206,7 @@ class ExcelProcessingService {
                           .filter(Boolean)
                     : []
 
-                return {
+                const normalizedData = {
                     rowIndex,
                     json: {
                         dominio: json.Dominio,
@@ -208,8 +241,16 @@ class ExcelProcessingService {
                         cuota_estimativa: this.toNumber(json["Cuota Estimativa"])
                     }
                 }
+
+                // Log detallado de vehículos procesados
+                console.log(`🚗 Fila ${rowIndex}: ${normalizedData.json.marca} ${normalizedData.json.modelo} (${normalizedData.json.año}) - Estado: "${normalizedData.json.estado}"`)
+
+                return normalizedData
             })
             .filter(Boolean)
+
+        console.log(`✅ Normalización de datos completada: ${result.length} vehículos procesados`)
+        return result
     }
 
     /**
@@ -218,8 +259,27 @@ class ExcelProcessingService {
      * @returns {Array} Items filtrados
      */
     static filterByCondition(normalizedItems) {
+        console.log("🔍 Iniciando filtrado por condición...")
         const validStates = ["salon", "consignacion"]
-        return normalizedItems.filter((item) => validStates.includes(item.json.estado))
+        console.log("✅ Estados válidos:", validStates)
+
+        // Log de estados encontrados
+        const estados = normalizedItems.map((item) => item.json.estado).filter(Boolean)
+        const estadosUnicos = [...new Set(estados)]
+        console.log("📋 Estados encontrados después de normalización:", estadosUnicos)
+
+        const result = normalizedItems.filter((item) => {
+            const isValid = validStates.includes(item.json.estado)
+            if (!isValid) {
+                console.log(`❌ Fila ${item.rowIndex} excluida - estado: "${item.json.estado}" (original: "${item.json.EstadoNormalizado}")`)
+            } else {
+                console.log(`✅ Fila ${item.rowIndex} incluida - estado: "${item.json.estado}"`)
+            }
+            return isValid
+        })
+
+        console.log(`🎯 Filtrado completado: ${result.length} vehículos válidos de ${normalizedItems.length} totales`)
+        return result
     }
 
     /**

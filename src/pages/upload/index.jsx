@@ -28,7 +28,10 @@ import {
     Step,
     StepLabel,
     Stepper,
-    StepContent
+    StepContent,
+    Switch,
+    Checkbox,
+    FormControlLabel
 } from '@mui/material'
 import { Container } from '@mui/material'
 import { useDropzone } from 'react-dropzone'
@@ -299,7 +302,7 @@ const UploadPage = () => {
                                 🤖 Configuración OpenAI
                                 <Chip size="small" label="BETA" color="primary" />
                             </Typography>
-                            
+
                             <FormControlLabel
                                 control={
                                     <Switch
@@ -317,7 +320,7 @@ const UploadPage = () => {
                                     <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                                         ℹ️ OpenAI consultará datos técnicos específicos como motorizacion, cilindrada, potencia, dimensiones, etc.
                                     </Typography>
-                                    
+
                                     <FormControlLabel
                                         control={
                                             <Checkbox
@@ -329,7 +332,7 @@ const UploadPage = () => {
                                         label="Solo vehículos con alta confianza de matching"
                                         sx={{ mb: 1 }}
                                     />
-                                    
+
                                     <Typography variant="caption" color="text.secondary" display="block">
                                         💡 Recomendado para mejores resultados y menor consumo de tokens
                                     </Typography>
@@ -343,8 +346,8 @@ const UploadPage = () => {
                                 <Typography variant="subtitle2" gutterBottom>
                                     🤖 Progreso OpenAI: Lote {openaiProgress.batchNumber}/{openaiProgress.totalBatches}
                                 </Typography>
-                                <LinearProgress 
-                                    variant="determinate" 
+                                <LinearProgress
+                                    variant="determinate"
                                     value={(openaiProgress.completed / openaiProgress.total) * 100}
                                     sx={{ mb: 1 }}
                                 />
@@ -720,7 +723,14 @@ const UploadPage = () => {
         setMessageType('info')
 
         try {
-            console.log('📡 Iniciando enriquecimiento con:', matchingData.results.length, 'resultados')
+            console.log('📡 Iniciando enriquecimiento...')
+            console.log('   - Resultados de matching:', matchingData.results.length)
+            console.log('   - EnableOpenAI:', enableOpenAI)
+            console.log('   - Muestra de matching data:', {
+                total: matchingData.results.length,
+                withBestMatch: matchingData.results.filter(r => r.bestMatch).length,
+                withHighConfidence: matchingData.results.filter(r => r.bestMatch?.confidence === 'alto').length
+            })
 
             const enrichmentOptions = {
                 enableCatalogEnrichment: true,
@@ -732,8 +742,8 @@ const UploadPage = () => {
 
             const result = await ApiEnrichmentService.enrichComplete(
                 matchingData.results,
-                enrichmentOptions,
                 (progress) => {
+                    console.log('📊 Progreso de enriquecimiento:', progress)
                     if (progress.stage === 'catalog') {
                         setMessage(`Enriqueciendo con catálogo: ${progress.processed || 0}/${progress.total || 0}`)
                     } else if (progress.stage === 'openai' || progress.stage === 'openai_enrichment') {
@@ -743,11 +753,19 @@ const UploadPage = () => {
                 }
             )
 
+            console.log('📡 Resultado del enriquecimiento:', {
+                success: result.success,
+                error: result.error,
+                dataLength: result.data?.length,
+                stats: result.stats,
+                warning: result.warning
+            })
+
             if (result.success) {
                 setEnrichedData(result)
-                
+
                 let message = `✅ Enriquecimiento completado`
-                
+
                 if (result.summary?.openaiEnrichment && typeof result.summary.openaiEnrichment === 'object') {
                     const openaiSummary = result.summary.openaiEnrichment
                     message += `\n📊 Catálogo: ${result.data.length} vehículos`
@@ -755,7 +773,7 @@ const UploadPage = () => {
                 } else {
                     message += `: ${result.data.length} vehículos procesados`
                 }
-                
+
                 setMessage(message)
                 setMessageType('success')
             } else {
