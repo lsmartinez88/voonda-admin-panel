@@ -1,4 +1,44 @@
-﻿class GoogleSheetsService {
+﻿import ExcelExportService from './excelExportService.js'
+
+class GoogleSheetsService {
+    /**
+     * Inicializa Google Sheets API
+     * @returns {Promise<boolean>} True si se inicializó correctamente
+     */
+    static async initializeGoogleSheetsAPI() {
+        try {
+            // Verificar si ya está cargada
+            if (window.gapi && window.gapi.client && window.gapi.client.sheets) {
+                console.log("✅ Google Sheets API ya está disponible")
+                return true
+            }
+
+            // Cargar Google API si no está disponible
+            if (!window.gapi) {
+                console.log("📡 Cargando Google API...")
+
+                return new Promise((resolve) => {
+                    const script = document.createElement("script")
+                    script.src = "https://apis.google.com/js/api.js"
+                    script.onload = () => {
+                        console.log("✅ Google API script cargado")
+                        resolve(false) // Requiere autenticación adicional
+                    }
+                    script.onerror = () => {
+                        console.warn("⚠️ No se pudo cargar Google API")
+                        resolve(false)
+                    }
+                    document.head.appendChild(script)
+                })
+            }
+
+            return false
+        } catch (error) {
+            console.warn("⚠️ Error inicializando Google Sheets API:", error.message)
+            return false
+        }
+    }
+
     /**
      * Extrae el ID de un link de Google Sheets
      * @param {string} sheetUrl - URL de Google Sheets
@@ -61,46 +101,434 @@
      */
     static async createNewSheet(spreadsheetId, vehicleData, summary) {
         try {
-            // Simulación de la creación de hoja (requiere autenticación real con Google API)
-            console.log("📊 Simulando creación de nueva hoja en Google Sheets...")
+            console.log("📊 Preparando datos para Google Sheets...")
 
             const timestamp = new Date().toISOString().split("T")[0]
-            const sheetName = `Voonda_Vehiculos_${timestamp}`
+            const sheetName = `Voonda_Vehiculos_${timestamp}_${Date.now().toString().slice(-4)}`
 
-            // En una implementación real, aquí usarías:
-            // - Google Sheets API v4
-            // - OAuth2 para autenticación
-            // - gapi.client.sheets.spreadsheets.batchUpdate() para crear la hoja
-            // - gapi.client.sheets.spreadsheets.values.batchUpdate() para los datos
-
-            // Por ahora, simularemos el éxito y generaremos CSV como fallback
-            const csvContent = this.generateCSV(vehicleData)
-            const filename = `${sheetName}.csv`
-
-            // Descargar CSV como fallback
-            this.downloadCSV(csvContent, filename)
-
-            // Simular respuesta exitosa
-            await new Promise((resolve) => setTimeout(resolve, 2000)) // Simular delay de API
-
-            return {
-                success: true,
-                mode: "simulation", // En implementación real sería 'api'
-                sheetName: sheetName,
-                spreadsheetId: spreadsheetId,
-                sheetUrl: `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit#gid=0`,
-                newSheetUrl: `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit#gid=new_sheet_id`,
-                recordsAdded: vehicleData.length,
-                fallbackFile: filename,
-                message: "Datos preparados para Google Sheets. Se descargó CSV como respaldo."
+            // Generar datos para copiar directamente
+            const sheetsData = this.formatForGoogleSheetsAPI(vehicleData.vehicleData || vehicleData, vehicleData.headers)
+            
+            // Crear contenido para copiar al portapapeles
+            const clipboardContent = this.generateClipboardContent(vehicleData.vehicleData || vehicleData)
+            
+            // URL de Google Sheets
+            const baseSheetUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`
+            
+            // Intentar copiar al portapapeles
+            try {
+                await navigator.clipboard.writeText(clipboardContent)
+                console.log("✅ Datos copiados al portapapeles")
+                
+                // Abrir Google Sheets
+                const sheetsWindow = window.open(baseSheetUrl, "_blank")
+                
+                // Mostrar instrucciones para pegar
+                setTimeout(() => {
+                    this.showPasteInstructions(sheetName, spreadsheetId, vehicleData.length)
+                }, 2000)
+                
+                return {
+                    success: true,
+                    mode: "clipboard_paste",
+                    sheetName: sheetName,
+                    spreadsheetId: spreadsheetId,
+                    sheetUrl: baseSheetUrl,
+                    newSheetUrl: baseSheetUrl,
+                    recordsAdded: vehicleData.length,
+                    message: `Datos copiados al portapapeles. Google Sheets abierto para pegar directamente.`
+                }
+                
+            } catch (clipboardError) {
+                console.warn("⚠️ No se pudo copiar al portapapeles, usando método alternativo")
+                
+                // Fallback: Crear textarea temporal para copiar manualmente
+                const textArea = this.createCopyTextArea(clipboardContent)
+                
+                // Abrir Google Sheets
+                window.open(baseSheetUrl, "_blank")
+                
+                // Mostrar instrucciones para copiar manualmente
+                setTimeout(() => {
+                    this.showManualCopyInstructions(sheetName, spreadsheetId, vehicleData.length, textArea)
+                }, 1500)
+                
+                return {
+                    success: true,
+                    mode: "manual_copy",
+                    sheetName: sheetName,
+                    spreadsheetId: spreadsheetId,
+                    sheetUrl: baseSheetUrl,
+                    newSheetUrl: baseSheetUrl,
+                    recordsAdded: vehicleData.length,
+                    message: `Datos listos para copiar manualmente. Google Sheets abierto.`
+                }
             }
+
         } catch (error) {
-            console.error("❌ Error creando nueva hoja:", error)
+            console.error("❌ Error preparando datos:", error)
             return {
                 success: false,
                 error: error.message
             }
         }
+    }
+
+    /**
+     * Genera contenido formateado para copiar al portapapeles (separado por tabs)
+     * @param {Array} vehicleData - Datos de vehículos
+     * @returns {string} Contenido formateado con tabs
+     */
+    static generateClipboardContent(vehicleData) {
+        if (!vehicleData.length) return ""
+
+        // Si vehicleData ya viene del ExcelExportService, usar ese formato
+        if (vehicleData[0] && typeof vehicleData[0] === 'object' && !Array.isArray(vehicleData[0])) {
+            // Es un array de objetos del ExcelExportService
+            const headers = Object.keys(vehicleData[0])
+            
+            // Convertir objetos a formato tab-separated
+            const rows = vehicleData.map(row => 
+                headers.map(header => {
+                    const value = row[header] || ""
+                    // Limpiar valores para evitar problemas en Google Sheets
+                    return String(value).replace(/[\t\n\r]/g, ' ').trim()
+                }).join('\t')
+            )
+            
+            // Unir headers y rows
+            const content = [
+                headers.join('\t'),
+                ...rows
+            ].join('\n')
+            
+            return content
+        } else {
+            // Fallback para formato anterior
+            const headers = Object.keys(vehicleData[0] || {})
+            
+            const rows = vehicleData.map(row => 
+                headers.map(header => {
+                    const value = row[header] || ""
+                    return String(value).replace(/[\t\n\r]/g, ' ').trim()
+                }).join('\t')
+            )
+            
+            const content = [
+                headers.join('\t'),
+                ...rows
+            ].join('\n')
+            
+            return content
+        }
+    }
+
+    /**
+     * Crea un textarea temporal para copiar manualmente
+     * @param {string} content - Contenido a copiar
+     * @returns {HTMLElement} Textarea element
+     */
+    static createCopyTextArea(content) {
+        const textArea = document.createElement('textarea')
+        textArea.value = content
+        textArea.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            height: 200px;
+            z-index: 10001;
+            background: white;
+            border: 2px solid #1976d2;
+            border-radius: 8px;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 12px;
+        `
+        
+        document.body.appendChild(textArea)
+        textArea.select()
+        
+        return textArea
+    }
+
+    /**
+     * Muestra instrucciones para pegar directamente desde el portapapeles
+     */
+    static showPasteInstructions(sheetName, spreadsheetId, recordCount) {
+        const modal = document.createElement('div')
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: Arial, sans-serif;
+        `
+        
+        modal.innerHTML = `
+            <div style="
+                background: white;
+                padding: 30px;
+                border-radius: 12px;
+                max-width: 600px;
+                width: 90%;
+                max-height: 80vh;
+                overflow-y: auto;
+                box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            ">
+                <h2 style="margin: 0 0 20px 0; color: #1976d2;">
+                    📋 Pegar datos en Google Sheets
+                </h2>
+                
+                <div style="background: #e8f5e8; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #4caf50;">
+                    <strong>✅ Datos copiados al portapapeles!</strong><br>
+                    ${recordCount} registros listos para pegar
+                </div>
+                
+                <h3 style="color: #333; margin: 20px 0 10px 0;">Pasos para pegar:</h3>
+                
+                <ol style="line-height: 1.8; margin: 0; padding-left: 20px;">
+                    <li><strong>Ve a Google Sheets</strong> (se abrió en otra pestaña)</li>
+                    <li><strong>Haz clic en la celda A1</strong> donde quieres empezar los datos</li>
+                    <li><strong>Pega los datos:</strong>
+                        <ul style="margin: 8px 0;">
+                            <li><strong>Windows/Linux:</strong> Ctrl + V</li>
+                            <li><strong>Mac:</strong> Cmd + V</li>
+                        </ul>
+                    </li>
+                    <li><strong>¡Listo!</strong> Los datos se pegarán automáticamente en formato de tabla</li>
+                </ol>
+                
+                <div style="background: #fff3e0; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                    <strong>💡 Tips:</strong><br>
+                    • Los datos están formateados con columnas automáticamente<br>
+                    • Puedes crear una nueva hoja para mejor organización<br>
+                    • Los datos incluyen: Excel original + matching + enriquecimiento
+                </div>
+                
+                <div style="text-align: center; margin-top: 25px;">
+                    <button onclick="this.parentElement.parentElement.parentElement.remove()" 
+                            style="
+                                background: #4caf50;
+                                color: white;
+                                border: none;
+                                padding: 12px 24px;
+                                border-radius: 6px;
+                                cursor: pointer;
+                                font-size: 16px;
+                                font-weight: 500;
+                            ">
+                        ✅ Perfecto, voy a pegar
+                    </button>
+                </div>
+            </div>
+        `
+        
+        // Cerrar al hacer clic en el fondo
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove()
+            }
+        })
+        
+        document.body.appendChild(modal)
+    }
+
+    /**
+     * Muestra instrucciones para copiar manualmente
+     */
+    static showManualCopyInstructions(sheetName, spreadsheetId, recordCount, textArea) {
+        const modal = document.createElement('div')
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: Arial, sans-serif;
+        `
+        
+        modal.innerHTML = `
+            <div style="
+                background: white;
+                padding: 30px;
+                border-radius: 12px;
+                max-width: 600px;
+                width: 90%;
+                max-height: 80vh;
+                overflow-y: auto;
+                box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            ">
+                <h2 style="margin: 0 0 20px 0; color: #1976d2;">
+                    📋 Copiar y pegar datos manualmente
+                </h2>
+                
+                <div style="background: #fff3e0; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <strong>📝 ${recordCount} registros listos para copiar</strong>
+                </div>
+                
+                <h3 style="color: #333; margin: 20px 0 10px 0;">Pasos:</h3>
+                
+                <ol style="line-height: 1.8; margin: 0; padding-left: 20px;">
+                    <li><strong>El texto ya está seleccionado abajo</strong> ⬇️</li>
+                    <li><strong>Copia:</strong> Ctrl+C (Windows/Linux) o Cmd+C (Mac)</li>
+                    <li><strong>Ve a Google Sheets</strong> (se abrió en otra pestaña)</li>
+                    <li><strong>Haz clic en la celda A1</strong></li>
+                    <li><strong>Pega:</strong> Ctrl+V (Windows/Linux) o Cmd+V (Mac)</li>
+                </ol>
+                
+                <div style="text-align: center; margin: 25px 0;">
+                    <button onclick="
+                        document.querySelector('textarea').select();
+                        document.execCommand('copy');
+                        this.textContent = '✅ ¡Copiado!';
+                        this.style.background = '#4caf50';
+                    " style="
+                        background: #1976d2;
+                        color: white;
+                        border: none;
+                        padding: 12px 24px;
+                        border-radius: 6px;
+                        cursor: pointer;
+                        font-size: 16px;
+                        font-weight: 500;
+                        margin-right: 10px;
+                    ">
+                        📋 Copiar datos
+                    </button>
+                    
+                    <button onclick="
+                        this.parentElement.parentElement.parentElement.remove();
+                        document.querySelector('textarea').remove();
+                    " style="
+                        background: #4caf50;
+                        color: white;
+                        border: none;
+                        padding: 12px 24px;
+                        border-radius: 6px;
+                        cursor: pointer;
+                        font-size: 16px;
+                        font-weight: 500;
+                    ">
+                        ✅ Listo
+                    </button>
+                </div>
+            </div>
+        `
+        
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove()
+                textArea.remove()
+            }
+        })
+        
+        document.body.appendChild(modal)
+    }
+
+    /**
+     * Muestra instrucciones detalladas para importar el CSV
+     * @param {string} filename - Nombre del archivo CSV
+     * @param {string} sheetName - Nombre de la hoja propuesta
+     * @param {string} spreadsheetId - ID del spreadsheet
+     */
+    static showImportInstructions(filename, sheetName, spreadsheetId) {
+        // Crear modal con instrucciones
+        const modal = document.createElement("div")
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: Arial, sans-serif;
+        `
+
+        modal.innerHTML = `
+            <div style="
+                background: white;
+                padding: 30px;
+                border-radius: 12px;
+                max-width: 600px;
+                width: 90%;
+                max-height: 80vh;
+                overflow-y: auto;
+                box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            ">
+                <h2 style="margin: 0 0 20px 0; color: #1976d2;">
+                    📊 Cómo importar tus datos a Google Sheets
+                </h2>
+                
+                <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <strong>📁 Archivo descargado:</strong> ${filename}
+                </div>
+                
+                <h3 style="color: #333; margin: 20px 0 10px 0;">Pasos para importar:</h3>
+                
+                <ol style="line-height: 1.8; margin: 0; padding-left: 20px;">
+                    <li><strong>En Google Sheets</strong>, ve al menú <strong>Archivo</strong> → <strong>Importar</strong></li>
+                    <li>Haz clic en la pestaña <strong>"Subir"</strong></li>
+                    <li>Arrastra el archivo <code>${filename}</code> o haz clic en <strong>"Seleccionar archivo"</strong></li>
+                    <li>Configura las opciones:
+                        <ul style="margin: 5px 0;">
+                            <li><strong>Tipo de separador:</strong> Coma</li>
+                            <li><strong>Convertir texto a números:</strong> Sí</li>
+                            <li><strong>Lugar de importación:</strong> Insertar nueva hoja</li>
+                        </ul>
+                    </li>
+                    <li>Haz clic en <strong>"Importar datos"</strong></li>
+                    <li>(Opcional) Renombra la hoja a: <code>${sheetName}</code></li>
+                </ol>
+                
+                <div style="background: #fff3e0; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                    <strong>💡 Tip:</strong> Los datos incluyen toda la información procesada: 
+                    Excel original + matching + enriquecimiento API.
+                </div>
+                
+                <div style="text-align: center; margin-top: 25px;">
+                    <button onclick="this.parentElement.parentElement.parentElement.remove()" 
+                            style="
+                                background: #1976d2;
+                                color: white;
+                                border: none;
+                                padding: 12px 24px;
+                                border-radius: 6px;
+                                cursor: pointer;
+                                font-size: 16px;
+                                font-weight: 500;
+                            ">
+                        ✅ Entendido
+                    </button>
+                </div>
+            </div>
+        `
+
+        // Cerrar al hacer clic en el fondo
+        modal.addEventListener("click", (e) => {
+            if (e.target === modal) {
+                modal.remove()
+            }
+        })
+
+        // Agregar al DOM
+        document.body.appendChild(modal)
     }
 
     /**
@@ -123,6 +551,10 @@
                 }
             }
 
+            // Intentar inicializar Google Sheets API
+            const apiAvailable = await this.initializeGoogleSheetsAPI()
+            console.log("🔗 Google Sheets API disponible:", apiAvailable)
+
             // Preparar datos
             const preparedData = this.prepareDataForGoogleSheets(enrichedData, originalStats)
             if (!preparedData.success) {
@@ -133,7 +565,7 @@
             }
 
             // Crear nueva hoja en el documento especificado
-            const result = await this.createNewSheet(validation.sheetId, preparedData.data.vehicleData, preparedData.data.summary)
+            const result = await this.createNewSheet(validation.sheetId, preparedData.data, preparedData.data.summary)
 
             if (result.success) {
                 return {
@@ -174,14 +606,19 @@
         try {
             console.log("📊 Preparando datos para exportar a Google Sheets...")
 
+            // Usar el mismo servicio que el Excel Export para mantener consistencia
+            const excelData = ExcelExportService.prepareExcelData(enrichedData)
+
             const sheetsData = {
                 metadata: this.generateMetadata(originalStats),
-                vehicleData: this.formatVehicleData(enrichedData),
+                vehicleData: excelData.rows, // Usar las mismas filas que Excel
+                headers: excelData.headers,   // Usar los mismos headers que Excel
                 summary: this.generateSummary(enrichedData),
                 enrichmentStats: this.generateEnrichmentSummary(enrichedData)
             }
 
             console.log(`✅ Datos preparados: ${sheetsData.vehicleData.length} vehículos listos para export`)
+            console.log(`📋 Headers: ${sheetsData.headers.join(', ')}`)
 
             return {
                 success: true,
@@ -433,19 +870,20 @@
     /**
      * Genera CSV para descarga directa
      * @param {Array} vehicleData - Datos de vehículos formateados
+     * @param {Array} headers - Headers opcionales (si no están en vehicleData)
      * @returns {string} Contenido CSV
      */
-    static generateCSV(vehicleData) {
+    static generateCSV(vehicleData, headers = null) {
         if (!vehicleData.length) return ""
 
-        // Headers del CSV
-        const headers = Object.keys(vehicleData[0])
+        // Si viene con headers separados (del ExcelExportService)
+        const csvHeaders = headers || Object.keys(vehicleData[0])
 
         // Convertir datos a CSV
         const csvContent = [
-            headers.join(","), // Headers
+            csvHeaders.join(","), // Headers
             ...vehicleData.map((row) =>
-                headers
+                csvHeaders
                     .map((header) => {
                         const value = row[header] || ""
                         // Escapar comillas y comas
@@ -485,18 +923,19 @@
     /**
      * Genera estructura para Google Sheets API
      * @param {Array} vehicleData - Datos formateados
+     * @param {Array} headers - Headers opcionales (del ExcelExportService)
      * @returns {Object} Estructura para Google Sheets API
      */
-    static formatForGoogleSheetsAPI(vehicleData) {
+    static formatForGoogleSheetsAPI(vehicleData, headers = null) {
         if (!vehicleData.length) return { headers: [], rows: [] }
 
-        const headers = Object.keys(vehicleData[0])
-        const rows = vehicleData.map((row) => headers.map((header) => row[header] || ""))
+        const sheetHeaders = headers || Object.keys(vehicleData[0])
+        const rows = vehicleData.map((row) => sheetHeaders.map((header) => row[header] || ""))
 
         return {
-            headers,
+            headers: sheetHeaders,
             rows,
-            totalColumns: headers.length,
+            totalColumns: sheetHeaders.length,
             totalRows: rows.length
         }
     }
@@ -519,15 +958,15 @@
                 throw new Error(preparedData.error)
             }
 
-            // Generar CSV
-            const csvContent = this.generateCSV(preparedData.data.vehicleData)
+            // Generar CSV con headers del ExcelExportService
+            const csvContent = this.generateCSV(preparedData.data.vehicleData, preparedData.data.headers)
 
             // Descargar CSV automáticamente
             const filename = options.filename || `vehiculos_procesados_${new Date().toISOString().split("T")[0]}.csv`
             this.downloadCSV(csvContent, filename)
 
             // Preparar estructura para Google Sheets API (para futuro uso)
-            const sheetsStructure = this.formatForGoogleSheetsAPI(preparedData.data.vehicleData)
+            const sheetsStructure = this.formatForGoogleSheetsAPI(preparedData.data.vehicleData, preparedData.data.headers)
 
             console.log("✅ Exportación completada exitosamente")
 

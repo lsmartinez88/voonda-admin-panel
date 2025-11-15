@@ -79,6 +79,11 @@ const UploadPage = () => {
     const [googleSheetsUrl, setGoogleSheetsUrl] = useState('')
     const [googleSheetsUrlError, setGoogleSheetsUrlError] = useState('')
 
+    // Estados para OpenAI
+    const [enableOpenAI, setEnableOpenAI] = useState(false)
+    const [openaiOnlyHighConfidence, setOpenaiOnlyHighConfidence] = useState(true)
+    const [openaiProgress, setOpenaiProgress] = useState(null)
+
     // Estado del stepper
     const [activeStep, setActiveStep] = useState(0)
 
@@ -283,23 +288,91 @@ const UploadPage = () => {
                     📡 Enriquecimiento de Datos
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                    Agregamos información adicional consultando la API externa
+                    Agregamos información adicional consultando APIs externas y OpenAI
                 </Typography>
 
                 {!enrichedData ? (
-                    <Button
-                        variant="contained"
-                        onClick={processEnrichment}
-                        disabled={enriching || !matchingData?.success}
-                        startIcon={enriching ? <ProcessIcon /> : <EnhanceIcon />}
-                        size="large"
-                    >
-                        {enriching ? 'Enriqueciendo...' : 'Enriquecer Datos'}
-                    </Button>
+                    <Box>
+                        {/* Configuración OpenAI */}
+                        <Box sx={{ mb: 3, p: 2, border: '1px solid #e0e0e0', borderRadius: 2 }}>
+                            <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                🤖 Configuración OpenAI
+                                <Chip size="small" label="BETA" color="primary" />
+                            </Typography>
+                            
+                            <FormControlLabel
+                                control={
+                                    <Switch
+                                        checked={enableOpenAI}
+                                        onChange={(e) => setEnableOpenAI(e.target.checked)}
+                                        color="primary"
+                                    />
+                                }
+                                label="Enriquecer con OpenAI (fichas técnicas detalladas)"
+                                sx={{ mb: 2, display: 'block' }}
+                            />
+
+                            {enableOpenAI && (
+                                <Box sx={{ ml: 3, mb: 2 }}>
+                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                        ℹ️ OpenAI consultará datos técnicos específicos como motorizacion, cilindrada, potencia, dimensiones, etc.
+                                    </Typography>
+                                    
+                                    <FormControlLabel
+                                        control={
+                                            <Checkbox
+                                                checked={openaiOnlyHighConfidence}
+                                                onChange={(e) => setOpenaiOnlyHighConfidence(e.target.checked)}
+                                                size="small"
+                                            />
+                                        }
+                                        label="Solo vehículos con alta confianza de matching"
+                                        sx={{ mb: 1 }}
+                                    />
+                                    
+                                    <Typography variant="caption" color="text.secondary" display="block">
+                                        💡 Recomendado para mejores resultados y menor consumo de tokens
+                                    </Typography>
+                                </Box>
+                            )}
+                        </Box>
+
+                        {/* Progreso de OpenAI */}
+                        {openaiProgress && (
+                            <Box sx={{ mb: 3, p: 2, bgcolor: '#f5f5f5', borderRadius: 2 }}>
+                                <Typography variant="subtitle2" gutterBottom>
+                                    🤖 Progreso OpenAI: Lote {openaiProgress.batchNumber}/{openaiProgress.totalBatches}
+                                </Typography>
+                                <LinearProgress 
+                                    variant="determinate" 
+                                    value={(openaiProgress.completed / openaiProgress.total) * 100}
+                                    sx={{ mb: 1 }}
+                                />
+                                <Typography variant="caption">
+                                    {openaiProgress.completed}/{openaiProgress.total} vehículos procesados
+                                </Typography>
+                            </Box>
+                        )}
+
+                        <Button
+                            variant="contained"
+                            onClick={processEnrichment}
+                            disabled={enriching || !matchingData?.success}
+                            startIcon={enriching ? <ProcessIcon /> : <EnhanceIcon />}
+                            size="large"
+                        >
+                            {enriching ? 'Enriqueciendo...' : `Enriquecer Datos${enableOpenAI ? ' + OpenAI' : ''}`}
+                        </Button>
+                    </Box>
                 ) : (
                     <Box>
                         <Alert severity="success" sx={{ mb: 2 }}>
-                            ✅ Enriquecimiento completado: {enrichedData.stats.enrichedSuccessfully} vehículos enriquecidos
+                            ✅ Enriquecimiento completado: {enrichedData.data?.length || 0} vehículos procesados
+                            {enrichedData.summary?.openaiEnrichment && typeof enrichedData.summary.openaiEnrichment === 'object' && (
+                                <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                                    🤖 OpenAI: {enrichedData.summary.openaiEnrichment.openaiSuccessful} exitosos / {enrichedData.summary.openaiEnrichment.openaiCandidates} candidatos ({enrichedData.summary.openaiEnrichment.openaiSuccessRate})
+                                </Typography>
+                            )}
                         </Alert>
                         {renderEnrichmentDataSummary()}
                     </Box>
@@ -643,22 +716,47 @@ const UploadPage = () => {
         if (!matchingData?.success || !matchingData?.results) return
 
         setEnriching(true)
-        setMessage('📡 Enriqueciendo datos con API...')
+        setMessage(`📡 Enriqueciendo datos${enableOpenAI ? ' con API + OpenAI' : ' con API'}...`)
         setMessageType('info')
 
         try {
             console.log('📡 Iniciando enriquecimiento con:', matchingData.results.length, 'resultados')
 
-            const result = await ApiEnrichmentService.enrichMatchingResults(
+            const enrichmentOptions = {
+                enableCatalogEnrichment: true,
+                enableOpenAI: enableOpenAI,
+                onlyHighConfidence: openaiOnlyHighConfidence,
+                batchSize: 3,
+                delayBetweenBatches: 2000
+            }
+
+            const result = await ApiEnrichmentService.enrichComplete(
                 matchingData.results,
+                enrichmentOptions,
                 (progress) => {
-                    setMessage(`Enriqueciendo datos: ${progress.processed}/${progress.total} (${progress.percentage}%)`)
+                    if (progress.stage === 'catalog') {
+                        setMessage(`Enriqueciendo con catálogo: ${progress.processed || 0}/${progress.total || 0}`)
+                    } else if (progress.stage === 'openai' || progress.stage === 'openai_enrichment') {
+                        setOpenaiProgress(progress)
+                        setMessage(`🤖 Consultando OpenAI: ${progress.completed || 0}/${progress.total || 0} (${progress.batchNumber || 0}/${progress.totalBatches || 0} lotes)`)
+                    }
                 }
             )
 
             if (result.success) {
                 setEnrichedData(result)
-                setMessage(`✅ Enriquecimiento completado: ${result.stats.enrichedSuccessfully} vehículos enriquecidos`)
+                
+                let message = `✅ Enriquecimiento completado`
+                
+                if (result.summary?.openaiEnrichment && typeof result.summary.openaiEnrichment === 'object') {
+                    const openaiSummary = result.summary.openaiEnrichment
+                    message += `\n📊 Catálogo: ${result.data.length} vehículos`
+                    message += `\n🤖 OpenAI: ${openaiSummary.openaiSuccessful}/${openaiSummary.openaiCandidates} exitosos (${openaiSummary.openaiSuccessRate})`
+                } else {
+                    message += `: ${result.data.length} vehículos procesados`
+                }
+                
+                setMessage(message)
                 setMessageType('success')
             } else {
                 setMessage(`❌ Error en enriquecimiento: ${result.error}`)
@@ -728,7 +826,7 @@ const UploadPage = () => {
 
         setShowGoogleSheetsDialog(false)
         setExporting(true)
-        setMessage('📊 Creando nueva hoja en tu Google Sheets...')
+        setMessage('📊 Conectando con Google Sheets...')
         setMessageType('info')
 
         try {
@@ -740,10 +838,28 @@ const UploadPage = () => {
 
             if (result.success) {
                 setExportResult(result)
-                if (result.mode === 'simulation') {
-                    setMessage(`✅ Datos preparados para Google Sheets. Se creará la hoja "${result.sheetName}" en tu documento. CSV descargado como respaldo: ${result.fallbackFile}`)
-                } else {
-                    setMessage(`✅ Nueva hoja "${result.sheetName}" creada exitosamente en tu Google Sheets con ${result.recordCount} vehículos`)
+
+                switch (result.mode) {
+                    case 'api':
+                        setMessage(`✅ ¡Nueva hoja creada exitosamente! La hoja "${result.sheetName}" se agregó a tu Google Sheets con ${result.recordCount} vehículos.`)
+                        break
+                    case 'clipboard_paste':
+                        setMessage(`📋 ¡Datos copiados al portapapeles! Ve a Google Sheets y pega con Ctrl+V (Cmd+V en Mac). ${result.recordCount} registros listos.`)
+                        break
+                    case 'manual_copy':
+                        setMessage(`📝 Datos listos para copiar manualmente. Sigue las instrucciones que aparecen para copiar y pegar en Google Sheets.`)
+                        break
+                    case 'direct_import':
+                        setMessage(`📊 CSV generado y Google Sheets abierto. Aparecerán instrucciones detalladas para importar "${result.fallbackFile}".`)
+                        break
+                    case 'manual_import':
+                        setMessage(`📋 CSV generado para importar manualmente. Se abrió Google Sheets en una nueva ventana. Sigue las instrucciones para importar el archivo.`)
+                        break
+                    case 'csv_download':
+                        setMessage(`📥 CSV descargado: "${result.fallbackFile}". Google Sheets abierto para importar manualmente.`)
+                        break
+                    default:
+                        setMessage(`✅ Datos preparados para Google Sheets. Se creará la hoja "${result.sheetName}" en tu documento.`)
                 }
                 setMessageType('success')
             } else {
@@ -755,7 +871,7 @@ const UploadPage = () => {
             setMessageType('error')
         } finally {
             setExporting(false)
-            setTimeout(() => setMessage(''), 10000)
+            setTimeout(() => setMessage(''), 15000) // Más tiempo para leer las instrucciones
         }
     }
 
@@ -920,17 +1036,17 @@ const UploadPage = () => {
                 </DialogTitle>
                 <DialogContent>
                     <Typography variant="body1" sx={{ mb: 3 }}>
-                        Ingresa el link de tu Google Sheets donde quieres que se cree una nueva hoja con los datos procesados.
+                        Ingresa el link de tu Google Sheets donde quieres agregar los datos procesados.
                     </Typography>
 
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                         ✨ <strong>¿Qué va a pasar?</strong>
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                        • Se creará una nueva hoja en tu documento de Google Sheets<br />
-                        • La hoja incluirá todos los datos procesados: Excel original + matching + enriquecimiento<br />
-                        • Se descargará un CSV como respaldo<br />
-                        • El archivo original no se modificará
+                        • Se intentará crear una nueva hoja automáticamente usando Google Sheets API<br />
+                        • Si no es posible, se descargará un CSV y se abrirá Google Sheets para importar manualmente<br />
+                        • Los datos incluyen: Excel original + matching + enriquecimiento<br />
+                        • Tu archivo original no se modificará
                     </Typography>
 
                     <TextField
@@ -948,7 +1064,7 @@ const UploadPage = () => {
                     />
 
                     <Typography variant="caption" color="text.secondary">
-                        💡 <strong>Tip:</strong> Asegúrate de que el Google Sheets esté compartido para que puedas editarlo.
+                        💡 <strong>Importante:</strong> Si usas importación manual, ve a Archivo → Importar en Google Sheets y selecciona el CSV descargado.
                     </Typography>
                 </DialogContent>
                 <DialogActions>

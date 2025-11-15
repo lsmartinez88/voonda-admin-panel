@@ -1,4 +1,5 @@
 ﻿import axios from "axios"
+import OpenAIService from "./openaiService.js"
 
 class ApiEnrichmentService {
     static API_BASE_URL = "https://api.fratelliautomotores.com.ar/api"
@@ -284,6 +285,254 @@ class ApiEnrichmentService {
             }
         }
     }
+
+    /**
+     * Enriquece los resultados con datos técnicos de OpenAI
+     * @param {Array} matchingResults - Resultados del proceso de matching
+     * @param {Object} options - Opciones de procesamiento
+     * @param {Function} onProgress - Callback para reportar progreso
+     * @returns {Promise<Object>} Datos enriquecidos con información de OpenAI
+     */
+    static async enrichWithOpenAI(matchingResults, options = {}, onProgress = null) {
+        try {
+            console.log("🤖 Iniciando enriquecimiento con OpenAI...")
+
+            const {
+                enableOpenAI = true,
+                batchSize = 3, // Lotes más pequeños para OpenAI
+                delayBetweenBatches = 2000, // Delay más largo para respetar rate limits
+                onlyHighConfidence = false
+            } = options
+
+            if (!enableOpenAI) {
+                console.log("⚠️ OpenAI deshabilitado, saltando enriquecimiento")
+                return {
+                    success: true,
+                    data: matchingResults,
+                    openaiUsed: false,
+                    message: "Enriquecimiento con OpenAI deshabilitado"
+                }
+            }
+
+            // Filtrar vehículos para enriquecer con OpenAI
+            const vehiclesToEnrich = matchingResults.filter(result => {
+                // Solo procesar si hay match
+                if (!result.bestMatch) return false
+                
+                // Si solo alta confianza está habilitado
+                if (onlyHighConfidence && result.bestMatch.confidence !== "alto") return false
+                
+                // Verificar que tenemos datos básicos
+                const excelData = result.excelVehicle?.json || {}
+                return excelData.marca && excelData.modelo && excelData.año
+            })
+
+            console.log(`📊 Vehículos candidatos para OpenAI: ${vehiclesToEnrich.length}`)
+
+            if (vehiclesToEnrich.length === 0) {
+                return {
+                    success: true,
+                    data: matchingResults,
+                    openaiUsed: false,
+                    message: "No hay vehículos candidatos para enriquecimiento con OpenAI"
+                }
+            }
+
+            // Preparar datos para OpenAI
+            const vehicleQueries = vehiclesToEnrich.map(result => {
+                const excelData = result.excelVehicle?.json || {}
+                const catalogData = result.bestMatch?.catalogVehicle || {}
+                
+                return {
+                    originalResult: result,
+                    marca: excelData.marca || catalogData.brand,
+                    modelo: excelData.modelo || catalogData.model,
+                    version: excelData.versión || excelData.version || catalogData.version,
+                    ano: excelData.año || catalogData.year
+                }
+            })
+
+            // Procesar con OpenAI en lotes
+            const openaiResults = await OpenAIService.processVehiclesBatch(
+                vehicleQueries,
+                {
+                    batchSize,
+                    delayBetweenBatches,
+                    onProgress: (progress) => {
+                        console.log(`🤖 OpenAI Progreso: ${progress.completed}/${progress.total} (${((progress.completed / progress.total) * 100).toFixed(1)}%)`)
+                        
+                        if (onProgress) {
+                            onProgress({
+                                stage: 'openai_enrichment',
+                                ...progress
+                            })
+                        }
+                    }
+                }
+            )
+
+            // Integrar resultados de OpenAI con los resultados existentes
+            const enrichedResults = matchingResults.map(result => {
+                // Buscar si este resultado fue procesado por OpenAI
+                const openaiResult = openaiResults.results.find(
+                    openaiRes => openaiRes.vehicleQuery?.originalResult === result
+                )
+
+                if (openaiResult && openaiResult.success) {
+                    // Merge con datos de OpenAI
+                    return {
+                        ...result,
+                        excelData: result.excelVehicle?.json || {},
+                        matchData: result.bestMatch || {},
+                        enrichedData: {
+                            ...(result.enrichedData || {}),
+                            openai: openaiResult.technicalData,
+                            openaiModel: openaiResult.model,
+                            openaiUsage: openaiResult.usage
+                        },
+                        openaiEnrichment: {
+                            success: true,
+                            timestamp: new Date().toISOString(),
+                            model: openaiResult.model,
+                            usage: openaiResult.usage
+                        }
+                    }
+                } else if (openaiResult && !openaiResult.success) {
+                    // Error en OpenAI pero mantener el resultado
+                    return {
+                        ...result,
+                        excelData: result.excelVehicle?.json || {},
+                        matchData: result.bestMatch || {},
+                        enrichedData: result.enrichedData || {},
+                        openaiEnrichment: {
+                            success: false,
+                            error: openaiResult.error,
+                            timestamp: new Date().toISOString()
+                        }
+                    }
+                } else {
+                    // No procesado por OpenAI
+                    return {
+                        ...result,
+                        excelData: result.excelVehicle?.json || {},
+                        matchData: result.bestMatch || {},
+                        enrichedData: result.enrichedData || {}
+                    }
+                }
+            })
+
+            const summary = openaiResults.summary
+            const successCount = summary.successful
+
+            console.log(`✅ Enriquecimiento OpenAI completado: ${successCount}/${vehiclesToEnrich.length} exitosos`)
+
+            return {
+                success: true,
+                data: enrichedResults,
+                openaiUsed: true,
+                summary: {
+                    totalProcessed: matchingResults.length,
+                    openaiCandidates: vehiclesToEnrich.length,
+                    openaiSuccessful: successCount,
+                    openaiErrors: summary.failed,
+                    openaiSuccessRate: summary.successRate
+                }
+            }
+
+        } catch (error) {
+            console.error("❌ Error en enriquecimiento OpenAI:", error)
+            return {
+                success: false,
+                error: error.message,
+                data: matchingResults,
+                openaiUsed: false
+            }
+        }
+    }
+
+    /**
+     * Pipeline completo de enriquecimiento (Catálogo + OpenAI)
+     * @param {Array} matchingResults - Resultados del matching
+     * @param {Object} options - Opciones de procesamiento
+     * @param {Function} onProgress - Callback de progreso
+     * @returns {Promise<Object>} Datos enriquecidos completos
+     */
+    static async enrichComplete(matchingResults, options = {}, onProgress = null) {
+        try {
+            console.log("🚀 Iniciando pipeline completo de enriquecimiento...")
+
+            const {
+                enableCatalogEnrichment = true,
+                enableOpenAI = true,
+                ...openaiOptions
+            } = options
+
+            let currentResults = matchingResults
+
+            // Paso 1: Enriquecimiento con catálogo
+            if (enableCatalogEnrichment) {
+                console.log("📊 Paso 1: Enriquecimiento con catálogo...")
+                const catalogEnrichment = await this.enrichMatchingResults(
+                    currentResults,
+                    (progress) => onProgress && onProgress({ stage: 'catalog', ...progress })
+                )
+                
+                if (catalogEnrichment.success) {
+                    currentResults = catalogEnrichment.data
+                    console.log("✅ Enriquecimiento con catálogo completado")
+                } else {
+                    console.error("❌ Error en enriquecimiento con catálogo:", catalogEnrichment.error)
+                }
+            }
+
+            // Paso 2: Enriquecimiento con OpenAI
+            if (enableOpenAI) {
+                console.log("🤖 Paso 2: Enriquecimiento con OpenAI...")
+                const openaiEnrichment = await this.enrichWithOpenAI(
+                    currentResults,
+                    openaiOptions,
+                    (progress) => onProgress && onProgress({ stage: 'openai', ...progress })
+                )
+                
+                if (openaiEnrichment.success) {
+                    currentResults = openaiEnrichment.data
+                    console.log("✅ Enriquecimiento con OpenAI completado")
+                    
+                    return {
+                        success: true,
+                        data: currentResults,
+                        summary: {
+                            catalogEnrichment: enableCatalogEnrichment,
+                            openaiEnrichment: openaiEnrichment.summary,
+                            totalVehicles: currentResults.length
+                        }
+                    }
+                } else {
+                    console.error("❌ Error en enriquecimiento con OpenAI:", openaiEnrichment.error)
+                    // Continuar sin OpenAI
+                }
+            }
+
+            return {
+                success: true,
+                data: currentResults,
+                summary: {
+                    catalogEnrichment: enableCatalogEnrichment,
+                    openaiEnrichment: enableOpenAI ? "error" : "disabled",
+                    totalVehicles: currentResults.length
+                }
+            }
+
+        } catch (error) {
+            console.error("❌ Error en pipeline completo de enriquecimiento:", error)
+            return {
+                success: false,
+                error: error.message,
+                data: matchingResults
+            }
+        }
+    }
+}
 }
 
 export default ApiEnrichmentService

@@ -5,7 +5,7 @@ class ExcelExportService {
         // Columnas requeridas exactamente como las especificaste
         const headers = [
             "patente",
-            "kilometros",
+            "kilometros", 
             "vehiculo_ano",
             "valor",
             "moneda",
@@ -41,6 +41,7 @@ class ExcelExportService {
             "ancho",
             "alto",
             "url_ficha",
+            "modelo_rag",
             "titulo_legible",
             "ficha_breve"
         ]
@@ -64,6 +65,9 @@ class ExcelExportService {
 
             // Extraer datos del enriquecimiento
             const enrichedData = vehicle.enrichedData || {}
+            
+            // Extraer datos de OpenAI si están disponibles
+            const openaiData = enrichedData.openai || {}
 
             // Debug para el primer elemento
             if (index === 0) {
@@ -71,6 +75,7 @@ class ExcelExportService {
                 console.log("🔍 MatchData:", matchData)
                 console.log("🔍 CatalogVehicle:", catalogVehicle)
                 console.log("🔍 EnrichedData:", enrichedData)
+                console.log("🔍 OpenAI Data:", openaiData)
             }
 
             // === DATOS DEL EXCEL ORIGINAL ===
@@ -92,53 +97,54 @@ class ExcelExportService {
             excelRow.version = excelData.versión || excelData.version || catalogVehicle.version || enrichedData.version || ""
 
             // === ESPECIFICACIONES TÉCNICAS ===
-            excelRow.motorizacion = catalogVehicle.engine || enrichedData.engine || catalogVehicle.motor || ""
-            excelRow.combustible = catalogVehicle.fuel || enrichedData.fuel || catalogVehicle.fuelType || ""
-            excelRow.caja = catalogVehicle.transmission || enrichedData.transmission || ""
-            excelRow.traccion = catalogVehicle.drivetrain || enrichedData.drivetrain || ""
-            excelRow.puertas = catalogVehicle.doors || enrichedData.doors || ""
+            // Prioridad: OpenAI > Catálogo > Enriquecimiento > Excel
+            excelRow.motorizacion = openaiData.motorizacion || catalogVehicle.engine || enrichedData.engine || catalogVehicle.motor || ""
+            excelRow.combustible = openaiData.combustible || catalogVehicle.fuel || enrichedData.fuel || catalogVehicle.fuelType || ""
+            excelRow.caja = openaiData.caja || catalogVehicle.transmission || enrichedData.transmission || ""
+            excelRow.traccion = openaiData.traccion || catalogVehicle.drivetrain || enrichedData.drivetrain || ""
+            excelRow.puertas = openaiData.puertas || catalogVehicle.doors || enrichedData.doors || ""
 
             // === SEGMENTACIÓN Y CLASIFICACIÓN ===
-            excelRow.segmento_modelo = catalogVehicle.segment || enrichedData.segment || catalogVehicle.category || ""
+            excelRow.segmento_modelo = openaiData.segmento_modelo || catalogVehicle.segment || enrichedData.segment || catalogVehicle.category || ""
 
             // === ESPECIFICACIONES DEL MOTOR ===
-            excelRow.cilindrada = catalogVehicle.displacement || enrichedData.displacement || ""
-            excelRow.potencia_hp = catalogVehicle.horsepower || enrichedData.horsepower || catalogVehicle.power || ""
-            excelRow.torque_nm = catalogVehicle.torque || enrichedData.torque || ""
+            excelRow.cilindrada = openaiData.cilindrada || catalogVehicle.displacement || enrichedData.displacement || ""
+            excelRow.potencia_hp = openaiData.potencia_hp || catalogVehicle.horsepower || enrichedData.horsepower || catalogVehicle.power || ""
+            excelRow.torque_nm = openaiData.torque_nm || catalogVehicle.torque || enrichedData.torque || ""
 
             // === CARACTERÍSTICAS DE SEGURIDAD ===
-            excelRow.airbags = catalogVehicle.airbags || enrichedData.airbags || ""
-            excelRow.abs = catalogVehicle.abs || enrichedData.abs || ""
-            excelRow.control_estabilidad = catalogVehicle.stability_control || enrichedData.stability_control || ""
+            excelRow.airbags = openaiData.airbags || catalogVehicle.airbags || enrichedData.airbags || ""
+            excelRow.abs = openaiData.abs !== null && openaiData.abs !== undefined ? openaiData.abs : (catalogVehicle.abs || enrichedData.abs || "")
+            excelRow.control_estabilidad = openaiData.control_estabilidad !== null && openaiData.control_estabilidad !== undefined ? openaiData.control_estabilidad : (catalogVehicle.stability_control || enrichedData.stability_control || "")
 
             // === CONFORT Y EQUIPAMIENTO ===
-            excelRow.climatizador = catalogVehicle.air_conditioning || enrichedData.air_conditioning || ""
-            excelRow.multimedia = catalogVehicle.multimedia || enrichedData.multimedia || ""
+            excelRow.climatizador = openaiData.climatizador !== null && openaiData.climatizador !== undefined ? openaiData.climatizador : (catalogVehicle.air_conditioning || enrichedData.air_conditioning || "")
+            excelRow.multimedia = openaiData.multimedia || catalogVehicle.multimedia || enrichedData.multimedia || ""
 
             // === COMPONENTES ===
-            excelRow.frenos = catalogVehicle.brakes || enrichedData.brakes || ""
-            excelRow.neumaticos = catalogVehicle.tires || enrichedData.tires || ""
-            excelRow.llantas = catalogVehicle.wheels || enrichedData.wheels || ""
+            excelRow.frenos = openaiData.frenos || catalogVehicle.brakes || enrichedData.brakes || ""
+            excelRow.neumaticos = openaiData.neumaticos || catalogVehicle.tires || enrichedData.tires || ""
+            excelRow.llantas = openaiData.llantas || catalogVehicle.wheels || enrichedData.wheels || ""
 
             // === ASISTENCIAS Y TECNOLOGÍA ===
-            excelRow.asistencia_manejo = catalogVehicle.driving_assistance || enrichedData.driving_assistance || ""
+            excelRow.asistencia_manejo = openaiData.asistencia_manejo || catalogVehicle.driving_assistance || enrichedData.driving_assistance || ""
 
             // === RENDIMIENTO Y CAPACIDADES ===
-            excelRow.rendimiento_mixto = catalogVehicle.fuel_consumption || enrichedData.fuel_consumption || ""
-            excelRow.capacidad_baul = catalogVehicle.trunk_capacity || enrichedData.trunk_capacity || ""
-            excelRow.capacidad_combustible = catalogVehicle.fuel_capacity || enrichedData.fuel_capacity || ""
-            excelRow.velocidad_max = catalogVehicle.max_speed || enrichedData.max_speed || ""
+            excelRow.rendimiento_mixto = openaiData.rendimiento_mixto || catalogVehicle.fuel_consumption || enrichedData.fuel_consumption || ""
+            excelRow.capacidad_baul = openaiData.capacidad_baul || catalogVehicle.trunk_capacity || enrichedData.trunk_capacity || ""
+            excelRow.capacidad_combustible = openaiData.capacidad_combustible || catalogVehicle.fuel_capacity || enrichedData.fuel_capacity || ""
+            excelRow.velocidad_max = openaiData.velocidad_max || catalogVehicle.max_speed || enrichedData.max_speed || ""
 
             // === DIMENSIONES ===
-            excelRow.largo = catalogVehicle.length || enrichedData.length || ""
-            excelRow.ancho = catalogVehicle.width || enrichedData.width || ""
-            excelRow.alto = catalogVehicle.height || enrichedData.height || ""
+            excelRow.largo = openaiData.largo || catalogVehicle.length || enrichedData.length || ""
+            excelRow.ancho = openaiData.ancho || catalogVehicle.width || enrichedData.width || ""
+            excelRow.alto = openaiData.alto || catalogVehicle.height || enrichedData.height || ""
 
             // === URLs Y DATOS ADICIONALES ===
-            excelRow.url_ficha = catalogVehicle.detail_url || enrichedData.detail_url || catalogVehicle.url || ""
+            excelRow.url_ficha = openaiData.url_ficha || catalogVehicle.detail_url || enrichedData.detail_url || catalogVehicle.url || ""
 
             // === DATOS DE ANÁLISIS ===
-            excelRow.modelo_rag = this.generateModelRAG(vehicle)
+            excelRow.modelo_rag = openaiData.informacion_rag || this.generateModelRAG(vehicle)
             excelRow.titulo_legible = this.generateReadableTitle(vehicle)
             excelRow.ficha_breve = this.generateBriefSummary(vehicle)
 
