@@ -185,7 +185,9 @@ class ApiEnrichmentService {
                                     total: vehiclesToProcess.length,
                                     batchNumber: progress.batchNumber,
                                     totalBatches: Math.ceil(vehiclesToProcess.length / batchSize),
-                                    currentVehicle: progress.currentBatch?.[progress.completed - 1] || null
+                                    vehicleDetails: progress.vehicleDetails || [], // Nueva: detalles de vehículos
+                                    batchStats: progress.batchStats || {}, // Nueva: estadísticas del lote
+                                    currentBatch: progress.currentBatch || []
                                 })
                             }
                         }

@@ -310,9 +310,11 @@ IMPORTANTE: Devuelve ÚNICAMENTE el JSON válido, sin texto adicional, sin markd
 
             const batchResults = await Promise.allSettled(batchPromises)
 
-            // Procesar resultados del lote
+            // Procesar resultados del lote y extraer detalles
             let batchSuccessCount = 0
             let batchErrorCount = 0
+            let totalTokensUsed = 0
+            const vehicleDetails = []
 
             const processedResults = batchResults.map((result, index) => {
                 const vehicleIndex = i + index + 1
@@ -322,13 +324,41 @@ IMPORTANTE: Devuelve ÚNICAMENTE el JSON válido, sin texto adicional, sin markd
 
                 if (result.status === "fulfilled" && result.value.success) {
                     batchSuccessCount++
+                    const fieldsCount = Object.keys(result.value.data || {}).length
+                    const tokensUsed = result.value.usage?.total_tokens || 0
+                    totalTokensUsed += tokensUsed
+                    
                     console.log(`✅ Vehículo ${vehicleIndex}: ${vehicleName} - EXITOSO`)
-                    console.log(`   📋 Datos obtenidos: ${Object.keys(result.value.data || {}).length} campos`)
+                    console.log(`   📋 Datos obtenidos: ${fieldsCount} campos`)
+                    console.log(`   💰 Tokens usados: ${tokensUsed}`)
+
+                    vehicleDetails.push({
+                        index: vehicleIndex,
+                        name: vehicleName,
+                        status: 'success',
+                        fieldsObtained: fieldsCount,
+                        tokensUsed: tokensUsed,
+                        duration: result.value.duration || 0,
+                        data: result.value.data
+                    })
+
                     return result.value
                 } else {
                     batchErrorCount++
                     const errorMsg = result.status === "fulfilled" ? result.value.error : result.reason.message
-                    console.error(`❌ Vehículo ${vehicleIndex}: ${vehicleName} - ERROR: ${errorMsg}`)
+                    
+                    console.log(`❌ Vehículo ${vehicleIndex}: ${vehicleName} - ERROR: ${errorMsg}`)
+                    
+                    vehicleDetails.push({
+                        index: vehicleIndex,
+                        name: vehicleName,
+                        status: 'error',
+                        fieldsObtained: 0,
+                        tokensUsed: 0,
+                        duration: 0,
+                        error: errorMsg
+                    })
+
                     return {
                         success: false,
                         error: errorMsg,
@@ -348,17 +378,19 @@ IMPORTANTE: Devuelve ÚNICAMENTE el JSON válido, sin texto adicional, sin markd
             console.log(`   ⏱️ Tiempo: ${batchDuration.toFixed(1)}s`)
             console.log(`   📈 Progreso total: ${results.length}/${vehicles.length} (${((results.length / vehicles.length) * 100).toFixed(1)}%)`)
 
-            // Callback de progreso
+            // Callback de progreso con información detallada
             onProgress({
                 completed: results.length,
                 total: vehicles.length,
                 batchNumber,
                 totalBatches,
                 currentBatch: processedResults,
+                vehicleDetails: vehicleDetails, // Nuevo: detalles de cada vehículo procesado
                 batchStats: {
                     successful: batchSuccessCount,
                     failed: batchErrorCount,
-                    duration: batchDuration
+                    duration: batchDuration,
+                    totalTokensUsed: totalTokensUsed // Nuevo: tokens usados en el lote
                 }
             })
 
