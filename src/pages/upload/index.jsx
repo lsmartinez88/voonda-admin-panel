@@ -508,41 +508,112 @@ const UploadPage = () => {
                 </Stack>
 
                 {matchingData.results?.length > 0 && (
-                    <TableContainer component={Paper} sx={{ maxHeight: 300 }}>
+                    <TableContainer component={Paper} sx={{ maxHeight: 500 }}>
                         <Table size="small">
                             <TableHead>
                                 <TableRow>
-                                    <TableCell>Vehículo Excel</TableCell>
-                                    <TableCell>Mejor Match</TableCell>
-                                    <TableCell>Score</TableCell>
+                                    <TableCell><strong>Vehículo Excel</strong></TableCell>
+                                    <TableCell><strong>Mejor Match Catálogo</strong></TableCell>
+                                    <TableCell><strong>Score/Confianza</strong></TableCell>
+                                    <TableCell><strong>Detalles Match</strong></TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
                                 {matchingData.results.map((result, index) => (
                                     <TableRow key={index}>
                                         <TableCell>
-                                            <Typography variant="caption">
-                                                {result?.excelVehicle?.json?.marca || '-'} {result?.excelVehicle?.json?.modelo || '-'}
-                                            </Typography>
+                                            <Box>
+                                                <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                                                    {result?.excelVehicle?.json?.marca || '-'} {result?.excelVehicle?.json?.modelo || '-'} ({result?.excelVehicle?.json?.año || '-'})
+                                                </Typography>
+                                                {result?.excelVehicle?.json?.versión && (
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        Versión: {result.excelVehicle.json.versión}
+                                                    </Typography>
+                                                )}
+                                                <Typography variant="caption" display="block" color="text.secondary">
+                                                    {result?.excelVehicle?.json?.kilometros ? `${result.excelVehicle.json.kilometros.toLocaleString()} km` : 'N/A'} • 
+                                                    {result?.excelVehicle?.json?.valor ? ` $${result.excelVehicle.json.valor.toLocaleString()} ${result?.excelVehicle?.json?.moneda || 'ARS'}` : ' Precio N/A'}
+                                                </Typography>
+                                                {result?.excelVehicle?.json?.dominio && (
+                                                    <Typography variant="caption" display="block" color="primary.main">
+                                                        Patente: {result.excelVehicle.json.dominio}
+                                                    </Typography>
+                                                )}
+                                            </Box>
                                         </TableCell>
                                         <TableCell>
                                             {result.bestMatch ? (
-                                                <Typography variant="caption">
-                                                    {result.bestMatch.catalogVehicle.brand} {result.bestMatch.catalogVehicle.model}
-                                                </Typography>
+                                                <Box>
+                                                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                                                        {result.bestMatch.catalogVehicle.brand} {result.bestMatch.catalogVehicle.model} ({result.bestMatch.catalogVehicle.year})
+                                                    </Typography>
+                                                    {result.bestMatch.catalogVehicle.version && (
+                                                        <Typography variant="caption" color="text.secondary">
+                                                            Versión: {result.bestMatch.catalogVehicle.version}
+                                                        </Typography>
+                                                    )}
+                                                    <Typography variant="caption" display="block" color="text.secondary">
+                                                        {result.bestMatch.catalogVehicle.mileage ? `${result.bestMatch.catalogVehicle.mileage.toLocaleString()} km` : 'N/A'} • 
+                                                        {result.bestMatch.catalogVehicle.price ? ` $${result.bestMatch.catalogVehicle.price.toLocaleString()}` : ' Precio N/A'}
+                                                    </Typography>
+                                                    {result.bestMatch.catalogVehicle.license_plate && (
+                                                        <Typography variant="caption" display="block" color="primary.main">
+                                                            Patente: {result.bestMatch.catalogVehicle.license_plate}
+                                                        </Typography>
+                                                    )}
+                                                </Box>
                                             ) : (
-                                                <Typography variant="caption" color="text.secondary">Sin match</Typography>
+                                                <Typography variant="caption" color="text.secondary">Sin match encontrado</Typography>
                                             )}
                                         </TableCell>
                                         <TableCell>
                                             {result.bestMatch ? (
-                                                <Chip
-                                                    label={`${Math.round(result.bestMatch.score * 100)}%`}
-                                                    size="small"
-                                                    color={result.bestMatch.score >= 0.8 ? 'success' : result.bestMatch.score >= 0.6 ? 'warning' : 'error'}
-                                                />
+                                                <Box>
+                                                    <Chip
+                                                        label={`${Math.round(result.bestMatch.score * 100)}%`}
+                                                        size="small"
+                                                        color={
+                                                            result.bestMatch.confidence === 'alto' ? 'success' : 
+                                                            result.bestMatch.confidence === 'medio' ? 'warning' : 
+                                                            'error'
+                                                        }
+                                                    />
+                                                    <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
+                                                        {result.bestMatch.confidence.charAt(0).toUpperCase() + result.bestMatch.confidence.slice(1)}
+                                                    </Typography>
+                                                </Box>
                                             ) : (
                                                 <Chip label="0%" size="small" color="error" />
+                                            )}
+                                        </TableCell>
+                                        <TableCell>
+                                            {result.bestMatch?.matchDetails ? (
+                                                <Box>
+                                                    {Object.entries(result.bestMatch.matchDetails).map(([key, value]) => {
+                                                        if (value > 0) {
+                                                            const displayKey = {
+                                                                dominio: 'Patente',
+                                                                marca: 'Marca',
+                                                                modelo: 'Modelo',
+                                                                año: 'Año',
+                                                                kilometros: 'Kilómetros', 
+                                                                precio: 'Precio',
+                                                                color: 'Color',
+                                                                version: 'Versión'
+                                                            }[key] || key;
+                                                            
+                                                            return (
+                                                                <Typography key={key} variant="caption" display="block">
+                                                                    {displayKey}: {Math.round(value * 100)}%
+                                                                </Typography>
+                                                            )
+                                                        }
+                                                        return null;
+                                                    })}
+                                                </Box>
+                                            ) : (
+                                                <Typography variant="caption" color="text.secondary">-</Typography>
                                             )}
                                         </TableCell>
                                     </TableRow>
