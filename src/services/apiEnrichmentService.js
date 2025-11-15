@@ -179,6 +179,7 @@ class ApiEnrichmentService {
                         batchSize: batchSize,
                         onProgress: (progress) => {
                             if (onProgress && typeof onProgress === "function") {
+                                console.log(`📡 Progreso OpenAI: ${totalProcessed + progress.completed}/${vehiclesToProcess.length}`)
                                 onProgress({
                                     stage: "openai",
                                     completed: totalProcessed + progress.completed,

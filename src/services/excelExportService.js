@@ -65,6 +65,9 @@ class ExcelExportService {
 
             // Extraer datos del enriquecimiento
             const enrichedData = vehicle.enrichedData || {}
+            
+            // Para compatibilidad: los datos OpenAI ahora están directamente en enrichedData
+            const openaiData = enrichedData // Alias para el código legacy
 
             // Debug para el primer elemento
             if (index === 0) {

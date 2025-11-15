@@ -241,10 +241,19 @@ IMPORTANTE: Devuelve ÚNICAMENTE el JSON válido, sin texto adicional, sin markd
                 console.log(`   📊 Datos técnicos obtenidos: ${Object.keys(result.data || {}).length} campos`)
                 console.log(`   💰 Tokens usados: ${result.usage?.total_tokens || "N/A"}`)
 
+                // Generar campos adicionales
+                const enhancedData = {
+                    ...result.data,
+                    // Campo titulo_legible: "marca modelo versión - año"
+                    titulo_legible: this.generateTituloLegible(marca, modelo, version, ano),
+                    // Campo ficha_breve: JSON crudo con todos los campos obtenidos
+                    ficha_breve: this.generateFichaBrave(result.data)
+                }
+
                 return {
                     success: true,
-                    data: result.data,
-                    technicalData: result.data,
+                    data: enhancedData,
+                    technicalData: enhancedData,
                     source: "openai",
                     model: result.model,
                     usage: result.usage,
@@ -295,6 +304,22 @@ IMPORTANTE: Devuelve ÚNICAMENTE el JSON válido, sin texto adicional, sin markd
             console.log(`\n📦 ========== LOTE ${batchNumber}/${totalBatches} ==========`)
             console.log(`🔄 Procesando ${batch.length} vehículos...`)
 
+            // Callback de progreso inicial del lote
+            onProgress({
+                completed: results.length,
+                total: vehicles.length,
+                batchNumber,
+                totalBatches,
+                currentBatch: [],
+                vehicleDetails: [],
+                batchStats: {
+                    successful: 0,
+                    failed: 0,
+                    duration: 0,
+                    totalTokensUsed: 0
+                }
+            })
+
             // Mostrar vehículos del lote
             batch.forEach((vehicle, idx) => {
                 const data = vehicle?.excelVehicle?.json || vehicle
@@ -327,7 +352,7 @@ IMPORTANTE: Devuelve ÚNICAMENTE el JSON válido, sin texto adicional, sin markd
                     const fieldsCount = Object.keys(result.value.data || {}).length
                     const tokensUsed = result.value.usage?.total_tokens || 0
                     totalTokensUsed += tokensUsed
-                    
+
                     console.log(`✅ Vehículo ${vehicleIndex}: ${vehicleName} - EXITOSO`)
                     console.log(`   📋 Datos obtenidos: ${fieldsCount} campos`)
                     console.log(`   💰 Tokens usados: ${tokensUsed}`)
@@ -335,7 +360,7 @@ IMPORTANTE: Devuelve ÚNICAMENTE el JSON válido, sin texto adicional, sin markd
                     vehicleDetails.push({
                         index: vehicleIndex,
                         name: vehicleName,
-                        status: 'success',
+                        status: "success",
                         fieldsObtained: fieldsCount,
                         tokensUsed: tokensUsed,
                         duration: result.value.duration || 0,
@@ -346,13 +371,13 @@ IMPORTANTE: Devuelve ÚNICAMENTE el JSON válido, sin texto adicional, sin markd
                 } else {
                     batchErrorCount++
                     const errorMsg = result.status === "fulfilled" ? result.value.error : result.reason.message
-                    
+
                     console.log(`❌ Vehículo ${vehicleIndex}: ${vehicleName} - ERROR: ${errorMsg}`)
-                    
+
                     vehicleDetails.push({
                         index: vehicleIndex,
                         name: vehicleName,
-                        status: 'error',
+                        status: "error",
                         fieldsObtained: 0,
                         tokensUsed: 0,
                         duration: 0,
@@ -449,6 +474,37 @@ IMPORTANTE: Devuelve ÚNICAMENTE el JSON válido, sin texto adicional, sin markd
             fieldCount: Object.keys(technicalData).length,
             nonNullCount: Object.values(technicalData).filter((v) => v !== null && v !== undefined && v !== "").length
         }
+    }
+
+    /**
+     * Genera un título legible para el vehículo
+     * @param {string} marca - Marca del vehículo
+     * @param {string} modelo - Modelo del vehículo
+     * @param {string} version - Versión del vehículo
+     * @param {string} ano - Año del vehículo
+     * @returns {string} Título legible en formato "marca modelo versión - año"
+     */
+    static generateTituloLegible(marca, modelo, version, ano) {
+        const partes = [marca, modelo, version].filter((parte) => parte && parte.trim() !== "")
+        const vehiculoBase = partes.join(" ")
+        return ano ? `${vehiculoBase} - ${ano}` : vehiculoBase
+    }
+
+    /**
+     * Genera una ficha breve en formato JSON con todos los campos OpenAI
+     * @param {Object} data - Datos técnicos obtenidos de OpenAI
+     * @returns {string} JSON string con todos los campos obtenidos
+     */
+    static generateFichaBrave(data) {
+        // Filtrar solo campos que tienen valor
+        const camposConValor = Object.entries(data)
+            .filter(([key, value]) => value && value !== "" && value !== null && value !== undefined)
+            .reduce((acc, [key, value]) => {
+                acc[key] = value
+                return acc
+            }, {})
+
+        return JSON.stringify(camposConValor, null, 2)
     }
 }
 

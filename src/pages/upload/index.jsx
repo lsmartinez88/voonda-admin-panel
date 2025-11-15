@@ -347,14 +347,14 @@ const UploadPage = () => {
                                 <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
                                     🤖 Progreso OpenAI: Lote {openaiProgress.batchNumber}/{openaiProgress.totalBatches}
                                 </Typography>
-                                
+
                                 {/* Barra de progreso principal */}
                                 <LinearProgress
                                     variant="determinate"
                                     value={(openaiProgress.completed / openaiProgress.total) * 100}
                                     sx={{ mb: 2, height: 8, borderRadius: 1 }}
                                 />
-                                
+
                                 {/* Estadísticas del lote */}
                                 <Box sx={{ display: 'flex', gap: 3, mb: 2 }}>
                                     <Typography variant="body2">
@@ -385,10 +385,10 @@ const UploadPage = () => {
                                         </Typography>
                                         <Box sx={{ maxHeight: 200, overflowY: 'auto', border: '1px solid #e0e0e0', borderRadius: 1, p: 1, backgroundColor: 'white' }}>
                                             {openaiProgress.vehicleDetails.map((vehicle, index) => (
-                                                <Box key={index} sx={{ 
-                                                    p: 1, 
-                                                    mb: 1, 
-                                                    border: '1px solid #f0f0f0', 
+                                                <Box key={index} sx={{
+                                                    p: 1,
+                                                    mb: 1,
+                                                    border: '1px solid #f0f0f0',
                                                     borderRadius: 1,
                                                     backgroundColor: vehicle.status === 'success' ? '#f0f8f0' : '#fff5f5'
                                                 }}>
@@ -1179,7 +1179,7 @@ const UploadPage = () => {
                         setMessage(`Enriqueciendo con catálogo: ${progress.processed || 0}/${progress.total || 0}`)
                     } else if (progress.stage === 'openai' || progress.stage === 'openai_enrichment') {
                         setOpenaiProgress(progress)
-                        
+
                         let message = `🤖 Consultando OpenAI: ${progress.completed || 0}/${progress.total || 0}`
                         if (progress.batchNumber && progress.totalBatches) {
                             message += ` (Lote ${progress.batchNumber}/${progress.totalBatches})`
@@ -1187,7 +1187,7 @@ const UploadPage = () => {
                         if (progress.batchStats?.totalTokensUsed > 0) {
                             message += ` - ${progress.batchStats.totalTokensUsed} tokens`
                         }
-                        
+
                         setMessage(message)
                     }
                 },
