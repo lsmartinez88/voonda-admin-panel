@@ -155,8 +155,12 @@ class VehicleMatchingService {
      * @returns {number} Score de similitud (0-1)
      */
     static calculateExactMatch(a, b) {
-        const normA = this.normalizeText(a).replace(/[\s\-\.]/g, "").toUpperCase()
-        const normB = this.normalizeText(b).replace(/[\s\-\.]/g, "").toUpperCase()
+        const normA = this.normalizeText(a)
+            .replace(/[\s\-\.]/g, "")
+            .toUpperCase()
+        const normB = this.normalizeText(b)
+            .replace(/[\s\-\.]/g, "")
+            .toUpperCase()
 
         if (!normA || !normB) return 0
         if (normA === normB) return 1
