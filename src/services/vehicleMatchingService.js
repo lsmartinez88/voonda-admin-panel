@@ -257,16 +257,16 @@ class VehicleMatchingService {
         const maxPrice = Math.max(excelPriceInPesos, price2)
         const priceDiffPercent = priceDiff / maxPrice
 
-        // MENOS RESTRICTIVO - permitir más diferencia de precios
+        // MÁS RESTRICTIVO - precio vuelve a ser más estricto
         if (priceDiff === 0) return 1.0 // Precio exacto - 100%
-        if (priceDiffPercent <= 0.1) return 1.0 // Hasta 10% diferencia - considerado exacto para precios
-        if (priceDiffPercent <= 0.2) return 0.9 // 20% diferencia - excelente
-        if (priceDiffPercent <= 0.3) return 0.8 // 30% diferencia - muy bueno
-        if (priceDiffPercent <= 0.4) return 0.7 // 40% diferencia - bueno
-        if (priceDiffPercent <= 0.5) return 0.6 // 50% diferencia - aceptable
-        if (priceDiffPercent <= 0.5) return 0.4 // 50% diferencia - regular
-        if (priceDiffPercent <= 0.7) return 0.3 // 70% diferencia - bajo pero válido
-        if (priceDiffPercent <= 0.8) return 0.2 // 80% diferencia - muy bajo
+        if (priceDiffPercent <= 0.05) return 1.0 // Hasta 5% diferencia - considerado exacto
+        if (priceDiffPercent <= 0.1) return 0.8 // 10% diferencia - bueno
+        if (priceDiffPercent <= 0.2) return 0.5 // 20% diferencia - aceptable
+        if (priceDiffPercent <= 0.3) return 0.3 // 30% diferencia - bajo
+        if (priceDiffPercent <= 0.5) return 0.2 // 50% diferencia - muy bajo
+        if (priceDiffPercent <= 0.5) return 0.2 // 50% diferencia - regular
+        if (priceDiffPercent <= 0.7) return 0.1 // 70% diferencia - bajo pero válido
+        if (priceDiffPercent <= 0.8) return 0.0 // 80% diferencia - muy bajo
 
         return 0 // Más del 80% de diferencia en precio - no match
     }
@@ -336,13 +336,13 @@ class VehicleMatchingService {
                 }
             }
 
-            // 1. Agregar score de marca (15% del peso total) - YA CALCULADO
-            score += marcaScore * 0.15
+            // 1. Agregar score de marca (25% del peso total) - AUMENTADO
+            score += marcaScore * 0.25
 
-            // 2. Agregar score de modelo (20% del peso total) - YA CALCULADO
-            score += modeloScore * 0.2
+            // 2. Agregar score de modelo (25% del peso total) - AUMENTADO
+            score += modeloScore * 0.25
 
-            // 3. Comparar año (25% del peso total) - MENOS ESTRICTO
+            // 3. Comparar año (20% del peso total) - REDUCIDO
             if (excelVehicle.año && catalogVehicle.year) {
                 const yearScore = this.calculateYearSimilarity(excelVehicle.año, catalogVehicle.year)
                 matchDetails.año = yearScore
@@ -353,7 +353,7 @@ class VehicleMatchingService {
                     // Si la diferencia es mayor a 2 años, descartar
                     return
                 }
-                score += yearScore * 0.25
+                score += yearScore * 0.2
             } else {
                 // Si falta el año, no descartar pero penalizar fuertemente
                 matchDetails.año = 0
@@ -372,13 +372,13 @@ class VehicleMatchingService {
                     // Si los kilómetros difieren más del 50%, descartar
                     return
                 }
-                score += kmScore * 0.2
+                score += kmScore * 0.15
             } else {
                 // Si faltan los kilómetros, no descartar pero penalizar
                 matchDetails.kilometros = 0
             }
 
-            // 5. Comparar precio (15% del peso total) - MUY PERMISIVO
+            // 5. Comparar precio (10% del peso total) - REDUCIDO
             if (excelVehicle.valor && catalogVehicle.price) {
                 const priceScore = this.calculatePriceSimilarity(excelVehicle.valor, catalogVehicle.price, excelVehicle.moneda)
                 matchDetails.precio = priceScore
@@ -393,7 +393,7 @@ class VehicleMatchingService {
                 if (priceDiffPercent > 2.0) {
                     return
                 }
-                score += priceScore * 0.15
+                score += priceScore * 0.1
             }
             // Si falta el precio, no descartar - puede continuar
 
