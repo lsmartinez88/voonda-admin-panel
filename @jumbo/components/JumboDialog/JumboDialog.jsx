@@ -1,5 +1,5 @@
-import { DialogConfirm } from "./components/DialogConfirm";
-import { DialogDefault } from "./components/DialogDefault";
+import DialogConfirm from "./components/DialogConfirm";
+import DialogDefault from "./components/DialogDefault";
 import { useJumboDialog } from "./hooks/useJumboDialog";
 
 const dialogVariants = {

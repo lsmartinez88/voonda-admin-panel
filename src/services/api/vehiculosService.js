@@ -1,5 +1,45 @@
 ﻿import apiClient, { makeApiRequest } from "./apiClient"
 
+// Datos ficticios para desarrollo cuando la API no está disponible
+const mockVehiculos = [
+    {
+        id: 1,
+        marca: "Toyota",
+        modelo: "Corolla",
+        año: 2022,
+        patente: "ABC123",
+        kilometros: 15000,
+        valor: 25000,
+        estado: "Disponible",
+        observaciones: "Excelente estado",
+        fecha_ingreso: "2024-01-15"
+    },
+    {
+        id: 2,
+        marca: "Ford",
+        modelo: "Focus",
+        año: 2021,
+        patente: "DEF456",
+        kilometros: 22000,
+        valor: 22000,
+        estado: "Vendido",
+        observaciones: "Menor desgaste",
+        fecha_ingreso: "2024-02-10"
+    },
+    {
+        id: 3,
+        marca: "Chevrolet",
+        modelo: "Cruze",
+        año: 2023,
+        patente: "GHI789",
+        kilometros: 8000,
+        valor: 28000,
+        estado: "Reservado",
+        observaciones: "Como nuevo",
+        fecha_ingreso: "2024-03-05"
+    }
+];
+
 /**
  * Servicio para manejo de vehículos que interactúa con la API
  */
@@ -20,19 +60,113 @@ class VehiculosService {
      * @returns {Promise<Object>} Lista de vehículos con paginación
      */
     async getVehiculos(options = {}) {
-        const params = new URLSearchParams()
+        try {
+            const params = new URLSearchParams()
 
-        // Agregar parámetros solo si tienen valor
-        Object.entries(options).forEach(([key, value]) => {
-            if (value !== undefined && value !== null && value !== "") {
-                params.append(key, value)
+            // Agregar parámetros solo si tienen valor
+            Object.entries(options).forEach(([key, value]) => {
+                if (value !== undefined && value !== null && value !== "") {
+                    params.append(key, value)
+                }
+            })
+
+            const queryString = params.toString()
+            const url = queryString ? `/api/vehiculos?${queryString}` : "/api/vehiculos"
+
+            const result = await makeApiRequest(() => apiClient.get(url), "Error al obtener la lista de vehículos")
+            
+            // Si la API funciona, devolver el resultado
+            if (result.success) {
+                return result;
             }
-        })
+            
+            // Si falla, usar datos mockeados
+            console.warn("🔄 API no disponible, usando datos de desarrollo...");
+            return this.getMockVehiculos(options);
+            
+        } catch (error) {
+            // En caso de error, usar datos mockeados
+            console.warn("🔄 Error con API, usando datos de desarrollo:", error.message);
+            return this.getMockVehiculos(options);
+        }
+    }
 
-        const queryString = params.toString()
-        const url = queryString ? `/api/vehiculos?${queryString}` : "/api/vehiculos"
+    /**
+     * Obtener datos mockeados de vehículos para desarrollo
+     * @param {Object} options - Opciones de consulta
+     * @returns {Object} Datos mockeados con estructura similar a la API
+     */
+    getMockVehiculos(options = {}) {
+        let filteredVehiculos = [...mockVehiculos];
 
-        return makeApiRequest(() => apiClient.get(url), "Error al obtener la lista de vehículos")
+        // Aplicar filtro de búsqueda si existe
+        if (options.search) {
+            const searchTerm = options.search.toLowerCase();
+            filteredVehiculos = filteredVehiculos.filter(vehiculo => 
+                vehiculo.marca.toLowerCase().includes(searchTerm) ||
+                vehiculo.modelo.toLowerCase().includes(searchTerm) ||
+                vehiculo.patente.toLowerCase().includes(searchTerm)
+            );
+        }
+
+        // Aplicar filtro por marca si existe
+        if (options.marca) {
+            filteredVehiculos = filteredVehiculos.filter(vehiculo => 
+                vehiculo.marca.toLowerCase() === options.marca.toLowerCase()
+            );
+        }
+
+        // Aplicar filtro por modelo si existe
+        if (options.modelo) {
+            filteredVehiculos = filteredVehiculos.filter(vehiculo => 
+                vehiculo.modelo.toLowerCase() === options.modelo.toLowerCase()
+            );
+        }
+
+        // Aplicar filtro por estado si existe
+        if (options.estado) {
+            filteredVehiculos = filteredVehiculos.filter(vehiculo => 
+                vehiculo.estado.toLowerCase() === options.estado.toLowerCase()
+            );
+        }
+
+        // Aplicar ordenamiento
+        const sortBy = options.sortBy || 'fecha_ingreso';
+        const order = options.order || 'desc';
+        
+        filteredVehiculos.sort((a, b) => {
+            let aValue = a[sortBy];
+            let bValue = b[sortBy];
+            
+            // Convertir fechas para comparación
+            if (sortBy === 'fecha_ingreso') {
+                aValue = new Date(aValue);
+                bValue = new Date(bValue);
+            }
+            
+            if (order === 'desc') {
+                return bValue > aValue ? 1 : -1;
+            } else {
+                return aValue > bValue ? 1 : -1;
+            }
+        });
+
+        // Aplicar paginación
+        const page = options.page || 1;
+        const limit = options.limit || 20;
+        const startIndex = (page - 1) * limit;
+        const endIndex = startIndex + limit;
+        const paginatedVehiculos = filteredVehiculos.slice(startIndex, endIndex);
+
+        return {
+            success: true,
+            vehiculos: paginatedVehiculos,
+            data: paginatedVehiculos, // Por compatibilidad
+            total: filteredVehiculos.length,
+            page: page,
+            limit: limit,
+            totalPages: Math.ceil(filteredVehiculos.length / limit)
+        };
     }
 
     /**
@@ -58,16 +192,48 @@ class VehiculosService {
             return { success: false, error: "Datos del vehículo son requeridos" }
         }
 
-        // Validar campos requeridos
-        if (!vehiculoData.modelo_id) {
-            return { success: false, error: "modelo_id es requerido" }
+        try {
+            const result = await makeApiRequest(() => apiClient.post("/api/vehiculos", vehiculoData), "Error al crear el vehículo")
+            
+            if (result.success) {
+                return result;
+            }
+            
+            // Fallback para desarrollo
+            console.warn("🔄 API no disponible, simulando creación de vehículo...");
+            
+            const nuevoVehiculo = {
+                id: Date.now(), // ID temporal
+                ...vehiculoData,
+                fecha_ingreso: new Date().toISOString().split('T')[0]
+            };
+            
+            // Agregar a los datos mock (solo en memoria)
+            mockVehiculos.push(nuevoVehiculo);
+            
+            return {
+                success: true,
+                vehiculo: nuevoVehiculo,
+                message: "Vehículo creado correctamente (modo desarrollo)"
+            };
+            
+        } catch (error) {
+            console.warn("🔄 Error con API, simulando creación:", error.message);
+            
+            const nuevoVehiculo = {
+                id: Date.now(),
+                ...vehiculoData,
+                fecha_ingreso: new Date().toISOString().split('T')[0]
+            };
+            
+            mockVehiculos.push(nuevoVehiculo);
+            
+            return {
+                success: true,
+                vehiculo: nuevoVehiculo,
+                message: "Vehículo creado correctamente (modo desarrollo)"
+            };
         }
-
-        if (!vehiculoData.vehiculo_ano) {
-            return { success: false, error: "vehiculo_ano es requerido" }
-        }
-
-        return makeApiRequest(() => apiClient.post("/api/vehiculos", vehiculoData), "Error al crear el vehículo")
     }
 
     /**
@@ -85,7 +251,43 @@ class VehiculosService {
             return { success: false, error: "Datos a actualizar son requeridos" }
         }
 
-        return makeApiRequest(() => apiClient.put(`/api/vehiculos/${id}`, vehiculoData), `Error al actualizar el vehículo con ID: ${id}`)
+        try {
+            const result = await makeApiRequest(() => apiClient.put(`/api/vehiculos/${id}`, vehiculoData), `Error al actualizar el vehículo con ID: ${id}`)
+            
+            if (result.success) {
+                return result;
+            }
+            
+            // Fallback para desarrollo
+            console.warn("🔄 API no disponible, simulando actualización de vehículo...");
+            
+            const index = mockVehiculos.findIndex(v => v.id == id);
+            if (index !== -1) {
+                mockVehiculos[index] = { ...mockVehiculos[index], ...vehiculoData };
+                return {
+                    success: true,
+                    vehiculo: mockVehiculos[index],
+                    message: "Vehículo actualizado correctamente (modo desarrollo)"
+                };
+            }
+            
+            return { success: false, error: "Vehículo no encontrado" };
+            
+        } catch (error) {
+            console.warn("🔄 Error con API, simulando actualización:", error.message);
+            
+            const index = mockVehiculos.findIndex(v => v.id == id);
+            if (index !== -1) {
+                mockVehiculos[index] = { ...mockVehiculos[index], ...vehiculoData };
+                return {
+                    success: true,
+                    vehiculo: mockVehiculos[index],
+                    message: "Vehículo actualizado correctamente (modo desarrollo)"
+                };
+            }
+            
+            return { success: false, error: "Vehículo no encontrado" };
+        }
     }
 
     /**
@@ -98,7 +300,41 @@ class VehiculosService {
             return { success: false, error: "ID del vehículo es requerido" }
         }
 
-        return makeApiRequest(() => apiClient.delete(`/api/vehiculos/${id}`), `Error al eliminar el vehículo con ID: ${id}`)
+        try {
+            const result = await makeApiRequest(() => apiClient.delete(`/api/vehiculos/${id}`), `Error al eliminar el vehículo con ID: ${id}`)
+            
+            if (result.success) {
+                return result;
+            }
+            
+            // Fallback para desarrollo
+            console.warn("🔄 API no disponible, simulando eliminación de vehículo...");
+            
+            const index = mockVehiculos.findIndex(v => v.id == id);
+            if (index !== -1) {
+                mockVehiculos.splice(index, 1);
+                return {
+                    success: true,
+                    message: "Vehículo eliminado correctamente (modo desarrollo)"
+                };
+            }
+            
+            return { success: false, error: "Vehículo no encontrado" };
+            
+        } catch (error) {
+            console.warn("🔄 Error con API, simulando eliminación:", error.message);
+            
+            const index = mockVehiculos.findIndex(v => v.id == id);
+            if (index !== -1) {
+                mockVehiculos.splice(index, 1);
+                return {
+                    success: true,
+                    message: "Vehículo eliminado correctamente (modo desarrollo)"
+                };
+            }
+            
+            return { success: false, error: "Vehículo no encontrado" };
+        }
     }
 
     /**

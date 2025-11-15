@@ -1,221 +1,219 @@
-﻿import React, { useState, useEffect } from 'react'
-import { createClient } from '@supabase/supabase-js'
-import { Container, Stack, useMediaQuery, Button, IconButton, Typography, Box } from '@mui/material'
-import { useJumboTheme } from '@jumbo/components/JumboTheme/hooks'
-import { useJumboDialog } from '@jumbo/components/JumboDialog/hooks/useJumboDialog'
-import { syncSheetsService } from '../../services/sync-sheets'
+﻿import React, { useState, useEffect } from 'react';
+import { Container, Stack, useMediaQuery, Button, Typography, Box } from '@mui/material';
+import { useJumboTheme } from '@jumbo/components/JumboTheme/hooks';
+import { useJumboDialog } from '@jumbo/components/JumboDialog/hooks/useJumboDialog';
+import { useAuth } from '@/contexts/AuthContext';
+import { vehiculosService } from '@/services/api';
 
 // Components
-import { VehiclesList } from './VehiclesList'
-import { VehiclesFilters } from './VehiclesFilters'
-import { VehicleModal } from './VehicleModal'
+import { VehiclesList } from './VehiclesList';
+import { VehiclesFilters } from './VehiclesFilters';
+import { VehicleModal } from './VehicleModal';
 
 // Icons
-import AddIcon from '@mui/icons-material/Add'
-import SyncIcon from '@mui/icons-material/Sync'
-
-const supabase = createClient(
-    import.meta.env.VITE_SUPABASE_URL,
-    import.meta.env.VITE_SUPABASE_ANON_KEY
-)
+import AddIcon from '@mui/icons-material/Add';
+import SyncIcon from '@mui/icons-material/Sync';
 
 export const VehiculosApp = () => {
-    const { theme } = useJumboTheme()
-    const lg = useMediaQuery(theme.breakpoints.down('lg'))
-    const { showDialog, showConfirmDialog } = useJumboDialog()
+    const { theme } = useJumboTheme();
+    const lg = useMediaQuery(theme.breakpoints.down('lg'));
+    const { showDialog, showConfirmDialog } = useJumboDialog();
+    const { isAuthenticated } = useAuth();
 
     // Estados
-    const [vehiculos, setVehiculos] = useState([])
-    const [totalVehiculos, setTotalVehiculos] = useState(0)
-    const [loading, setLoading] = useState(false)
-    const [showModal, setShowModal] = useState(false)
-    const [selectedVehicle, setSelectedVehicle] = useState(null)
+    const [vehiculos, setVehiculos] = useState([]);
+    const [totalVehiculos, setTotalVehiculos] = useState(0);
+    const [loading, setLoading] = useState(false);
+    const [showModal, setShowModal] = useState(false);
+    const [selectedVehicle, setSelectedVehicle] = useState(null);
     const [filters, setFilters] = useState({
         search: '',
         marca: '',
         modelo: '',
-        condicion: '',
+        estado: '',
         sortBy: 'fecha_ingreso',
-        order: 'desc'
-    })
+        order: 'desc',
+        page: 1,
+        limit: 20
+    });
 
-    // Fetch vehículos
+    // Fetch vehículos usando API service
     const fetchVehiculos = async () => {
         try {
-            setLoading(true)
+            setLoading(true);
 
-            let query = supabase
-                .from('vehiculos')
-                .select('*', { count: 'exact' })
+            // Preparar opciones de filtro para el servicio
+            const options = {
+                page: filters.page,
+                limit: filters.limit,
+                sortBy: filters.sortBy,
+                order: filters.order
+            };
 
-            // Aplicar filtros
+            // Agregar filtros si existen
             if (filters.search) {
-                query = query.or(`dominio.ilike.%${filters.search}%,marca.ilike.%${filters.search}%,modelo.ilike.%${filters.search}%`)
+                options.search = filters.search;
             }
             if (filters.marca) {
-                query = query.eq('marca', filters.marca)
+                options.marca = filters.marca;
             }
             if (filters.modelo) {
-                query = query.eq('modelo', filters.modelo)
+                options.modelo = filters.modelo;
             }
-            if (filters.condicion) {
-                query = query.eq('estado', filters.condicion)
-            }
-
-            // Ordenamiento
-            query = query.order(filters.sortBy, { ascending: filters.order === 'asc' })
-
-            const { data, error, count } = await query
-
-            if (error) {
-                throw error
+            if (filters.estado) {
+                options.estado = filters.estado;
             }
 
-            setVehiculos(data || [])
-            setTotalVehiculos(count || 0)
-        } catch (error) {
-            console.error('Error fetching vehicles:', error)
-            showDialog({
-                title: 'Error',
-                content: 'Error al cargar los vehículos: ' + error.message,
-                variant: 'error'
-            })
-        } finally {
-            setLoading(false)
-        }
-    }
+            console.log('🔍 Buscando vehículos con opciones:', options);
 
-    // Sincronizar con sheets
-    const sincronizarConSheets = async () => {
-        try {
-            setLoading(true)
-            showDialog({
-                title: 'Sincronizando...',
-                content: 'Actualizando datos con Google Sheets...',
-                variant: 'info'
-            })
+            const response = await vehiculosService.getVehiculos(options);
 
-            const result = await syncSheetsService.syncVehiculos()
-
-            if (result.success) {
-                showDialog({
-                    title: 'Sincronización exitosa',
-                    content: `Se sincronizaron ${result.totalSynced} vehículos correctamente.`,
-                    variant: 'success'
-                })
-                await fetchVehiculos() // Recargar datos
+            if (response.success) {
+                console.log('✅ Vehículos obtenidos:', response);
+                setVehiculos(response.vehiculos || response.data || []);
+                setTotalVehiculos(response.total || response.vehiculos?.length || 0);
             } else {
-                throw new Error(result.error || 'Error en sincronización')
+                console.error('❌ Error en respuesta:', response);
+                setVehiculos([]);
+                setTotalVehiculos(0);
+
+                // Solo mostrar error si no es un problema de autenticación
+                if (response.error && !response.error.includes('Sesión expirada') && isAuthenticated) {
+                    showDialog({
+                        title: 'Error',
+                        content: `Error al cargar los vehículos: ${response.error}`,
+                        variant: 'error'
+                    });
+                }
             }
         } catch (error) {
-            console.error('Error syncing:', error)
-            showDialog({
-                title: 'Error de sincronización',
-                content: 'No se pudo sincronizar con Google Sheets: ' + error.message,
-                variant: 'error'
-            })
-        } finally {
-            setLoading(false)
-        }
-    }
+            console.error('❌ Error al obtener vehículos:', error);
+            setVehiculos([]);
+            setTotalVehiculos(0);
 
-    // Crear/actualizar vehículo
+            // Solo mostrar error si el usuario está autenticado
+            if (isAuthenticated) {
+                showDialog({
+                    title: 'Error',
+                    content: `Error al cargar los vehículos: ${error.message}`,
+                    variant: 'error'
+                });
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Sincronizar con sheets (deshabilitado temporalmente)
+    const sincronizarConSheets = async () => {
+        showDialog({
+            title: 'Función no disponible',
+            content: 'La sincronización con Google Sheets está temporalmente deshabilitada.',
+            variant: 'warning'
+        });
+    };
+
+    // Crear/actualizar vehículo usando API service
     const handleSaveVehicle = async (vehicleData) => {
         try {
-            setLoading(true)
+            setLoading(true);
 
+            let response;
             if (selectedVehicle) {
-                // Actualizar
-                const { error } = await supabase
-                    .from('vehiculos')
-                    .update(vehicleData)
-                    .eq('id', selectedVehicle.id)
-
-                if (error) throw error
-
-                showDialog({
-                    title: 'Éxito',
-                    content: 'Vehículo actualizado correctamente',
-                    variant: 'success'
-                })
+                // Actualizar vehículo existente
+                response = await vehiculosService.updateVehiculo(selectedVehicle.id, vehicleData);
             } else {
-                // Crear
-                const { error } = await supabase
-                    .from('vehiculos')
-                    .insert([vehicleData])
-
-                if (error) throw error
-
-                showDialog({
-                    title: 'Éxito',
-                    content: 'Vehículo creado correctamente',
-                    variant: 'success'
-                })
+                // Crear nuevo vehículo
+                response = await vehiculosService.createVehiculo(vehicleData);
             }
 
-            setShowModal(false)
-            setSelectedVehicle(null)
-            await fetchVehiculos()
+            if (response.success) {
+                showDialog({
+                    title: 'Éxito',
+                    content: selectedVehicle ? 'Vehículo actualizado correctamente' : 'Vehículo creado correctamente',
+                    variant: 'success'
+                });
+                setShowModal(false);
+                setSelectedVehicle(null);
+                await fetchVehiculos(); // Recargar datos
+            } else {
+                showDialog({
+                    title: 'Error',
+                    content: response.error || 'Error al guardar el vehículo',
+                    variant: 'error'
+                });
+            }
         } catch (error) {
-            console.error('Error saving vehicle:', error)
+            console.error('❌ Error al guardar vehículo:', error);
             showDialog({
                 title: 'Error',
-                content: 'Error al guardar el vehículo: ' + error.message,
+                content: `Error al guardar el vehículo: ${error.message}`,
                 variant: 'error'
-            })
+            });
         } finally {
-            setLoading(false)
+            setLoading(false);
         }
-    }
+    };
 
-    // Eliminar vehículo
+    // Eliminar vehículo usando API service  
     const handleDeleteVehicle = async (vehicleId) => {
         const confirmed = await showConfirmDialog({
             title: 'Confirmar eliminación',
-            content: '¿Estás seguro de que quieres eliminar este vehículo?'
-        })
+            content: '¿Estás seguro de que deseas eliminar este vehículo? Esta acción no se puede deshacer.',
+            confirmButtonText: 'Eliminar',
+            cancelButtonText: 'Cancelar'
+        });
 
-        if (confirmed) {
-            try {
-                setLoading(true)
+        if (!confirmed) return;
 
-                const { error } = await supabase
-                    .from('vehiculos')
-                    .delete()
-                    .eq('id', vehicleId)
+        try {
+            setLoading(true);
 
-                if (error) throw error
+            const response = await vehiculosService.deleteVehiculo(vehicleId);
 
+            if (response.success) {
                 showDialog({
                     title: 'Éxito',
                     content: 'Vehículo eliminado correctamente',
                     variant: 'success'
-                })
-
-                await fetchVehiculos()
-            } catch (error) {
-                console.error('Error deleting vehicle:', error)
+                });
+                await fetchVehiculos(); // Recargar datos
+            } else {
                 showDialog({
                     title: 'Error',
-                    content: 'Error al eliminar el vehículo: ' + error.message,
+                    content: response.error || 'Error al eliminar el vehículo',
                     variant: 'error'
-                })
-            } finally {
-                setLoading(false)
+                });
             }
+        } catch (error) {
+            console.error('❌ Error al eliminar vehículo:', error);
+            showDialog({
+                title: 'Error',
+                content: `Error al eliminar el vehículo: ${error.message}`,
+                variant: 'error'
+            });
+        } finally {
+            setLoading(false);
         }
-    }
+    };
 
     // Editar vehículo
     const handleEditVehicle = (vehicle) => {
-        setSelectedVehicle(vehicle)
-        setShowModal(true)
-    }
+        setSelectedVehicle(vehicle);
+        setShowModal(true);
+    };
 
-    // Cargar datos iniciales
+    // Cargar datos iniciales solo si el usuario está autenticado
     useEffect(() => {
-        fetchVehiculos()
-    }, [filters])
+        if (isAuthenticated) {
+            fetchVehiculos();
+        }
+    }, [filters, isAuthenticated]);
+
+    // Si no está autenticado, no mostrar nada
+    if (!isAuthenticated) {
+        return null;
+    }
 
     return (
         <Container maxWidth="xl" sx={{ py: 4, minHeight: '100vh' }}>
@@ -281,16 +279,16 @@ export const VehiculosApp = () => {
             />
 
             {/* Vehicle Modal */}
-            <VehicleModal
-                open={showModal}
-                vehicle={selectedVehicle}
-                onClose={() => {
-                    setShowModal(false)
-                    setSelectedVehicle(null)
-                }}
-                onSave={handleSaveVehicle}
-                loading={loading}
-            />
+            {showModal && (
+                <VehicleModal
+                    vehicle={selectedVehicle}
+                    onClose={() => {
+                        setShowModal(false);
+                        setSelectedVehicle(null);
+                    }}
+                    onSave={handleSaveVehicle}
+                />
+            )}
         </Container>
     )
 }
