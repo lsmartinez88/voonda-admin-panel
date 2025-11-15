@@ -373,9 +373,9 @@ class VehicleMatchingService {
      * @returns {string} Nivel de confianza
      */
     static getConfidenceLevel(score) {
-        if (score >= 0.8) return "alto"
-        if (score >= 0.6) return "medio"
-        if (score >= 0.3) return "bajo"
+        if (score >= 0.65) return "alto"      // Bajado de 0.8 a 0.65 para ser más realista
+        if (score >= 0.45) return "medio"    // Bajado de 0.6 a 0.45
+        if (score >= 0.25) return "bajo"     // Bajado de 0.3 a 0.25
         return "muy_bajo"
     }
 
