@@ -377,7 +377,7 @@ const UploadPage = () => {
                                 </Typography>
                             )}
                         </Alert>
-                        {renderEnrichmentDataSummary()}
+                        {enableOpenAI && renderEnrichmentDataSummary()}
                     </Box>
                 )}
             </CardContent>
@@ -874,9 +874,17 @@ const UploadPage = () => {
             </AccordionSummary>
             <AccordionDetails>
                 <Stack spacing={1} sx={{ mb: 2 }}>
-                    <Chip label={`Total procesados: ${enrichedData.stats.totalProcessed}`} size="small" color="info" />
-                    <Chip label={`Exitosamente enriquecidos: ${enrichedData.stats.enrichedSuccessfully}`} size="small" color="success" />
-                    <Chip label={`Con errores: ${enrichedData.stats.enrichmentErrors}`} size="small" color="error" />
+                    <Chip label={`Total procesados: ${enrichedData.stats.total || 0}`} size="small" color="info" />
+                    <Chip label={`Match con catálogo: ${enrichedData.stats.successful || 0}`} size="small" color="success" />
+                    {enrichedData.stats.openaiProcessed > 0 && (
+                        <>
+                            <Chip label={`Procesados por OpenAI: ${enrichedData.stats.openaiProcessed}`} size="small" color="primary" />
+                            <Chip label={`OpenAI exitosos: ${enrichedData.stats.openaiSuccessful}`} size="small" color="primary" />
+                            {enrichedData.stats.openaiErrors > 0 && (
+                                <Chip label={`OpenAI errores: ${enrichedData.stats.openaiErrors}`} size="small" color="error" />
+                            )}
+                        </>
+                    )}
                 </Stack>
 
                 {enrichedData.data?.length > 0 && (
@@ -890,27 +898,62 @@ const UploadPage = () => {
                                 </TableRow>
                             </TableHead>
                             <TableBody>
-                                {enrichedData.data.map((item, index) => (
-                                    <TableRow key={index}>
-                                        <TableCell>
-                                            <Typography variant="caption">
-                                                {item?.excelData?.marca || '-'} {item?.excelData?.modelo || '-'}
-                                            </Typography>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Chip
-                                                label={item?.enrichmentSuccess ? 'Exitoso' : 'Error'}
-                                                size="small"
-                                                color={item?.enrichmentSuccess ? 'success' : 'error'}
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            <Typography variant="caption">
-                                                {item?.enrichedData ? `${Object.keys(item.enrichedData).length} campos` : 'N/A'}
-                                            </Typography>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
+                                {enrichedData.data.map((item, index) => {
+                                    const enrichedDataItem = item?.enrichedData || {}
+                                    const openaiSuccess = enrichedDataItem.openaiSuccess
+                                    const openaiFieldsCount = enrichedDataItem.openaiFieldsCount || 0
+
+                                    return (
+                                        <TableRow key={index}>
+                                            <TableCell>
+                                                <Typography variant="caption">
+                                                    <strong>{enrichedDataItem?.marca || '-'} {enrichedDataItem?.modelo || '-'}</strong>
+                                                    <br />
+                                                    <small>{enrichedDataItem?.vehiculo_ano || enrichedDataItem?.año || '-'}</small>
+                                                    {enrichedDataItem?.version && <><br /><small>{enrichedDataItem.version}</small></>}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Stack spacing={0.5}>
+                                                    <Chip
+                                                        label={enrichedDataItem?.enrichmentSuccess ? 'Match Catálogo' : 'Sin Match'}
+                                                        size="small"
+                                                        color={enrichedDataItem?.enrichmentSuccess ? 'success' : 'default'}
+                                                    />
+                                                    {openaiSuccess !== undefined && (
+                                                        <Chip
+                                                            label={openaiSuccess ? `OpenAI: ${openaiFieldsCount} campos` : 'OpenAI: Error'}
+                                                            size="small"
+                                                            color={openaiSuccess ? 'primary' : 'error'}
+                                                        />
+                                                    )}
+                                                </Stack>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Typography variant="caption">
+                                                    {openaiSuccess && openaiFieldsCount > 0 ? (
+                                                        <Stack spacing={0.5} sx={{ maxHeight: 100, overflow: 'auto' }}>
+                                                            {enrichedDataItem.motorizacion && <small>• Motor: {enrichedDataItem.motorizacion}</small>}
+                                                            {enrichedDataItem.combustible && <small>• Combustible: {enrichedDataItem.combustible}</small>}
+                                                            {enrichedDataItem.caja && <small>• Transmisión: {enrichedDataItem.caja}</small>}
+                                                            {enrichedDataItem.potencia_hp && <small>• Potencia: {enrichedDataItem.potencia_hp} HP</small>}
+                                                            {enrichedDataItem.torque_nm && <small>• Torque: {enrichedDataItem.torque_nm} Nm</small>}
+                                                            {openaiFieldsCount > 5 && <small>... y {openaiFieldsCount - 5} campos más</small>}
+                                                        </Stack>
+                                                    ) : openaiSuccess === false ? (
+                                                        <Typography variant="caption" color="error">
+                                                            Error: {enrichedDataItem.openaiError || 'Error desconocido'}
+                                                        </Typography>
+                                                    ) : (
+                                                        <Typography variant="caption" color="text.secondary">
+                                                            Solo datos básicos
+                                                        </Typography>
+                                                    )}
+                                                </Typography>
+                                            </TableCell>
+                                        </TableRow>
+                                    )
+                                })}
                             </TableBody>
                         </Table>
                     </TableContainer>
@@ -1060,7 +1103,8 @@ const UploadPage = () => {
                         setOpenaiProgress(progress)
                         setMessage(`🤖 Consultando OpenAI: ${progress.completed || 0}/${progress.total || 0} (${progress.batchNumber || 0}/${progress.totalBatches || 0} lotes)`)
                     }
-                }
+                },
+                enrichmentOptions
             )
 
             console.log('📡 Resultado del enriquecimiento:', {

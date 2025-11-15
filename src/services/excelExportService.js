@@ -66,16 +66,11 @@ class ExcelExportService {
             // Extraer datos del enriquecimiento
             const enrichedData = vehicle.enrichedData || {}
 
-            // Extraer datos de OpenAI si están disponibles
-            const openaiData = enrichedData.openai || {}
-
             // Debug para el primer elemento
             if (index === 0) {
-                console.log("🔍 ExcelData:", excelData)
-                console.log("🔍 MatchData:", matchData)
-                console.log("🔍 CatalogVehicle:", catalogVehicle)
                 console.log("🔍 EnrichedData:", enrichedData)
-                console.log("🔍 OpenAI Data:", openaiData)
+                console.log("🔍 OpenAI Success:", enrichedData.openaiSuccess)
+                console.log("🔍 OpenAI Fields Count:", enrichedData.openaiFieldsCount)
             }
 
             // === DATOS DE LA NUEVA ESTRUCTURA SIMPLIFICADA ===
@@ -93,12 +88,58 @@ class ExcelExportService {
             excelRow.color = enrichedData.color || ""
 
             // === ESPECIFICACIONES TÉCNICAS ===
-            // Prioridad: OpenAI > Catálogo > Enriquecimiento > Excel
-            excelRow.motorizacion = openaiData.motorizacion || catalogVehicle.engine || enrichedData.engine || catalogVehicle.motor || ""
-            excelRow.combustible = openaiData.combustible || catalogVehicle.fuel || enrichedData.fuel || catalogVehicle.fuelType || ""
-            excelRow.caja = openaiData.caja || catalogVehicle.transmission || enrichedData.transmission || ""
-            excelRow.traccion = openaiData.traccion || catalogVehicle.drivetrain || enrichedData.drivetrain || ""
-            excelRow.puertas = openaiData.puertas || catalogVehicle.doors || enrichedData.doors || ""
+            // Los datos de OpenAI están ahora directamente en enrichedData
+            excelRow.motorizacion = enrichedData.motorizacion || ""
+            excelRow.combustible = enrichedData.combustible || ""
+            excelRow.caja = enrichedData.caja || ""
+            excelRow.traccion = enrichedData.traccion || ""
+            excelRow.puertas = enrichedData.puertas || ""
+
+            // === SEGMENTACIÓN Y CLASIFICACIÓN ===
+            excelRow.segmento_modelo = enrichedData.segmento_modelo || ""
+
+            // === ESPECIFICACIONES DEL MOTOR ===
+            excelRow.cilindrada = enrichedData.cilindrada || ""
+            excelRow.potencia_hp = enrichedData.potencia_hp || ""
+            excelRow.torque_nm = enrichedData.torque_nm || ""
+
+            // === CARACTERÍSTICAS DE SEGURIDAD ===
+            excelRow.airbags = enrichedData.airbags || ""
+            excelRow.abs = enrichedData.abs !== null && enrichedData.abs !== undefined ? enrichedData.abs : ""
+            excelRow.control_estabilidad = enrichedData.control_estabilidad !== null && enrichedData.control_estabilidad !== undefined ? enrichedData.control_estabilidad : ""
+
+            // === CONFORT Y EQUIPAMIENTO ===
+            excelRow.climatizador = enrichedData.climatizador !== null && enrichedData.climatizador !== undefined ? enrichedData.climatizador : ""
+            excelRow.multimedia = enrichedData.multimedia || ""
+
+            // === CHASIS Y SUSPENSIÓN ===
+            excelRow.frenos = enrichedData.frenos || ""
+            excelRow.neumaticos = enrichedData.neumaticos || ""
+            excelRow.llantas = enrichedData.llantas || ""
+
+            // === ASISTENCIA Y TECNOLOGÍA ===
+            excelRow.asistencia_manejo = enrichedData.asistencia_manejo || ""
+
+            // === RENDIMIENTO ===
+            excelRow.rendimiento_mixto = enrichedData.rendimiento_mixto || ""
+
+            // === CAPACIDADES ===
+            excelRow.capacidad_baul = enrichedData.capacidad_baul || ""
+            excelRow.capacidad_combustible = enrichedData.capacidad_combustible || ""
+            excelRow.velocidad_max = enrichedData.velocidad_max || ""
+
+            // === DIMENSIONES ===
+            excelRow.largo = enrichedData.largo || ""
+            excelRow.ancho = enrichedData.ancho || ""
+            excelRow.alto = enrichedData.alto || ""
+
+            // === INFORMACIÓN ADICIONAL ===
+            excelRow.url_ficha = enrichedData.url_ficha || ""
+
+            // === DATOS DE ANÁLISIS ===
+            excelRow.modelo_rag = enrichedData.informacion_rag || enrichedData.modelo_rag || ""
+            excelRow.titulo_legible = enrichedData.titulo_legible || ""
+            excelRow.ficha_breve = enrichedData.ficha_breve || ""
 
             // === SEGMENTACIÓN Y CLASIFICACIÓN ===
             excelRow.segmento_modelo = openaiData.segmento_modelo || catalogVehicle.segment || enrichedData.segment || catalogVehicle.category || ""
