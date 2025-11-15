@@ -256,13 +256,16 @@ class VehicleMatchingService {
         const maxPrice = Math.max(excelPriceInPesos, price2)
         const priceDiffPercent = priceDiff / maxPrice
 
-        if (priceDiffPercent <= 0.03) return 1.0 // 3% diferencia - casi exacto
-        if (priceDiffPercent <= 0.05) return 0.8 // 5% diferencia
-        if (priceDiffPercent <= 0.1) return 0.6 // 10% diferencia
-        if (priceDiffPercent <= 0.15) return 0.4 // 15% diferencia
-        if (priceDiffPercent <= 0.2) return 0.2 // 20% diferencia
+        // MENOS RESTRICTIVO - permitir más diferencia de precios
+        if (priceDiffPercent <= 0.05) return 1.0 // 5% diferencia - excelente
+        if (priceDiffPercent <= 0.15) return 0.9 // 15% diferencia - muy bueno
+        if (priceDiffPercent <= 0.25) return 0.8 // 25% diferencia - bueno
+        if (priceDiffPercent <= 0.35) return 0.6 // 35% diferencia - aceptable
+        if (priceDiffPercent <= 0.5) return 0.4 // 50% diferencia - regular
+        if (priceDiffPercent <= 0.7) return 0.3 // 70% diferencia - bajo pero válido
+        if (priceDiffPercent <= 0.8) return 0.2 // 80% diferencia - muy bajo
 
-        return 0 // Más del 20% de diferencia en precio - no match
+        return 0 // Más del 80% de diferencia en precio - no match
     }
 
     /**
@@ -369,20 +372,18 @@ class VehicleMatchingService {
                 return
             }
 
-            // 5. Comparar precio (15% del peso total) - CRÍTICO - DEBE SER MUY PRECISO
+            // 5. Comparar precio (15% del peso total) - MENOS RESTRICTIVO
             if (excelVehicle.valor && catalogVehicle.price) {
                 const priceScore = this.calculatePriceSimilarity(excelVehicle.valor, catalogVehicle.price, excelVehicle.moneda)
                 matchDetails.precio = priceScore
-                // Solo aceptar diferencias pequeñas en precio
-                if (priceScore < 0.6) {
-                    // Si el precio difiere mucho, descartar
+                // Precio es menos restrictivo - permitir diferencias mayores
+                if (priceScore < 0.2) {
+                    // Solo descartar si el precio es MUY diferente (más del 80% diferencia)
                     return
                 }
                 score += priceScore * 0.15
-            } else {
-                // Si falta el precio, descartar
-                return
             }
+            // Si falta el precio, no descartar - puede continuar
 
             // 6. Comparar color (3% del peso total) - OPCIONAL
             if (excelVehicle.color && catalogVehicle.color) {
@@ -398,8 +399,8 @@ class VehicleMatchingService {
                 score += versionScore * 0.02
             }
 
-            // Solo incluir matches con score mínimo del 60% (más alto por filtros estrictos)
-            if (score >= 0.6) {
+            // Solo incluir matches con score mínimo del 50% (reducido por precio menos restrictivo)
+            if (score >= 0.5) {
                 matches.push({
                     catalogVehicle,
                     score,
@@ -419,9 +420,9 @@ class VehicleMatchingService {
      * @returns {string} Nivel de confianza
      */
     static getConfidenceLevel(score) {
-        if (score >= 0.8) return "alto" // Muy estricto: marca/modelo coinciden + año exacto + km/precio precisos
-        if (score >= 0.65) return "medio" // Match bueno con todos los filtros obligatorios pasados
-        if (score >= 0.5) return "bajo" // Match mínimo aceptable
+        if (score >= 0.75) return "alto" // Ajustado: marca/modelo coinciden + año exacto + km precisos
+        if (score >= 0.6) return "medio" // Match bueno con filtros obligatorios + precio flexible
+        if (score >= 0.45) return "bajo" // Match aceptable con precio flexible
         return "muy_bajo"
     }
 

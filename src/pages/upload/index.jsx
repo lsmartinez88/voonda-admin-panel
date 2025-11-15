@@ -495,17 +495,77 @@ const UploadPage = () => {
     const renderMatchingDataSummary = () => (
         <Accordion>
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Typography variant="subtitle1">
-                    🔍 Ver resultados del matching ({matchingData.stats.withMatches} coincidencias)
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
+                    <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                        🎯 Resultados del Matching
+                    </Typography>
+                    <Chip
+                        label={`${matchingData.stats.withMatches}/${matchingData.stats.total} coincidencias`}
+                        color="success"
+                        variant="outlined"
+                        size="small"
+                    />
+                    <Chip
+                        label={`${Math.round((matchingData.stats.withMatches / matchingData.stats.total) * 100)}% éxito`}
+                        color="primary"
+                        size="small"
+                    />
+                </Box>
             </AccordionSummary>
             <AccordionDetails>
-                <Stack spacing={1} sx={{ mb: 2 }}>
-                    <Chip label={`Total procesados: ${matchingData.stats.total}`} size="small" color="info" />
-                    <Chip label={`Con coincidencias: ${matchingData.stats.withMatches}`} size="small" color="success" />
-                    <Chip label={`Alta confianza: ${matchingData.stats.confidenceLevels.alto}`} size="small" color="primary" />
-                    <Chip label={`Sin matches: ${matchingData.stats.confidenceLevels.sin_match}`} size="small" color="error" />
-                </Stack>
+                {/* Métricas principales en una fila */}
+                <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'nowrap', overflowX: 'auto' }}>
+                    <Card variant="outlined" sx={{ minWidth: '120px', p: 1, textAlign: 'center', flex: '1 1 0' }}>
+                        <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: '1.2rem', color: '#000' }}>
+                            {matchingData.stats.total}
+                        </Typography>
+                        <Typography variant="caption" sx={{ fontSize: '0.7rem', color: '#000' }}>
+                            Procesados
+                        </Typography>
+                    </Card>
+
+                    <Card variant="outlined" sx={{ minWidth: '120px', p: 1, textAlign: 'center', flex: '1 1 0' }}>
+                        <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: '1.2rem', color: '#000' }}>
+                            {matchingData.stats.withMatches}
+                        </Typography>
+                        <Typography variant="caption" sx={{ fontSize: '0.7rem', color: '#000' }}>
+                            Coincidencias
+                        </Typography>
+                        <Typography variant="caption" sx={{ display: 'block', fontSize: '0.65rem', color: '#000' }}>
+                            {Math.round((matchingData.stats.withMatches / matchingData.stats.total) * 100)}%
+                        </Typography>
+                    </Card>
+
+                    <Card variant="outlined" sx={{ minWidth: '120px', p: 1, textAlign: 'center', flex: '1 1 0' }}>
+                        <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: '1.2rem', color: '#000' }}>
+                            {matchingData.stats.confidenceLevels.alto}
+                        </Typography>
+                        <Typography variant="caption" sx={{ fontSize: '0.7rem', color: '#000' }}>
+                            Alta Confianza
+                        </Typography>
+                        <Typography variant="caption" sx={{ display: 'block', fontSize: '0.65rem', color: '#000' }}>
+                            {Math.round((matchingData.stats.confidenceLevels.alto / matchingData.stats.total) * 100)}%
+                        </Typography>
+                    </Card>
+
+                    <Card variant="outlined" sx={{ minWidth: '120px', p: 1, textAlign: 'center', flex: '1 1 0' }}>
+                        <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: '1.2rem', color: '#000' }}>
+                            {matchingData.stats.confidenceLevels.sin_match}
+                        </Typography>
+                        <Typography variant="caption" sx={{ fontSize: '0.7rem', color: '#000' }}>
+                            Sin Matches
+                        </Typography>
+                        {matchingData.stats.confidenceLevels.sin_match === 0 ? (
+                            <Typography variant="caption" sx={{ display: 'block', fontSize: '0.65rem', color: '#000' }}>
+                                ¡Excelente!
+                            </Typography>
+                        ) : (
+                            <Typography variant="caption" sx={{ display: 'block', fontSize: '0.65rem', color: '#000' }}>
+                                {Math.round((matchingData.stats.confidenceLevels.sin_match / matchingData.stats.total) * 100)}%
+                            </Typography>
+                        )}
+                    </Card>
+                </Box>
 
                 {matchingData.results?.length > 0 && (
                     <TableContainer component={Paper} sx={{ maxHeight: 500 }}>
