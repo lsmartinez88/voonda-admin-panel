@@ -78,23 +78,19 @@ class ExcelExportService {
                 console.log("🔍 OpenAI Data:", openaiData)
             }
 
-            // === DATOS DEL EXCEL ORIGINAL ===
-            excelRow.patente = excelData.dominio || excelData.patente || excelData.placa || ""
-            excelRow.kilometros = excelData.kilometros || excelData.km || excelData.mileage || ""
-            excelRow.vehiculo_ano = excelData.año || excelData.ano || excelData.year || ""
-            excelRow.valor = excelData.valor || excelData.precio || excelData.price || ""
-            excelRow.moneda = excelData.moneda || "ARS"
-
-            // === URLs Y REFERENCIAS ===
-            const apiId = catalogVehicle.id || ""
-            excelRow.publicacion_web = apiId ? `https://www.fratelliautomotores.com.ar/catalogo/${apiId}` : ""
-            excelRow.publicacion_api_call = apiId ? `https://api.fratelliautomotores.com.ar/api/cars/${apiId}` : ""
-
-            // === DATOS BÁSICOS DEL VEHÍCULO ===
-            excelRow.marca = excelData.marca || catalogVehicle.brand || enrichedData.brand || ""
-            excelRow.modelo = excelData.modelo || catalogVehicle.model || enrichedData.model || ""
-            excelRow.modelo_ano = excelData.año || catalogVehicle.year || enrichedData.year || ""
-            excelRow.version = excelData.versión || excelData.version || catalogVehicle.version || enrichedData.version || ""
+            // === DATOS DE LA NUEVA ESTRUCTURA SIMPLIFICADA ===
+            excelRow.patente = enrichedData.patente || ""
+            excelRow.kilometros = enrichedData.kilometros || ""
+            excelRow.vehiculo_ano = enrichedData.vehiculo_ano || ""
+            excelRow.valor = enrichedData.valor || ""
+            excelRow.moneda = enrichedData.moneda || ""
+            excelRow.publicacion_web = enrichedData.publicacion_web || ""
+            excelRow.publicacion_api_call = enrichedData.publicacion_api_call || ""
+            excelRow.marca = enrichedData.marca || ""
+            excelRow.modelo = enrichedData.modelo || ""
+            excelRow.modelo_ano = enrichedData.modelo_ano || ""
+            excelRow.version = enrichedData.version || ""
+            excelRow.color = enrichedData.color || ""
 
             // === ESPECIFICACIONES TÉCNICAS ===
             // Prioridad: OpenAI > Catálogo > Enriquecimiento > Excel

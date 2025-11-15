@@ -2,163 +2,48 @@ import OpenAIService from "./openaiService"
 
 class ApiEnrichmentService {
     static async enrichComplete(matchingResults, onProgress = null) {
+        console.log(`� Iniciando enriquecimiento completo de ${matchingResults.length} vehículos...`)
+
         try {
-            console.log("🚀 Iniciando enriquecimiento completo desde el catálogo...")
-            console.log("📋 Datos de matching recibidos:", {
-                total: matchingResults?.length || 0,
-                type: typeof matchingResults,
-                isArray: Array.isArray(matchingResults)
-            })
-
-            // Log detallado de los resultados de matching
-            if (matchingResults && matchingResults.length > 0) {
-                console.log("🔍 Muestra de resultados de matching:")
-                matchingResults.slice(0, 3).forEach((result, i) => {
-                    console.log(`   Resultado ${i + 1}:`, {
-                        bestMatch: result.bestMatch
-                            ? {
-                                  confidence: result.bestMatch.confidence,
-                                  score: result.bestMatch.score,
-                                  vehicleBrand: result.bestMatch.catalogVehicle?.brand,
-                                  vehicleModel: result.bestMatch.catalogVehicle?.model
-                              }
-                            : null,
-                        excelVehicle: result.excelVehicle?.json
-                            ? {
-                                  marca: result.excelVehicle.json.marca,
-                                  modelo: result.excelVehicle.json.modelo
-                              }
-                            : null
-                    })
-                })
-
-                // Log de niveles de confianza
-                const confidenceLevels = {
-                    alto: 0,
-                    medio: 0,
-                    bajo: 0,
-                    sin_match: 0
-                }
-
-                matchingResults.forEach((result) => {
-                    if (result.bestMatch) {
-                        confidenceLevels[result.bestMatch.confidence] = (confidenceLevels[result.bestMatch.confidence] || 0) + 1
-                    } else {
-                        confidenceLevels.sin_match++
-                    }
-                })
-
-                console.log("📊 Distribución de niveles de confianza:", confidenceLevels)
-            }
-
-            const vehiclesToEnrich = matchingResults.filter((result) => result.bestMatch && (result.bestMatch.confidence === "alto" || result.bestMatch.confidence === "medio"))
-
-            console.log(`📊 Vehículos a enriquecer: ${vehiclesToEnrich.length} de ${matchingResults.length} totales`)
-            console.log(`   - Con confianza alta: ${matchingResults.filter((r) => r.bestMatch?.confidence === "alto").length}`)
-            console.log(`   - Con confianza media: ${matchingResults.filter((r) => r.bestMatch?.confidence === "medio").length}`)
-
-            if (vehiclesToEnrich.length === 0) {
-                console.warn("⚠️ No hay vehículos con confianza 'alto' o 'medio' para enriquecer")
-                console.log("💡 Procesando todos los vehículos aunque no tengan confianza alta/media...")
-
-                // Procesar todos los vehículos aunque no tengan alta confianza
-                const allResults = matchingResults.map((result) => {
-                    const excelVehicleData = result.excelVehicle?.json || {}
-
-                    return {
-                        ...result,
-                        enrichedData: {
-                            // PRESERVAR TODOS los datos del Excel original
-                            excelData: {
-                                ...excelVehicleData,
-                                dominio: excelVehicleData.dominio || excelVehicleData.patente,
-                                marca: excelVehicleData.marca,
-                                modelo: excelVehicleData.modelo,
-                                año: excelVehicleData.año,
-                                kilometros: excelVehicleData.kilometros,
-                                valor: excelVehicleData.valor,
-                                moneda: excelVehicleData.moneda,
-                                versión: excelVehicleData.versión || excelVehicleData.version,
-                                color: excelVehicleData.color,
-                                publicacion_web: excelVehicleData.publicacion_web,
-                                publicacion_api_call: excelVehicleData.publicacion_api_call
-                            },
-                            matchData: result.bestMatch || {},
-                            enrichmentSuccess: true, // CORREGIDO: Marcar como exitoso
-                            enrichmentReason: result.bestMatch ? `Confianza ${result.bestMatch.confidence} - datos preservados del Excel` : "Sin matches - datos preservados del Excel",
-                            enrichmentTimestamp: new Date().toISOString()
-                        }
-                    }
-                })
-
-                const stats = this.calculateEnrichmentStats(allResults)
-
-                return {
-                    success: true,
-                    data: allResults,
-                    stats: stats,
-                    warning: "No se encontraron vehículos con confianza alta para enriquecer"
-                }
-            }
-
             const enrichedResults = []
             let processedCount = 0
 
-            for (const result of vehiclesToEnrich) {
+            for (const result of matchingResults) {
                 try {
-                    const catalogVehicle = result.bestMatch.catalogVehicle
-                    const excelVehicleData = result.excelVehicle?.json || {}
+                    const excelData = result.excelVehicle?.json || {}
+                    const apiData = result.bestMatch?.catalogVehicle || {}
 
-                    console.log(`🔍 Enriqueciendo vehículo: ${catalogVehicle.brand} ${catalogVehicle.model}`)
-                    console.log(`📋 Datos Excel originales:`, {
-                        dominio: excelVehicleData.dominio,
-                        marca: excelVehicleData.marca,
-                        modelo: excelVehicleData.modelo,
-                        año: excelVehicleData.año,
-                        kilometros: excelVehicleData.kilometros,
-                        valor: excelVehicleData.valor,
-                        moneda: excelVehicleData.moneda,
-                        versión: excelVehicleData.versión
-                    })
+                    // Mapeo simple como especificaste:
+                    // Excel dominio -> patente
+                    // API mileage -> kilometros
+                    // API year -> vehiculo_ano/modelo_ano
+                    // Excel valor -> valor
+                    // Excel moneda -> moneda
+                    // Excel Version -> version
+                    // Resto en blanco
 
                     const enrichedData = {
-                        // Datos del catálogo
-                        id: catalogVehicle.id,
-                        brand: catalogVehicle.brand,
-                        model: catalogVehicle.model,
-                        year: catalogVehicle.year,
-                        // PRESERVAR TODOS los datos del Excel original
-                        excelData: {
-                            ...excelVehicleData,
-                            // Asegurar que los campos clave estén presentes
-                            dominio: excelVehicleData.dominio || excelVehicleData.patente,
-                            marca: excelVehicleData.marca,
-                            modelo: excelVehicleData.modelo,
-                            año: excelVehicleData.año,
-                            kilometros: excelVehicleData.kilometros,
-                            valor: excelVehicleData.valor,
-                            moneda: excelVehicleData.moneda,
-                            versión: excelVehicleData.versión || excelVehicleData.version,
-                            color: excelVehicleData.color,
-                            publicacion_web: excelVehicleData.publicacion_web,
-                            publicacion_api_call: excelVehicleData.publicacion_api_call
-                        },
-                        // Datos del matching
-                        matchData: {
-                            ...result.bestMatch,
-                            catalogVehicle: catalogVehicle
-                        },
-                        enrichmentSuccess: true,
+                        // Campos principales del Excel preservados
+                        patente: excelData.dominio || excelData.patente || "",
+                        kilometros: apiData.mileage || excelData.kilometros || "",
+                        vehiculo_ano: apiData.year || excelData.año || "",
+                        modelo_ano: apiData.year || excelData.año || "",
+                        valor: excelData.valor || "",
+                        moneda: excelData.moneda || "",
+                        version: excelData.versión || excelData.version || "",
+
+                        // Resto de campos como estaban en el Excel
+                        marca: excelData.marca || "",
+                        modelo: excelData.modelo || "",
+                        color: excelData.color || "",
+                        // URLs construidas desde el ID del catálogo si está disponible
+                        publicacion_web: apiData.id ? `https://www.fratelliautomotores.com.ar/catalogo/${apiData.id}` : excelData.publicacion_web || "",
+                        publicacion_api_call: apiData.id ? `https://api.fratelliautomotores.com.ar/api/cars/${apiData.id}` : excelData.publicacion_api_call || "",
+
+                        // Solo marcar como exitoso si realmente hay match con catálogo
+                        enrichmentSuccess: !!apiData.id,
                         enrichmentTimestamp: new Date().toISOString()
                     }
-
-                    console.log(`✅ Datos enriquecidos:`, {
-                        excelDataKeys: Object.keys(enrichedData.excelData),
-                        hasPatente: !!enrichedData.excelData.dominio,
-                        hasKilometros: !!enrichedData.excelData.kilometros,
-                        hasValor: !!enrichedData.excelData.valor,
-                        hasMoneda: !!enrichedData.excelData.moneda
-                    })
 
                     enrichedResults.push({
                         ...result,
@@ -166,11 +51,23 @@ class ApiEnrichmentService {
                     })
                 } catch (error) {
                     console.error(`❌ Error enriqueciendo vehículo:`, error)
+                    const excelData = result.excelVehicle?.json || {}
+
                     enrichedResults.push({
                         ...result,
                         enrichedData: {
-                            excelData: result.excelVehicle?.json || {},
-                            matchData: result.bestMatch || {},
+                            patente: excelData.dominio || excelData.patente || "",
+                            kilometros: excelData.kilometros || "",
+                            vehiculo_ano: excelData.año || "",
+                            modelo_ano: excelData.año || "",
+                            valor: excelData.valor || "",
+                            moneda: excelData.moneda || "",
+                            version: excelData.versión || excelData.version || "",
+                            marca: excelData.marca || "",
+                            modelo: excelData.modelo || "",
+                            color: excelData.color || "",
+                            publicacion_web: excelData.publicacion_web || "",
+                            publicacion_api_call: excelData.publicacion_api_call || "",
                             enrichmentSuccess: false,
                             enrichmentError: error.message,
                             enrichmentTimestamp: new Date().toISOString()
@@ -182,54 +79,17 @@ class ApiEnrichmentService {
                 if (onProgress && typeof onProgress === "function") {
                     onProgress({
                         processed: processedCount,
-                        total: vehiclesToEnrich.length,
-                        percentage: Math.round((processedCount / vehiclesToEnrich.length) * 100)
+                        total: matchingResults.length,
+                        current: result
                     })
                 }
             }
 
-            const notEnriched = matchingResults.filter((result) => !result.bestMatch || (result.bestMatch.confidence !== "alto" && result.bestMatch.confidence !== "medio"))
-
-            notEnriched.forEach((result) => {
-                const excelVehicleData = result.excelVehicle?.json || {}
-
-                console.log(`⚠️ Vehículo sin alta confianza - preservando datos Excel:`, {
-                    dominio: excelVehicleData.dominio,
-                    marca: excelVehicleData.marca,
-                    modelo: excelVehicleData.modelo
-                })
-
-                enrichedResults.push({
-                    ...result,
-                    enrichedData: {
-                        // PRESERVAR TODOS los datos del Excel original
-                        excelData: {
-                            ...excelVehicleData,
-                            dominio: excelVehicleData.dominio || excelVehicleData.patente,
-                            marca: excelVehicleData.marca,
-                            modelo: excelVehicleData.modelo,
-                            año: excelVehicleData.año,
-                            kilometros: excelVehicleData.kilometros,
-                            valor: excelVehicleData.valor,
-                            moneda: excelVehicleData.moneda,
-                            versión: excelVehicleData.versión || excelVehicleData.version,
-                            color: excelVehicleData.color,
-                            publicacion_web: excelVehicleData.publicacion_web,
-                            publicacion_api_call: excelVehicleData.publicacion_api_call
-                        },
-                        matchData: result.bestMatch || {},
-                        enrichmentSuccess: true, // CORREGIDO: Marcar como exitoso
-                        enrichmentReason: result.bestMatch ? `Confianza ${result.bestMatch.confidence} - datos preservados del Excel` : "Sin matches - datos preservados del Excel",
-                        enrichmentTimestamp: new Date().toISOString()
-                    }
-                })
-            })
-
             const stats = this.calculateEnrichmentStats(enrichedResults)
 
-            console.log("✅ Enriquecimiento completo terminado:")
-            console.log(`📊 Total procesados: ${enrichedResults.length}`)
-            console.log(`✅ Enriquecidos exitosamente: ${stats.enrichedSuccessfully}`)
+            console.log(`✅ Enriquecimiento completo finalizado:`)
+            console.log(`   - Total procesados: ${enrichedResults.length}`)
+            console.log(`   - Enriquecidos exitosamente: ${stats.successful}`)
 
             return {
                 success: true,
@@ -237,26 +97,11 @@ class ApiEnrichmentService {
                 stats: stats
             }
         } catch (error) {
-            console.error("❌ Error en proceso de enriquecimiento:", error)
-            console.error("   - Mensaje:", error.message)
-            console.error("   - Stack:", error.stack)
-            console.error("   - Datos recibidos:", {
-                matchingResultsType: typeof matchingResults,
-                matchingResultsLength: matchingResults?.length,
-                matchingResultsArray: Array.isArray(matchingResults)
-            })
-
+            console.error("❌ Error crítico en enriquecimiento completo:", error)
             return {
                 success: false,
                 error: error.message,
-                data: [],
-                details: {
-                    errorType: error.constructor.name,
-                    received: {
-                        matchingResultsType: typeof matchingResults,
-                        matchingResultsLength: matchingResults?.length
-                    }
-                }
+                data: []
             }
         }
     }
@@ -386,31 +231,25 @@ class ApiEnrichmentService {
 
     static calculateEnrichmentStats(enrichedResults) {
         const total = enrichedResults.length
-        const enrichedSuccessfully = enrichedResults.filter((r) => {
-            // Verificar si hay datos enriquecidos con éxito
-            const hasEnrichment = r.enrichedData && r.enrichedData.enrichmentSuccess === true
-            const hasExcelData = r.enrichedData && r.enrichedData.excelData
-            return hasEnrichment || hasExcelData // Considerar exitoso si tiene datos del Excel o enriquecimiento
-        }).length
-
-        const enrichmentFailures = enrichedResults.filter((r) => {
-            return r.enrichedData && r.enrichedData.enrichmentSuccess === false && r.enrichedData.enrichmentError
-        }).length
+        const successful = enrichedResults.filter((r) => r.enrichedData?.enrichmentSuccess === true).length
+        const failed = enrichedResults.filter((r) => r.enrichedData?.enrichmentSuccess === false).length
 
         console.log("📊 Estadísticas de enriquecimiento:", {
             total,
-            enrichedSuccessfully,
-            enrichmentFailures,
-            rate: Math.round((enrichedSuccessfully / total) * 100)
+            successful,
+            failed,
+            rate: total > 0 ? Math.round((successful / total) * 100) : 0
         })
 
         return {
             total,
-            totalProcessed: total, // Agregar alias para compatibilidad
-            enrichedSuccessfully,
-            enrichmentErrors: enrichmentFailures, // Agregar alias para compatibilidad
-            enrichmentFailures,
-            enrichmentRate: Math.round((enrichedSuccessfully / total) * 100)
+            successful,
+            failed,
+            enrichmentRate: total > 0 ? Math.round((successful / total) * 100) : 0,
+            // Aliases para compatibilidad
+            enrichedSuccessfully: successful,
+            enrichmentFailures: failed,
+            enrichmentErrors: failed
         }
     }
 
