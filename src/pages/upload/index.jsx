@@ -524,35 +524,36 @@ const UploadPage = () => {
                                             modelo_ano: enrichedDataItem.modelo_ano || "",
                                             version: enrichedDataItem.version || "",
                                             color: enrichedDataItem.color || "",
-                                            motorizacion: "",
-                                            combustible: "",
-                                            caja: "",
-                                            traccion: "",
-                                            puertas: "",
-                                            segmento_modelo: "",
-                                            cilindrada: "",
-                                            potencia_hp: "",
-                                            torque_nm: "",
-                                            airbags: "",
-                                            abs: "",
-                                            control_estabilidad: "",
-                                            climatizador: "",
-                                            multimedia: "",
-                                            frenos: "",
-                                            neumaticos: "",
-                                            llantas: "",
-                                            asistencia_manejo: "",
-                                            rendimiento_mixto: "",
-                                            capacidad_baul: "",
-                                            capacidad_combustible: "",
-                                            velocidad_max: "",
-                                            largo: "",
-                                            ancho: "",
-                                            alto: "",
-                                            url_ficha: "",
-                                            modelo_rag: "",
-                                            titulo_legible: "",
-                                            ficha_breve: ""
+                                            // Campos OpenAI ahora están directamente en enrichedDataItem
+                                            motorizacion: enrichedDataItem.motorizacion || "",
+                                            combustible: enrichedDataItem.combustible || "",
+                                            caja: enrichedDataItem.caja || "",
+                                            traccion: enrichedDataItem.traccion || "",
+                                            puertas: enrichedDataItem.puertas || "",
+                                            segmento_modelo: enrichedDataItem.segmento_modelo || "",
+                                            cilindrada: enrichedDataItem.cilindrada || "",
+                                            potencia_hp: enrichedDataItem.potencia_hp || "",
+                                            torque_nm: enrichedDataItem.torque_nm || "",
+                                            airbags: enrichedDataItem.airbags || "",
+                                            abs: enrichedDataItem.abs || "",
+                                            control_estabilidad: enrichedDataItem.control_estabilidad || "",
+                                            climatizador: enrichedDataItem.climatizador || "",
+                                            multimedia: enrichedDataItem.multimedia || "",
+                                            frenos: enrichedDataItem.frenos || "",
+                                            neumaticos: enrichedDataItem.neumaticos || "",
+                                            llantas: enrichedDataItem.llantas || "",
+                                            asistencia_manejo: enrichedDataItem.asistencia_manejo || "",
+                                            rendimiento_mixto: enrichedDataItem.rendimiento_mixto || "",
+                                            capacidad_baul: enrichedDataItem.capacidad_baul || "",
+                                            capacidad_combustible: enrichedDataItem.capacidad_combustible || "",
+                                            velocidad_max: enrichedDataItem.velocidad_max || "",
+                                            largo: enrichedDataItem.largo || "",
+                                            ancho: enrichedDataItem.ancho || "",
+                                            alto: enrichedDataItem.alto || "",
+                                            url_ficha: enrichedDataItem.url_ficha || "",
+                                            modelo_rag: enrichedDataItem.modelo_rag || "",
+                                            titulo_legible: enrichedDataItem.titulo_legible || "",
+                                            ficha_breve: enrichedDataItem.ficha_breve || ""
                                         }
 
                                         return (
@@ -1072,6 +1073,7 @@ const UploadPage = () => {
         if (!matchingData?.success || !matchingData?.results) return
 
         setEnriching(true)
+        setOpenaiProgress(null) // Reset del progreso OpenAI
         setMessage(`📡 Enriqueciendo datos${enableOpenAI ? ' con API + OpenAI' : ' con API'}...`)
         setMessageType('info')
 
@@ -1139,6 +1141,7 @@ const UploadPage = () => {
             setMessageType('error')
         } finally {
             setEnriching(false)
+            setOpenaiProgress(null) // Reset del progreso OpenAI al finalizar
             setTimeout(() => setMessage(''), 5000)
         }
     }

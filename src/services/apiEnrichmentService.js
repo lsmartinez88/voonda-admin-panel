@@ -307,10 +307,11 @@ class ApiEnrichmentService {
             notProcessed.forEach((vehicle) => {
                 processedResults.push({
                     ...vehicle,
-                    openaiData: {
-                        success: false,
-                        reason: "Vehículo no fue enriquecido previamente",
-                        timestamp: new Date().toISOString()
+                    enrichedData: {
+                        ...vehicle.enrichedData,
+                        openaiSuccess: false,
+                        openaiError: "Vehículo no fue enriquecido previamente",
+                        openaiTimestamp: new Date().toISOString()
                     }
                 })
             })
@@ -375,8 +376,8 @@ class ApiEnrichmentService {
 
     static calculateOpenAIStats(results) {
         const total = results.length
-        const openaiEnriched = results.filter((r) => r.openaiData && r.openaiData.success).length
-        const openaiErrors = results.filter((r) => r.openaiData && r.openaiData.success === false && r.openaiData.error).length
+        const openaiEnriched = results.filter((r) => r.enrichedData && r.enrichedData.openaiSuccess === true).length
+        const openaiErrors = results.filter((r) => r.enrichedData && r.enrichedData.openaiSuccess === false && r.enrichedData.openaiError).length
 
         return {
             total,
