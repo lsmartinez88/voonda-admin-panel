@@ -444,6 +444,185 @@ const UploadPage = () => {
                         )}
                     </Box>
                 )}
+
+                {/* Tabla de vista previa de los datos finales - TODAS LAS COLUMNAS DEL EXCEL */}
+                {enrichedData?.success && enrichedData?.data && (
+                    <Box sx={{ mt: 3 }}>
+                        <Typography variant="h6" gutterBottom>
+                            👀 Vista Previa de Datos Finales (40 columnas completas)
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                            Exactamente los mismos datos que se exportarán en Excel. {enrichedData.data.length} registros con todas las columnas.
+                        </Typography>
+
+                        <TableContainer component={Paper} sx={{ maxHeight: 600, overflowX: 'auto' }}>
+                            <Table size="small" stickyHeader>
+                                <TableHead>
+                                    <TableRow>
+                                        <TableCell sx={{ minWidth: 100 }}><strong>patente</strong></TableCell>
+                                        <TableCell sx={{ minWidth: 100 }}><strong>kilometros</strong></TableCell>
+                                        <TableCell sx={{ minWidth: 100 }}><strong>vehiculo_ano</strong></TableCell>
+                                        <TableCell sx={{ minWidth: 100 }}><strong>valor</strong></TableCell>
+                                        <TableCell sx={{ minWidth: 80 }}><strong>moneda</strong></TableCell>
+                                        <TableCell sx={{ minWidth: 120 }}><strong>publicacion_web</strong></TableCell>
+                                        <TableCell sx={{ minWidth: 140 }}><strong>publicacion_api_call</strong></TableCell>
+                                        <TableCell sx={{ minWidth: 100 }}><strong>marca</strong></TableCell>
+                                        <TableCell sx={{ minWidth: 100 }}><strong>modelo</strong></TableCell>
+                                        <TableCell sx={{ minWidth: 100 }}><strong>modelo_ano</strong></TableCell>
+                                        <TableCell sx={{ minWidth: 100 }}><strong>version</strong></TableCell>
+                                        <TableCell sx={{ minWidth: 120 }}><strong>motorizacion</strong></TableCell>
+                                        <TableCell sx={{ minWidth: 100 }}><strong>combustible</strong></TableCell>
+                                        <TableCell sx={{ minWidth: 80 }}><strong>caja</strong></TableCell>
+                                        <TableCell sx={{ minWidth: 100 }}><strong>traccion</strong></TableCell>
+                                        <TableCell sx={{ minWidth: 80 }}><strong>puertas</strong></TableCell>
+                                        <TableCell sx={{ minWidth: 120 }}><strong>segmento_modelo</strong></TableCell>
+                                        <TableCell sx={{ minWidth: 100 }}><strong>cilindrada</strong></TableCell>
+                                        <TableCell sx={{ minWidth: 100 }}><strong>potencia_hp</strong></TableCell>
+                                        <TableCell sx={{ minWidth: 100 }}><strong>torque_nm</strong></TableCell>
+                                        <TableCell sx={{ minWidth: 80 }}><strong>airbags</strong></TableCell>
+                                        <TableCell sx={{ minWidth: 60 }}><strong>abs</strong></TableCell>
+                                        <TableCell sx={{ minWidth: 140 }}><strong>control_estabilidad</strong></TableCell>
+                                        <TableCell sx={{ minWidth: 120 }}><strong>climatizador</strong></TableCell>
+                                        <TableCell sx={{ minWidth: 100 }}><strong>multimedia</strong></TableCell>
+                                        <TableCell sx={{ minWidth: 80 }}><strong>frenos</strong></TableCell>
+                                        <TableCell sx={{ minWidth: 100 }}><strong>neumaticos</strong></TableCell>
+                                        <TableCell sx={{ minWidth: 80 }}><strong>llantas</strong></TableCell>
+                                        <TableCell sx={{ minWidth: 140 }}><strong>asistencia_manejo</strong></TableCell>
+                                        <TableCell sx={{ minWidth: 140 }}><strong>rendimiento_mixto</strong></TableCell>
+                                        <TableCell sx={{ minWidth: 120 }}><strong>capacidad_baul</strong></TableCell>
+                                        <TableCell sx={{ minWidth: 160 }}><strong>capacidad_combustible</strong></TableCell>
+                                        <TableCell sx={{ minWidth: 120 }}><strong>velocidad_max</strong></TableCell>
+                                        <TableCell sx={{ minWidth: 80 }}><strong>largo</strong></TableCell>
+                                        <TableCell sx={{ minWidth: 80 }}><strong>ancho</strong></TableCell>
+                                        <TableCell sx={{ minWidth: 80 }}><strong>alto</strong></TableCell>
+                                        <TableCell sx={{ minWidth: 120 }}><strong>url_ficha</strong></TableCell>
+                                        <TableCell sx={{ minWidth: 100 }}><strong>modelo_rag</strong></TableCell>
+                                        <TableCell sx={{ minWidth: 140 }}><strong>titulo_legible</strong></TableCell>
+                                        <TableCell sx={{ minWidth: 200 }}><strong>ficha_breve</strong></TableCell>
+                                    </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                    {enrichedData.data.map((vehicle, index) => {
+                                        // Usar la misma lógica que ExcelExportService para crear cada fila
+                                        const excelData = vehicle.excelData || {}
+                                        const matchData = vehicle.matchData || vehicle.bestMatch || {}
+                                        const catalogVehicle = matchData.catalogVehicle || {}
+                                        const enrichedDataItem = vehicle.enrichedData || {}
+                                        const openaiData = enrichedDataItem.openai || {}
+
+                                        // Crear fila exactamente como en ExcelExportService
+                                        const apiId = catalogVehicle.id || ""
+                                        const row = {
+                                            patente: excelData.dominio || excelData.patente || excelData.placa || "",
+                                            kilometros: excelData.kilometros || excelData.km || excelData.mileage || "",
+                                            vehiculo_ano: excelData.año || excelData.ano || excelData.year || "",
+                                            valor: excelData.valor || excelData.precio || excelData.price || "",
+                                            moneda: excelData.moneda || "ARS",
+                                            publicacion_web: apiId ? `https://www.fratelliautomotores.com.ar/catalogo/${apiId}` : "",
+                                            publicacion_api_call: apiId ? `https://api.fratelliautomotores.com.ar/api/cars/${apiId}` : "",
+                                            marca: excelData.marca || catalogVehicle.brand || enrichedDataItem.brand || "",
+                                            modelo: excelData.modelo || catalogVehicle.model || enrichedDataItem.model || "",
+                                            modelo_ano: excelData.año || catalogVehicle.year || enrichedDataItem.year || "",
+                                            version: excelData.versión || excelData.version || catalogVehicle.version || enrichedDataItem.version || "",
+                                            motorizacion: openaiData.motorizacion || enrichedDataItem.motorizacion || catalogVehicle.engine || "",
+                                            combustible: openaiData.combustible || enrichedDataItem.combustible || catalogVehicle.fuel_type || "",
+                                            caja: openaiData.caja || enrichedDataItem.caja || catalogVehicle.transmission || "",
+                                            traccion: openaiData.traccion || enrichedDataItem.traccion || catalogVehicle.drivetrain || "",
+                                            puertas: openaiData.puertas || enrichedDataItem.puertas || catalogVehicle.doors || "",
+                                            segmento_modelo: openaiData.segmento_modelo || enrichedDataItem.segmento_modelo || catalogVehicle.segment || "",
+                                            cilindrada: openaiData.cilindrada || enrichedDataItem.cilindrada || catalogVehicle.displacement || "",
+                                            potencia_hp: openaiData.potencia_hp || enrichedDataItem.potencia_hp || catalogVehicle.power_hp || "",
+                                            torque_nm: openaiData.torque_nm || enrichedDataItem.torque_nm || catalogVehicle.torque_nm || "",
+                                            airbags: openaiData.airbags || enrichedDataItem.airbags || catalogVehicle.airbags || "",
+                                            abs: openaiData.abs || enrichedDataItem.abs || catalogVehicle.abs || "",
+                                            control_estabilidad: openaiData.control_estabilidad || enrichedDataItem.control_estabilidad || catalogVehicle.stability_control || "",
+                                            climatizador: openaiData.climatizador || enrichedDataItem.climatizador || catalogVehicle.climate_control || "",
+                                            multimedia: openaiData.multimedia || enrichedDataItem.multimedia || catalogVehicle.multimedia || "",
+                                            frenos: openaiData.frenos || enrichedDataItem.frenos || catalogVehicle.brakes || "",
+                                            neumaticos: openaiData.neumaticos || enrichedDataItem.neumaticos || catalogVehicle.tires || "",
+                                            llantas: openaiData.llantas || enrichedDataItem.llantas || catalogVehicle.rims || "",
+                                            asistencia_manejo: openaiData.asistencia_manejo || enrichedDataItem.asistencia_manejo || catalogVehicle.driving_assistance || "",
+                                            rendimiento_mixto: openaiData.rendimiento_mixto || enrichedDataItem.rendimiento_mixto || catalogVehicle.fuel_consumption || "",
+                                            capacidad_baul: openaiData.capacidad_baul || enrichedDataItem.capacidad_baul || catalogVehicle.trunk_capacity || "",
+                                            capacidad_combustible: openaiData.capacidad_combustible || enrichedDataItem.capacidad_combustible || catalogVehicle.fuel_capacity || "",
+                                            velocidad_max: openaiData.velocidad_max || enrichedDataItem.velocidad_max || catalogVehicle.max_speed || "",
+                                            largo: openaiData.largo || enrichedDataItem.largo || catalogVehicle.length || "",
+                                            ancho: openaiData.ancho || enrichedDataItem.ancho || catalogVehicle.width || "",
+                                            alto: openaiData.alto || enrichedDataItem.alto || catalogVehicle.height || "",
+                                            url_ficha: openaiData.url_ficha || enrichedDataItem.url_ficha || catalogVehicle.spec_sheet_url || "",
+                                            modelo_rag: openaiData.modelo_rag || enrichedDataItem.modelo_rag || "",
+                                            titulo_legible: openaiData.titulo_legible || enrichedDataItem.titulo_legible || "",
+                                            ficha_breve: openaiData.ficha_breve || enrichedDataItem.ficha_breve || ""
+                                        }
+
+                                        return (
+                                            <TableRow key={index}>
+                                                <TableCell>{row.patente || "-"}</TableCell>
+                                                <TableCell>{row.kilometros ? `${row.kilometros.toLocaleString()}` : "-"}</TableCell>
+                                                <TableCell>{row.vehiculo_ano || "-"}</TableCell>
+                                                <TableCell>{row.valor ? `$${row.valor.toLocaleString()}` : "-"}</TableCell>
+                                                <TableCell>{row.moneda || "-"}</TableCell>
+                                                <TableCell>
+                                                    {row.publicacion_web ? (
+                                                        <Button size="small" onClick={() => window.open(row.publicacion_web, '_blank')} sx={{ fontSize: '0.6rem' }}>
+                                                            Ver Web
+                                                        </Button>
+                                                    ) : "-"}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {row.publicacion_api_call ? (
+                                                        <Button size="small" onClick={() => window.open(row.publicacion_api_call, '_blank')} sx={{ fontSize: '0.6rem' }}>
+                                                            Ver API
+                                                        </Button>
+                                                    ) : "-"}
+                                                </TableCell>
+                                                <TableCell>{row.marca || "-"}</TableCell>
+                                                <TableCell>{row.modelo || "-"}</TableCell>
+                                                <TableCell>{row.modelo_ano || "-"}</TableCell>
+                                                <TableCell>{row.version || "-"}</TableCell>
+                                                <TableCell>{row.motorizacion || "-"}</TableCell>
+                                                <TableCell>{row.combustible || "-"}</TableCell>
+                                                <TableCell>{row.caja || "-"}</TableCell>
+                                                <TableCell>{row.traccion || "-"}</TableCell>
+                                                <TableCell>{row.puertas || "-"}</TableCell>
+                                                <TableCell>{row.segmento_modelo || "-"}</TableCell>
+                                                <TableCell>{row.cilindrada || "-"}</TableCell>
+                                                <TableCell>{row.potencia_hp || "-"}</TableCell>
+                                                <TableCell>{row.torque_nm || "-"}</TableCell>
+                                                <TableCell>{row.airbags || "-"}</TableCell>
+                                                <TableCell>{row.abs || "-"}</TableCell>
+                                                <TableCell>{row.control_estabilidad || "-"}</TableCell>
+                                                <TableCell>{row.climatizador || "-"}</TableCell>
+                                                <TableCell>{row.multimedia || "-"}</TableCell>
+                                                <TableCell>{row.frenos || "-"}</TableCell>
+                                                <TableCell>{row.neumaticos || "-"}</TableCell>
+                                                <TableCell>{row.llantas || "-"}</TableCell>
+                                                <TableCell>{row.asistencia_manejo || "-"}</TableCell>
+                                                <TableCell>{row.rendimiento_mixto || "-"}</TableCell>
+                                                <TableCell>{row.capacidad_baul || "-"}</TableCell>
+                                                <TableCell>{row.capacidad_combustible || "-"}</TableCell>
+                                                <TableCell>{row.velocidad_max || "-"}</TableCell>
+                                                <TableCell>{row.largo || "-"}</TableCell>
+                                                <TableCell>{row.ancho || "-"}</TableCell>
+                                                <TableCell>{row.alto || "-"}</TableCell>
+                                                <TableCell>
+                                                    {row.url_ficha ? (
+                                                        <Button size="small" onClick={() => window.open(row.url_ficha, '_blank')} sx={{ fontSize: '0.6rem' }}>
+                                                            Ver Ficha
+                                                        </Button>
+                                                    ) : "-"}
+                                                </TableCell>
+                                                <TableCell>{row.modelo_rag || "-"}</TableCell>
+                                                <TableCell>{row.titulo_legible || "-"}</TableCell>
+                                                <TableCell sx={{ maxWidth: 200 }}>{row.ficha_breve || "-"}</TableCell>
+                                            </TableRow>
+                                        )
+                                    })}
+                                </TableBody>
+                            </Table>
+                        </TableContainer>
+                    </Box>
+                )}
             </CardContent>
         </Card>
     )
