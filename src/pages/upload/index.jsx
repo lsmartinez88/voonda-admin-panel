@@ -342,7 +342,7 @@ const UploadPage = () => {
 
                         {/* Progreso de OpenAI */}
                         {openaiProgress && (
-                            <Box sx={{ mb: 3, p: 2, bgcolor: '#f5f5f5', borderRadius: 2 }}>
+                            <Box sx={{ mb: 3, p: 2, border: '1px solid #e0e0e0', borderRadius: 2 }}>
                                 <Typography variant="subtitle2" gutterBottom>
                                     🤖 Progreso OpenAI: Lote {openaiProgress.batchNumber}/{openaiProgress.totalBatches}
                                 </Typography>
@@ -1077,7 +1077,7 @@ const UploadPage = () => {
     }
 
     return (
-        <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Container maxWidth="xl" sx={{ py: 4 }}>
             {/* Header */}
             <Box sx={{ textAlign: 'center', mb: 4 }}>
                 <Typography variant="h3" component="h1" gutterBottom color="primary">
@@ -1101,7 +1101,7 @@ const UploadPage = () => {
                                                 border: 1,
                                                 borderRadius: 2,
                                                 color: index <= activeStep ? 'primary.main' : 'text.secondary',
-                                                backgroundColor: index < activeStep ? 'primary.main' : 'transparent',
+                                                backgroundColor: 'transparent',
                                                 '&:hover': { backgroundColor: 'transparent' }
                                             }}
                                             size="small"
