@@ -259,10 +259,11 @@ class VehicleMatchingService {
 
         // MENOS RESTRICTIVO - permitir más diferencia de precios
         if (priceDiff === 0) return 1.0 // Precio exacto - 100%
-        if (priceDiffPercent <= 0.05) return 0.9 // 5% diferencia - excelente pero no perfecto
-        if (priceDiffPercent <= 0.15) return 0.8 // 15% diferencia - muy bueno
-        if (priceDiffPercent <= 0.25) return 0.7 // 25% diferencia - bueno
-        if (priceDiffPercent <= 0.35) return 0.6 // 35% diferencia - aceptable
+        if (priceDiffPercent <= 0.1) return 1.0 // Hasta 10% diferencia - considerado exacto para precios
+        if (priceDiffPercent <= 0.2) return 0.9 // 20% diferencia - excelente
+        if (priceDiffPercent <= 0.3) return 0.8 // 30% diferencia - muy bueno
+        if (priceDiffPercent <= 0.4) return 0.7 // 40% diferencia - bueno
+        if (priceDiffPercent <= 0.5) return 0.6 // 50% diferencia - aceptable
         if (priceDiffPercent <= 0.5) return 0.4 // 50% diferencia - regular
         if (priceDiffPercent <= 0.7) return 0.3 // 70% diferencia - bajo pero válido
         if (priceDiffPercent <= 0.8) return 0.2 // 80% diferencia - muy bajo
