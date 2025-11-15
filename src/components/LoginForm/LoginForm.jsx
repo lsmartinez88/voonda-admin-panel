@@ -24,14 +24,14 @@ const LoginForm = () => {
     password: "",
     showPassword: false,
   });
-  
+
   async function handleLogin(data) {
     try {
       const result = await login({
         email: data?.email,
         password: data?.password,
       });
-      
+
       if (result.success) {
         enqueueSnackbar("¡Login exitoso!", { variant: "success" });
         return navigate("/dashboards/misc");

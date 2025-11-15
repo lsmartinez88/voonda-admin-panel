@@ -10,7 +10,7 @@ const DEV_CREDENTIALS = {
 const DEV_USER = {
     id: "dev-user-1",
     nombre: "Usuario",
-    apellido: "Desarrollo", 
+    apellido: "Desarrollo",
     email: "admin@voonda.com",
     telefono: "+54 11 1234-5678",
     rol: {
@@ -83,7 +83,7 @@ class AuthService {
                 }
             } catch (apiError) {
                 console.log("❌ Error con API real, intentando modo desarrollo...")
-                
+
                 // Si falla la API, usar modo desarrollo si estamos en dev
                 if (isDevelopmentMode()) {
                     if (credentials.email === DEV_CREDENTIALS.email && credentials.password === DEV_CREDENTIALS.password) {
@@ -173,7 +173,7 @@ class AuthService {
             }
 
             // Si estamos en modo desarrollo y tenemos token de desarrollo, usar datos locales
-            if (isDevelopmentMode() && storedToken.startsWith('dev-token-')) {
+            if (isDevelopmentMode() && storedToken.startsWith("dev-token-")) {
                 const storedUser = getStoredUser()
                 if (storedUser) {
                     console.log("✅ Usuario de desarrollo obtenido desde sessionStorage")
@@ -196,7 +196,7 @@ class AuthService {
                     // Actualizar datos del usuario en sessionStorage
                     setStoredUser(apiData.user)
                     console.log("✅ Usuario actual obtenido correctamente")
-                    
+
                     return {
                         success: true,
                         user: apiData.user
@@ -209,7 +209,7 @@ class AuthService {
                 }
             } catch (apiError) {
                 console.log("❌ Error al verificar usuario con API")
-                
+
                 // En desarrollo, si tenemos datos almacenados, usarlos
                 if (isDevelopmentMode()) {
                     const storedUser = getStoredUser()
@@ -221,7 +221,7 @@ class AuthService {
                         }
                     }
                 }
-                
+
                 throw apiError
             }
         } catch (error) {
