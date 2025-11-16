@@ -4,7 +4,6 @@ import { Box, Typography, IconButton, Chip, Avatar, Menu, MenuItem, ListItemIcon
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
-import DriveEtaIcon from '@mui/icons-material/DriveEta'
 
 // Función para obtener avatar de marca
 const getBrandLogo = (marca) => {
@@ -333,7 +332,7 @@ const VehicleCard = ({ vehiculo, onEdit, onDelete }) => {
                             <Typography variant='body2'>{vehiculo.kilometros.toLocaleString('de-DE')} km</Typography>
                         </Box>
                     )}
-                    <Box sx={{ gridColumn: '1 / -1' }}>
+                    <Box>
                         <Typography variant='caption' color='text.secondary'>Vendedor</Typography>
                         {vehiculo.vendedor ? (
                             <Tooltip
@@ -376,6 +375,12 @@ const VehicleCard = ({ vehiculo, onEdit, onDelete }) => {
                             </Typography>
                         )}
                     </Box>
+                    <Box>
+                        <Typography variant='caption' color='text.secondary'>Fecha Ingreso</Typography>
+                        <Typography variant='body2'>
+                            {vehiculo.created_at ? new Date(vehiculo.created_at).toLocaleDateString('es-AR') : '-'}
+                        </Typography>
+                    </Box>
                 </Box>
 
                 {/* Descripción */}
@@ -393,15 +398,12 @@ const VehicleCard = ({ vehiculo, onEdit, onDelete }) => {
             </Box>
 
             {/* Footer */}
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pt: 2, borderTop: 1, borderColor: 'divider' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <DriveEtaIcon color='action' fontSize='small' />
-                    <Typography variant='caption' color='text.secondary'>
-                        ID: {vehiculo.id}
-                    </Typography>
-                </Box>
-                <Typography variant='caption' color='text.secondary'>
-                    {vehiculo.created_at ? new Date(vehiculo.created_at).toLocaleDateString('es-AR') : 'Fecha N/A'}
+            <Box sx={{ pt: 2, borderTop: 1, borderColor: 'divider' }}>
+                <Typography variant='caption' color='text.secondary' sx={{ display: 'block', mb: 0.5 }}>
+                    ID: {vehiculo.id}
+                </Typography>
+                <Typography variant='caption' color='text.secondary' sx={{ display: 'block' }}>
+                    Voonda Admin
                 </Typography>
             </Box>
         </JumboCard>
