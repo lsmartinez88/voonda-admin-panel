@@ -19,21 +19,38 @@ export default defineConfig({
     },
     server: {
         proxy: {
-            // Proxy para la API en desarrollo
             "/api": {
                 target: "https://api.fratelli.voonda.net",
                 changeOrigin: true,
                 secure: true,
-                rewrite: (path) => path.replace(/^\/api/, ""),
-                configure: (proxy, _options) => {
-                    proxy.on("error", (err, _req, _res) => {
-                        console.log("proxy error", err)
+                configure: (proxy, options) => {
+                    proxy.on("proxyReq", (proxyReq, req, res) => {
+                        // Limpiar headers problemáticos que pueden causar CORS
+                        proxyReq.removeHeader("origin")
+                        proxyReq.removeHeader("referer")
+
+                        // Asegurar headers necesarios
+                        proxyReq.setHeader("Accept", "application/json")
+                        proxyReq.setHeader("Content-Type", "application/json")
+
+                        console.log(`🔄 Proxy request: ${req.method} ${req.url}`)
                     })
-                    proxy.on("proxyReq", (proxyReq, req, _res) => {
-                        console.log("Enviando Request:", req.method, req.url)
+
+                    proxy.on("proxyRes", (proxyRes, req, res) => {
+                        console.log(`📥 Proxy response: ${proxyRes.statusCode} ${req.url}`)
+
+                        // Agregar headers CORS para evitar problemas en el cliente
+                        res.setHeader("Access-Control-Allow-Origin", "*")
+                        res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+                        res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization")
                     })
-                    proxy.on("proxyRes", (proxyRes, req, _res) => {
-                        console.log("Recibió Response:", proxyRes.statusCode, req.url)
+
+                    proxy.on("error", (err, req, res) => {
+                        console.error(`❌ Proxy error: ${err.message}`)
+                        res.writeHead(500, {
+                            "Content-Type": "text/plain"
+                        })
+                        res.end("Proxy error: " + err.message)
                     })
                 }
             }

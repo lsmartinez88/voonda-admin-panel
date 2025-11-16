@@ -1,11 +1,11 @@
 import { Spinner } from "@/components/Spinner";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
 
 const withAuth = (Component) => {
   return (props) => {
-    const { isAuthenticated, loading } = useAuth();
-    if (loading) {
+    const { isAuthenticated, isLoading } = useAuth();
+    if (isLoading) {
       return <Spinner />;
     }
 

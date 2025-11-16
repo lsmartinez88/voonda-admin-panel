@@ -39,18 +39,17 @@ class VehiculosService {
 
             const response = await apiClient.get(url)
 
-            // El apiClient interceptor devuelve response.data directamente
-            // Así que 'response' ya contiene { success, message, vehiculos, pagination }
+            // La API devuelve la estructura: { success, message, vehiculos, pagination }
             return {
                 success: true,
-                vehiculos: response.vehiculos || response.data || [],
-                pagination: response.pagination || {
-                    total: response.vehiculos?.length || 0,
+                vehiculos: response.data.vehiculos || response.data.data || [],
+                pagination: response.data.pagination || {
+                    total: response.data.vehiculos?.length || 0,
                     page: options.page || 1,
                     limit: options.limit || 12,
-                    pages: Math.ceil((response.vehiculos?.length || 0) / (options.limit || 12))
+                    pages: Math.ceil((response.data.vehiculos?.length || 0) / (options.limit || 12))
                 },
-                message: response.message || "Vehículos obtenidos exitosamente"
+                message: response.data.message || "Vehículos obtenidos exitosamente"
             }
         } catch (error) {
             console.error("❌ Error al obtener vehículos:", error)
@@ -85,8 +84,8 @@ class VehiculosService {
 
             return {
                 success: true,
-                vehiculo: response.vehiculo || response.data,
-                message: response.message || "Vehículo obtenido exitosamente"
+                vehiculo: response.data.vehiculo || response.data.data,
+                message: response.data.message || "Vehículo obtenido exitosamente"
             }
         } catch (error) {
             console.error("❌ Error al obtener vehículo:", error)
@@ -126,8 +125,8 @@ class VehiculosService {
 
             return {
                 success: true,
-                vehiculo: response.vehiculo || response.data,
-                message: response.message || "Vehículo creado exitosamente"
+                vehiculo: response.data.vehiculo || response.data.data,
+                message: response.data.message || "Vehículo creado exitosamente"
             }
         } catch (error) {
             console.error("❌ Error al crear vehículo:", error)
@@ -168,8 +167,8 @@ class VehiculosService {
 
             return {
                 success: true,
-                vehiculo: response.vehiculo || response.data,
-                message: response.message || "Vehículo actualizado exitosamente"
+                vehiculo: response.data.vehiculo || response.data.data,
+                message: response.data.message || "Vehículo actualizado exitosamente"
             }
         } catch (error) {
             console.error("❌ Error al actualizar vehículo:", error)
@@ -209,7 +208,7 @@ class VehiculosService {
 
             return {
                 success: true,
-                message: response.message || "Vehículo eliminado exitosamente"
+                message: response.data.message || "Vehículo eliminado exitosamente"
             }
         } catch (error) {
             console.error("❌ Error al eliminar vehículo:", error)
@@ -242,8 +241,8 @@ class VehiculosService {
 
             return {
                 success: true,
-                estados: response.estados || response.data || [],
-                message: response.message || "Estados obtenidos exitosamente"
+                estados: response.data.estados || response.data.data || [],
+                message: response.data.message || "Estados obtenidos exitosamente"
             }
         } catch (error) {
             console.error("❌ Error al obtener estados:", error)
@@ -411,6 +410,82 @@ class VehiculosService {
         return {
             isValid: errors.length === 0,
             errors
+        }
+    }
+
+    /**
+     * Datos mock para desarrollo
+     */
+    getMockVehiculos(options = {}) {
+        const mockVehiculos = [
+            {
+                id: 1,
+                estado: "DISPONIBLE",
+                valor: 25000,
+                kilometros: 50000,
+                modelo_autos: {
+                    marca: "Toyota",
+                    modelo: "Corolla",
+                    año: 2020,
+                    combustible: "Nafta",
+                    caja: "Manual"
+                },
+                created_at: "2024-01-15T10:00:00Z"
+            },
+            {
+                id: 2,
+                estado: "VENDIDO",
+                valor: 35000,
+                kilometros: 30000,
+                modelo_autos: {
+                    marca: "Ford",
+                    modelo: "Focus",
+                    año: 2021,
+                    combustible: "Nafta",
+                    caja: "Automático"
+                },
+                created_at: "2024-01-10T10:00:00Z"
+            },
+            {
+                id: 3,
+                estado: "RESERVADO", 
+                valor: 45000,
+                kilometros: 20000,
+                modelo_autos: {
+                    marca: "Chevrolet",
+                    modelo: "Cruze",
+                    año: 2022,
+                    combustible: "Nafta",
+                    caja: "Manual"
+                },
+                created_at: "2024-01-05T10:00:00Z"
+            }
+        ]
+
+        return {
+            isValid: errors.length === 0,
+            errors
+        }
+    }
+}
+
+// Crear una instancia única del servicio
+const vehiculosService = new VehiculosService()
+
+export default vehiculosService
+
+    getMockEstados() {
+        const mockEstados = [
+            { codigo: "DISPONIBLE", nombre: "Disponible" },
+            { codigo: "VENDIDO", nombre: "Vendido" },
+            { codigo: "RESERVADO", nombre: "Reservado" },
+            { codigo: "MANTENIMIENTO", nombre: "En Mantenimiento" }
+        ]
+
+        return {
+            success: true,
+            estados: mockEstados,
+            message: "Estados mock obtenidos exitosamente"
         }
     }
 }

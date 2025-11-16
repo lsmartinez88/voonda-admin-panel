@@ -1,4 +1,4 @@
-import DialogBase from "../DialogBase/DialogBase";
+import DialogBase from "../DialogBase";
 
 const DialogDefault = ({ open = false, onClose, ...restProps }) => {
   return (
@@ -14,3 +14,4 @@ const DialogDefault = ({ open = false, onClose, ...restProps }) => {
 };
 
 export { DialogDefault };
+export default DialogDefault;

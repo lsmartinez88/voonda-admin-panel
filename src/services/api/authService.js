@@ -1,46 +1,8 @@
-﻿import apiClient, { setStoredToken, removeStoredToken, getStoredToken, setStoredUser, getStoredUser, clearSession, makeApiRequest } from "./apiClient"
-
-// Credenciales de desarrollo temporal (mientras verificamos la API)
-const DEV_CREDENTIALS = {
-    email: "admin@voonda.com",
-    password: "admin123"
-}
-
-// Usuario de desarrollo simulado
-const DEV_USER = {
-    id: "dev-user-1",
-    nombre: "Usuario",
-    apellido: "Desarrollo",
-    email: "admin@voonda.com",
-    telefono: "+54 11 1234-5678",
-    rol: {
-        id: "admin-role",
-        nombre: "administrador_general",
-        permisos: {
-            vehiculos: { leer: true, crear: true, editar: true, eliminar: true },
-            vendedores: { leer: true, crear: true, editar: true, eliminar: true },
-            compradores: { leer: true, crear: true, editar: true, eliminar: true },
-            operaciones: { leer: true, crear: true, editar: true, eliminar: true },
-            empresas: { leer: true, crear: true, editar: true, eliminar: true }
-        }
-    },
-    empresa: {
-        id: "voonda-empresa",
-        nombre: "Voonda"
-    },
-    ultimo_login: new Date().toISOString()
-}
-
-const DEV_TOKEN = "dev-token-" + Date.now()
-
-// Verificar si estamos en modo desarrollo
-const isDevelopmentMode = () => {
-    return import.meta.env.DEV // Solo en desarrollo
-}
+﻿import apiClient, { setStoredToken, setStoredUser, clearSession, getStoredUser, getStoredToken } from "./apiClient"
 
 /**
- * Servicio de autenticación que maneja login, logout y gestión de usuarios
- * Configurado para usar API real tanto en desarrollo como en producción
+ * Servicio de autenticación para la API de Voonda
+ * Conecta únicamente con endpoints reales
  */
 class AuthService {
     /**
@@ -52,79 +14,33 @@ class AuthService {
      */
     async login(credentials) {
         try {
-            console.log("🔗 Realizando login con API real:", credentials.email)
-            console.log("🌐 URL base de API:", import.meta.env.DEV ? "PROXY /api" : "https://api.fratelli.voonda.net")
+            console.log("🔐 Intentando login con API:", credentials.email)
 
-            // Primero intentar con API real
-            try {
-                const response = await apiClient.post("/api/auth/login", {
-                    email: credentials.email,
-                    password: credentials.password
-                })
+            const response = await apiClient.post("/api/auth/login", {
+                email: credentials.email.trim(),
+                password: credentials.password
+            })
 
-                console.log("📡 Respuesta de la API:", response)
+            console.log("✅ Login exitoso:", response)
 
-                // La respuesta de axios está en response.data
-                const apiData = response
+            // Verificar estructura de respuesta según documentación
+            if (response.success && response.token && response.user) {
+                // Guardar token y datos del usuario
+                setStoredToken(response.token)
+                setStoredUser(response.user)
 
-                if (apiData.success && apiData.token && apiData.user) {
-                    // Guardar token y datos del usuario en sessionStorage
-                    setStoredToken(apiData.token)
-                    setStoredUser(apiData.user)
-
-                    console.log("✅ Login exitoso con API real")
-
-                    return {
-                        success: true,
-                        message: apiData.message || "Login exitoso",
-                        token: apiData.token,
-                        user: apiData.user
-                    }
-                }
-            } catch (apiError) {
-                console.log("❌ Error con API real, intentando modo desarrollo...")
-
-                // Si falla la API, usar modo desarrollo si estamos en dev
-                if (isDevelopmentMode()) {
-                    if (credentials.email === DEV_CREDENTIALS.email && credentials.password === DEV_CREDENTIALS.password) {
-                        // Simular delay de red
-                        await new Promise((resolve) => setTimeout(resolve, 1000))
-
-                        // Guardar token y datos del usuario en sessionStorage
-                        setStoredToken(DEV_TOKEN)
-                        setStoredUser(DEV_USER)
-
-                        console.log("✅ Login exitoso en modo desarrollo")
-
-                        return {
-                            success: true,
-                            message: "Login exitoso (modo desarrollo - API no disponible)",
-                            token: DEV_TOKEN,
-                            user: DEV_USER
-                        }
-                    } else {
-                        return {
-                            success: false,
-                            error: `Credenciales inválidas. En modo desarrollo usa: ${DEV_CREDENTIALS.email} / ${DEV_CREDENTIALS.password}`
-                        }
-                    }
-                } else {
-                    // En producción, mostrar error de API
-                    throw apiError
+                return {
+                    success: true,
+                    user: response.user,
+                    token: response.token,
+                    message: response.message || "Inicio de sesión exitoso"
                 }
             }
 
-            // Si la API no devuelve success, manejar como error de credenciales
-            return {
-                success: false,
-                error: "Credenciales inválidas"
-            }
+            throw new Error(response.message || "Respuesta inválida del servidor")
         } catch (error) {
-            console.error("Error al iniciar sesión:", error)
-            return {
-                success: false,
-                error: error.message || "Error al iniciar sesión"
-            }
+            console.error("❌ Error al iniciar sesión:", error.message)
+            throw new Error(error.response?.data?.message || error.message || "Credenciales inválidas")
         }
     }
 
@@ -134,23 +50,31 @@ class AuthService {
      */
     async logout() {
         try {
-            // Intentar cerrar sesión en el servidor
-            const response = await apiClient.post("/api/auth/logout")
+            console.log("🔐 Cerrando sesión en API")
 
-            // Siempre limpiar datos locales, incluso si falla la request
+            try {
+                const response = await apiClient.post("/api/auth/logout")
+                console.log("✅ Logout exitoso:", response.message)
+            } catch (error) {
+                console.warn("⚠️ Error al cerrar sesión en API (continuando):", error.message)
+            }
+
+            // Siempre limpiar datos locales
             clearSession()
 
             return {
                 success: true,
-                message: response.message || "Sesión cerrada exitosamente"
+                message: "Sesión cerrada exitosamente"
             }
         } catch (error) {
-            // Siempre limpiar datos locales, incluso si falla la request
+            console.error("❌ Error al cerrar sesión:", error)
+
+            // Incluso si hay error, limpiar datos locales
             clearSession()
-            console.error("Error al cerrar sesión:", error)
+
             return {
-                success: false,
-                error: error.message || "Error al cerrar sesión"
+                success: true,
+                message: "Sesión cerrada exitosamente"
             }
         }
     }
@@ -161,75 +85,39 @@ class AuthService {
      */
     async getCurrentUser() {
         try {
-            console.log("🔗 Verificando usuario actual con API")
+            const token = getStoredToken()
 
-            // Verificar que tenemos token antes de hacer la request
-            const storedToken = getStoredToken()
-            if (!storedToken) {
-                return {
-                    success: false,
-                    error: "No hay token de autenticación"
-                }
+            if (!token) {
+                throw new Error("No hay token de autenticación")
             }
 
-            // Si estamos en modo desarrollo y tenemos token de desarrollo, usar datos locales
-            if (isDevelopmentMode() && storedToken.startsWith("dev-token-")) {
-                const storedUser = getStoredUser()
-                if (storedUser) {
-                    console.log("✅ Usuario de desarrollo obtenido desde sessionStorage")
-                    return {
-                        success: true,
-                        user: storedUser
-                    }
-                }
-            }
+            console.log("🔐 Verificando usuario actual con API")
 
-            try {
-                // Usar API real para obtener usuario actual
-                const response = await apiClient.get("/api/auth/me")
-                console.log("📡 Respuesta de /api/auth/me:", response)
+            const response = await apiClient.get("/api/auth/me")
 
-                // La respuesta de axios está en response
-                const apiData = response
+            if (response.success && response.user) {
+                // Actualizar datos del usuario en sessionStorage
+                setStoredUser(response.user)
 
-                if (apiData.success && apiData.user) {
-                    // Actualizar datos del usuario en sessionStorage
-                    setStoredUser(apiData.user)
-                    console.log("✅ Usuario actual obtenido correctamente")
-
-                    return {
-                        success: true,
-                        user: apiData.user
-                    }
-                }
+                console.log("✅ Usuario actual obtenido de API")
 
                 return {
-                    success: false,
-                    error: apiData.message || "Error al obtener usuario"
+                    success: true,
+                    user: response.user,
+                    message: response.message || "Usuario obtenido exitosamente"
                 }
-            } catch (apiError) {
-                console.log("❌ Error al verificar usuario con API")
-
-                // En desarrollo, si tenemos datos almacenados, usarlos
-                if (isDevelopmentMode()) {
-                    const storedUser = getStoredUser()
-                    if (storedUser) {
-                        console.log("✅ Usando usuario almacenado en modo desarrollo")
-                        return {
-                            success: true,
-                            user: storedUser
-                        }
-                    }
-                }
-
-                throw apiError
             }
+
+            throw new Error(response.message || "Error al obtener usuario")
         } catch (error) {
-            console.error("Error al obtener información del usuario:", error)
-            return {
-                success: false,
-                error: error.message || "Error al obtener información del usuario"
+            console.error("❌ Error al obtener información del usuario:", error)
+
+            // Si hay error de autenticación, limpiar sesión
+            if (error.message.includes("Token") || error.message.includes("401")) {
+                clearSession()
             }
+
+            throw new Error(error.message || "Error al obtener información del usuario")
         }
     }
 
@@ -249,33 +137,28 @@ class AuthService {
     }
 
     /**
-     * Verificar si el usuario está autenticado
-     * @returns {boolean} True si está autenticado
-     */
-    isAuthenticated() {
-        return !!(getStoredToken() && getStoredUser())
-    }
-
-    /**
      * Verificar si el usuario tiene un permiso específico
-     * @param {string} permission - Permiso a verificar (ej: 'vehiculos.leer')
-     * @returns {boolean} True si el usuario tiene el permiso
+     * @param {string} modulo - Módulo (ej: 'vehiculos', 'operaciones')
+     * @param {string} accion - Acción (ej: 'leer', 'crear', 'editar', 'eliminar')
+     * @returns {boolean} Si tiene permisos
      */
-    hasPermission(permission) {
+    hasPermission(modulo, accion) {
         const userData = this.getStoredUserData()
         if (!userData || !userData.rol || !userData.rol.permisos) {
             return false
         }
 
-        const permisos = userData.rol.permisos
-        const [recurso, accion] = permission.split(".")
-
-        // Verificar si tiene el permiso específico o es admin general
+        // Admin general tiene todos los permisos
         if (userData.rol.nombre === "administrador_general") {
             return true
         }
 
-        return permisos[recurso] && permisos[recurso][accion] === true
+        const permisos = userData.rol.permisos[modulo]
+        if (!permisos) {
+            return false
+        }
+
+        return permisos[accion] === true
     }
 
     /**
@@ -303,6 +186,24 @@ class AuthService {
     getUserCompany() {
         const userData = this.getStoredUserData()
         return userData?.empresa || null
+    }
+
+    /**
+     * Obtener el token actual
+     * @returns {string|null} Token actual
+     */
+    getCurrentToken() {
+        return getStoredToken()
+    }
+
+    /**
+     * Verificar si el usuario está autenticado
+     * @returns {boolean} Si está autenticado
+     */
+    isAuthenticated() {
+        const token = getStoredToken()
+        const user = getStoredUser()
+        return !!(token && user)
     }
 }
 

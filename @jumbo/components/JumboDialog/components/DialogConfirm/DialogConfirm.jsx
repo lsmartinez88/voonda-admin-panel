@@ -1,6 +1,6 @@
 import Button from "@mui/material/Button";
 import { useJumboDialog } from "@jumbo/components/JumboDialog/hooks/useJumboDialog";
-import DialogBase from "../DialogBase/DialogBase";
+import DialogBase from "../DialogBase";
 
 const DialogConfirm = ({ open = false, onYes, onNo, ...restProps }) => {
   const { hideDialog } = useJumboDialog();
@@ -29,3 +29,4 @@ const DialogConfirm = ({ open = false, onYes, onNo, ...restProps }) => {
 };
 
 export { DialogConfirm };
+export default DialogConfirm;

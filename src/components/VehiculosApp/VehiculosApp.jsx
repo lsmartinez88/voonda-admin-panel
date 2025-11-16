@@ -2,8 +2,8 @@
 import { Container, Stack, useMediaQuery, Button, Typography, Box } from '@mui/material';
 import { useJumboTheme } from '@jumbo/components/JumboTheme/hooks';
 import { useJumboDialog } from '@jumbo/components/JumboDialog/hooks/useJumboDialog';
-import { useAuth } from '@/contexts/AuthContext';
-import { vehiculosService } from '@/services/api';
+import { useAuth } from '../../contexts/AuthContext';
+import vehiculosService from '../../services/api/vehiculosService';
 
 // Components
 import { VehiclesList } from './VehiclesList';
@@ -18,14 +18,20 @@ export const VehiculosApp = () => {
     const { theme } = useJumboTheme();
     const lg = useMediaQuery(theme.breakpoints.down('lg'));
     const { showDialog, showConfirmDialog } = useJumboDialog();
-    const { isAuthenticated } = useAuth();
+    const { user } = useAuth();
 
-    // Estados
+    // Estados principales
     const [vehiculos, setVehiculos] = useState([]);
     const [totalVehiculos, setTotalVehiculos] = useState(0);
     const [loading, setLoading] = useState(false);
-    const [showModal, setShowModal] = useState(false);
     const [selectedVehicle, setSelectedVehicle] = useState(null);
+    const [showModal, setShowModal] = useState(false);
+
+    // Estados para opciones de filtros
+    const [marcas, setMarcas] = useState([]);
+    const [modelos, setModelos] = useState([]);
+    const [estados, setEstados] = useState([]);
+    const [loadingOptions, setLoadingOptions] = useState(false);
     const [filters, setFilters] = useState({
         search: '',
         marca: '',
@@ -42,65 +48,81 @@ export const VehiculosApp = () => {
         try {
             setLoading(true);
 
-            // Preparar opciones de filtro para el servicio
-            const options = {
-                page: filters.page,
-                limit: filters.limit,
-                sortBy: filters.sortBy,
-                order: filters.order
-            };
+            console.log('🔍 Buscando vehículos con opciones:', filters);
 
-            // Agregar filtros si existen
-            if (filters.search) {
-                options.search = filters.search;
-            }
-            if (filters.marca) {
-                options.marca = filters.marca;
-            }
-            if (filters.modelo) {
-                options.modelo = filters.modelo;
-            }
-            if (filters.estado) {
-                options.estado = filters.estado;
-            }
-
-            console.log('🔍 Buscando vehículos con opciones:', options);
-
-            const response = await vehiculosService.getVehiculos(options);
+            const response = await vehiculosService.getVehiculos(filters);
 
             if (response.success) {
                 console.log('✅ Vehículos obtenidos:', response);
-                setVehiculos(response.vehiculos || response.data || []);
-                setTotalVehiculos(response.total || response.vehiculos?.length || 0);
+                setVehiculos(response.vehiculos || []);
+                setTotalVehiculos(response.pagination?.total || response.vehiculos?.length || 0);
             } else {
                 console.error('❌ Error en respuesta:', response);
                 setVehiculos([]);
                 setTotalVehiculos(0);
 
-                // Solo mostrar error si no es un problema de autenticación
-                if (response.error && !response.error.includes('Sesión expirada') && isAuthenticated) {
-                    showDialog({
-                        title: 'Error',
-                        content: `Error al cargar los vehículos: ${response.error}`,
-                        variant: 'error'
-                    });
-                }
+                showDialog({
+                    title: 'Error',
+                    content: `Error al cargar los vehículos: ${response.error || 'Error desconocido'}`,
+                    variant: 'error'
+                });
             }
         } catch (error) {
             console.error('❌ Error al obtener vehículos:', error);
             setVehiculos([]);
             setTotalVehiculos(0);
 
-            // Solo mostrar error si el usuario está autenticado
-            if (isAuthenticated) {
-                showDialog({
-                    title: 'Error',
-                    content: `Error al cargar los vehículos: ${error.message}`,
-                    variant: 'error'
-                });
-            }
+            showDialog({
+                title: 'Error',
+                content: `Error al cargar los vehículos: ${error.message}`,
+                variant: 'error'
+            });
         } finally {
             setLoading(false);
+        }
+    };
+
+    // Cargar opciones para filtros
+    const loadFilterOptions = async () => {
+        try {
+            setLoadingOptions(true);
+
+            // Cargar marcas, estados en paralelo
+            const [marcasResponse, estadosResponse] = await Promise.all([
+                vehiculosService.getMarcas(),
+                vehiculosService.getEstados()
+            ]);
+
+            if (marcasResponse.success) {
+                setMarcas(marcasResponse.marcas || marcasResponse.data || []);
+            }
+
+            if (estadosResponse.success) {
+                setEstados(estadosResponse.estados || estadosResponse.data || []);
+            }
+
+        } catch (error) {
+            console.error('❌ Error al cargar opciones de filtros:', error);
+        } finally {
+            setLoadingOptions(false);
+        }
+    };
+
+    // Cargar modelos cuando cambia la marca seleccionada
+    const loadModelos = async (marca) => {
+        if (!marca) {
+            setModelos([]);
+            return;
+        }
+
+        try {
+            const response = await vehiculosService.getModelosByMarca(marca);
+            if (response.success) {
+                setModelos(response.modelos || response.data || []);
+            }
+        } catch (error) {
+            console.error('❌ Error al cargar modelos:', error);
+            setModelos([]);
         }
     };
 
@@ -205,14 +227,30 @@ export const VehiculosApp = () => {
 
     // Cargar datos iniciales solo si el usuario está autenticado
     useEffect(() => {
-        if (isAuthenticated) {
+        if (user) {
             fetchVehiculos();
+            loadFilterOptions(); // Cargar opciones de filtros
         }
-    }, [filters, isAuthenticated]);
+    }, [filters, user]);
+
+    // Cargar modelos cuando cambia la marca en los filtros
+    useEffect(() => {
+        if (filters.marca) {
+            loadModelos(filters.marca);
+        } else {
+            setModelos([]);
+        }
+    }, [filters.marca]);
 
     // Si no está autenticado, no mostrar nada
-    if (!isAuthenticated) {
-        return null;
+    if (!user) {
+        return (
+            <Container maxWidth="xl" sx={{ py: 4, minHeight: '100vh' }}>
+                <Typography variant="h6" color="text.secondary" textAlign="center">
+                    Debes iniciar sesión para acceder al módulo de vehículos
+                </Typography>
+            </Container>
+        );
     }
 
     return (
@@ -268,6 +306,11 @@ export const VehiculosApp = () => {
                 filters={filters}
                 onFiltersChange={setFilters}
                 loading={loading}
+                marcas={marcas}
+                modelos={modelos}
+                estados={estados}
+                loadingOptions={loadingOptions}
+                onMarcaChange={loadModelos}
             />
 
             {/* Vehicles List */}

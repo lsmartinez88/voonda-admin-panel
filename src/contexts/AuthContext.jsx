@@ -29,6 +29,8 @@ export const AuthProvider = ({ children }) => {
                 const storedToken = getStoredToken()
                 const storedUser = getStoredUser()
 
+                console.log('🔍 Verificando auth inicial:', { storedToken: storedToken?.substring(0, 20) + '...', hasUser: !!storedUser })
+
                 if (storedToken && storedUser) {
                     // Verificar si el token sigue siendo válido
                     const userResponse = await authService.getCurrentUser()
@@ -37,14 +39,17 @@ export const AuthProvider = ({ children }) => {
                         setToken(storedToken)
                         setUser(userResponse.user)
                         setIsAuthenticated(true)
+                        console.log('✅ Usuario autenticado exitosamente')
                     } else {
                         // Token inválido, limpiar sesión
+                        console.log('❌ Token inválido, limpiando sesión')
                         clearSession()
                         setToken(null)
                         setUser(null)
                         setIsAuthenticated(false)
                     }
                 } else {
+                    console.log('❌ No hay token o usuario guardado')
                     setIsAuthenticated(false)
                 }
             } catch (error) {

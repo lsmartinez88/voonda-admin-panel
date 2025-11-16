@@ -92,13 +92,17 @@ import UserProfile3Page from "@/pages/user/profile-3";
 import UserProfile4Page from "@/pages/user/profile-4";
 import SocialWallApp from "@/pages/user/social-wall";
 import { WidgetsPage } from "@/pages/widgets";
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, Navigate } from "react-router-dom";
 
 const routes = [
   {
     path: "/",
     element: <StretchedLayout />,
     children: [
+      {
+        index: true,
+        element: <Navigate to="/voonda/vehiculos" replace />,
+      },
       {
         path: "/dashboards/misc",
         element: <Page Component={MiscPage} hoc={withAuth} />,
