@@ -140,7 +140,7 @@ const VehicleItem = ({ vehiculo, onEdit, onDelete }) => {
                         {brandInfo?.initials || 'VH'}
                     </Avatar>
                     <Stack>
-                        <Typography variant='subtitle2' fontWeight={600}>
+                        <Typography variant='subtitle2' fontWeight={700}>
                             {marcaReal} {getStringValue(modeloAutos.modelo) || getStringValue(vehiculo.modelo)}
                         </Typography>
                         <Typography variant='body2' color='text.secondary'>
