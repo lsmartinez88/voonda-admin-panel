@@ -15,10 +15,10 @@ export const VehicleTable = ({ vehiculos, onEdit, onDelete }) => {
                 <TableHead>
                     <TableRow
                         sx={{
-                            "th:first-child": {
+                            "th:first-of-type": {
                                 pl: 3,
                             },
-                            "th:last-child": {
+                            "th:last-of-type": {
                                 pr: 3,
                             },
                         }}
@@ -33,10 +33,10 @@ export const VehicleTable = ({ vehiculos, onEdit, onDelete }) => {
                     </TableRow>
                 </TableHead>
                 <TableBody>
-                    {vehiculos.map((item, index) => (
+                    {vehiculos.map((vehiculo, index) => (
                         <VehicleItem
-                            item={item}
-                            key={index}
+                            vehiculo={vehiculo}
+                            key={vehiculo.id || index}
                             onEdit={onEdit}
                             onDelete={onDelete}
                         />

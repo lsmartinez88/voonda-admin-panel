@@ -31,17 +31,73 @@ const getBrandLogo = (marca) => {
 }
 
 const VehicleCard = ({ vehiculo, onEdit, onDelete }) => {
-    const marcaReal = vehiculo.modelo_autos?.marca || vehiculo.marca
+    // Protección contra vehiculo undefined o null
+    if (!vehiculo) {
+        return null // No renderizar nada si no hay vehiculo
+    }
+
+    // Función auxiliar para obtener valores string seguros
+    const getStringValue = (value, defaultValue = '') => {
+        if (typeof value === 'string') return value
+        if (typeof value === 'number') return value.toString()
+        if (typeof value === 'object' && value?.nombre) return value.nombre
+        if (typeof value === 'object' && value?.valor) return value.valor
+        return defaultValue
+    }
+
+    const modeloAutos = vehiculo?.modelo_autos || {}
+    const marcaReal = getStringValue(modeloAutos.marca) || getStringValue(vehiculo.marca)
     const { color, initial } = getBrandLogo(marcaReal)
 
     const getStateColor = (estado) => {
-        switch (estado?.toLowerCase()) {
+        // Manejar diferentes formatos del estado
+        let estadoNombre = ''
+
+        if (typeof estado === 'string') {
+            estadoNombre = estado
+        } else if (typeof estado === 'object' && estado?.nombre) {
+            estadoNombre = estado.nombre
+        } else if (typeof estado === 'object' && estado?.estado) {
+            estadoNombre = estado.estado
+        } else if (typeof estado === 'number') {
+            // Mapear IDs comunes de estados
+            const estadosMap = {
+                1: 'disponible',
+                2: 'vendido',
+                3: 'reservado',
+                4: 'mantenimiento'
+            }
+            estadoNombre = estadosMap[estado] || 'disponible'
+        } else {
+            estadoNombre = 'disponible' // default
+        }
+
+        switch (estadoNombre?.toLowerCase()) {
             case 'disponible': return 'success'
             case 'vendido': return 'error'
             case 'reservado': return 'warning'
             case 'mantenimiento': return 'info'
             default: return 'default'
         }
+    }
+
+    const getEstadoLabel = (estado) => {
+        if (typeof estado === 'string') {
+            return estado
+        } else if (typeof estado === 'object' && estado?.nombre) {
+            return estado.nombre
+        } else if (typeof estado === 'object' && estado?.estado) {
+            return estado.estado
+        } else if (typeof estado === 'number') {
+            const estadosMap = {
+                1: 'Disponible',
+                2: 'Vendido',
+                3: 'Reservado',
+                4: 'Mantenimiento'
+            }
+            return estadosMap[estado] || 'Disponible'
+        }
+        return 'Sin estado'
     }
 
     const formatPrice = (price) => {
@@ -76,10 +132,10 @@ const VehicleCard = ({ vehiculo, onEdit, onDelete }) => {
                     </Avatar>
                     <Box>
                         <Typography variant='h6' sx={{ fontWeight: 600, mb: 0 }}>
-                            {vehiculo.modelo_autos?.marca || vehiculo.marca} {vehiculo.modelo_autos?.modelo || vehiculo.modelo}
+                            {getStringValue(modeloAutos.marca) || getStringValue(vehiculo.marca)} {getStringValue(modeloAutos.modelo) || getStringValue(vehiculo.modelo)}
                         </Typography>
                         <Typography variant='caption' color='text.secondary'>
-                            Año {vehiculo.modelo_autos?.año || vehiculo.vehiculo_ano}
+                            Año {getStringValue(modeloAutos.año) || getStringValue(vehiculo.vehiculo_ano)}
                         </Typography>
                     </Box>
                 </Box>
@@ -98,7 +154,7 @@ const VehicleCard = ({ vehiculo, onEdit, onDelete }) => {
                 {/* Estado y precio */}
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                     <Chip
-                        label={vehiculo.estado || 'Sin estado'}
+                        label={getEstadoLabel(vehiculo.estado)}
                         color={getStateColor(vehiculo.estado)}
                         size='small'
                     />
@@ -109,10 +165,10 @@ const VehicleCard = ({ vehiculo, onEdit, onDelete }) => {
 
                 {/* Información adicional */}
                 <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, mb: 2 }}>
-                    {(vehiculo.modelo_autos?.combustible || vehiculo.combustible) && (
+                    {(getStringValue(modeloAutos.combustible) || getStringValue(vehiculo.combustible)) && (
                         <Box>
                             <Typography variant='caption' color='text.secondary'>Combustible</Typography>
-                            <Typography variant='body2'>{vehiculo.modelo_autos?.combustible || vehiculo.combustible}</Typography>
+                            <Typography variant='body2'>{getStringValue(modeloAutos.combustible) || getStringValue(vehiculo.combustible)}</Typography>
                         </Box>
                     )}
                     {vehiculo.kilometros && (
@@ -121,10 +177,10 @@ const VehicleCard = ({ vehiculo, onEdit, onDelete }) => {
                             <Typography variant='body2'>{vehiculo.kilometros.toLocaleString()} km</Typography>
                         </Box>
                     )}
-                    {(vehiculo.modelo_autos?.caja || vehiculo.caja || vehiculo.transmision) && (
+                    {(getStringValue(modeloAutos.caja) || getStringValue(vehiculo.caja) || getStringValue(vehiculo.transmision)) && (
                         <Box>
                             <Typography variant='caption' color='text.secondary'>Transmisión</Typography>
-                            <Typography variant='body2'>{vehiculo.modelo_autos?.caja || vehiculo.caja || vehiculo.transmision}</Typography>
+                            <Typography variant='body2'>{getStringValue(modeloAutos.caja) || getStringValue(vehiculo.caja) || getStringValue(vehiculo.transmision)}</Typography>
                         </Box>
                     )}
                     {vehiculo.motor && (

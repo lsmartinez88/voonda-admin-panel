@@ -25,7 +25,29 @@ const formatPrice = (price) => {
 }
 
 const getEstadoColor = (estado) => {
-    switch (estado?.toLowerCase()) {
+    // Manejar diferentes formatos del estado
+    let estadoNombre = ''
+
+    if (typeof estado === 'string') {
+        estadoNombre = estado
+    } else if (typeof estado === 'object' && estado?.nombre) {
+        estadoNombre = estado.nombre
+    } else if (typeof estado === 'object' && estado?.estado) {
+        estadoNombre = estado.estado
+    } else if (typeof estado === 'number') {
+        // Mapear IDs comunes de estados
+        const estadosMap = {
+            1: 'disponible',
+            2: 'vendido',
+            3: 'reservado',
+            4: 'mantenimiento'
+        }
+        estadoNombre = estadosMap[estado] || 'disponible'
+    } else {
+        estadoNombre = 'disponible' // default
+    }
+
+    switch (estadoNombre?.toLowerCase()) {
         case 'disponible':
             return 'success'
         case 'vendido':
@@ -39,9 +61,43 @@ const getEstadoColor = (estado) => {
     }
 }
 
-const VehicleItem = ({ item: vehiculo, onEdit, onDelete }) => {
+const getEstadoLabel = (estado) => {
+    if (typeof estado === 'string') {
+        return estado
+    } else if (typeof estado === 'object' && estado?.nombre) {
+        return estado.nombre
+    } else if (typeof estado === 'object' && estado?.estado) {
+        return estado.estado
+    } else if (typeof estado === 'number') {
+        const estadosMap = {
+            1: 'Disponible',
+            2: 'Vendido',
+            3: 'Reservado',
+            4: 'Mantenimiento'
+        }
+        return estadosMap[estado] || 'Disponible'
+    }
+    return 'Sin estado'
+}
+
+const VehicleItem = ({ vehiculo, onEdit, onDelete }) => {
+    // Protección contra vehiculo undefined o null
+    if (!vehiculo) {
+        return null // No renderizar nada si no hay vehiculo
+    }
+
+    // Función auxiliar para obtener valores string seguros
+    const getStringValue = (value, defaultValue = '') => {
+        if (typeof value === 'string') return value
+        if (typeof value === 'number') return value.toString()
+        if (typeof value === 'object' && value?.nombre) return value.nombre
+        if (typeof value === 'object' && value?.valor) return value.valor
+        return defaultValue
+    }
+
     // Usar la misma lógica que VehicleCard para obtener la marca real
-    const marcaReal = vehiculo.modelo_autos?.marca || vehiculo.marca
+    const modeloAutos = vehiculo?.modelo_autos || {}
+    const marcaReal = getStringValue(modeloAutos.marca) || getStringValue(vehiculo.marca)
     const brandInfo = getCarBrandLogo(marcaReal)
     const brandColor = getBrandColor(marcaReal)
 
@@ -85,10 +141,10 @@ const VehicleItem = ({ item: vehiculo, onEdit, onDelete }) => {
                     </Avatar>
                     <Stack>
                         <Typography variant='subtitle2' fontWeight={600}>
-                            {marcaReal} {vehiculo.modelo_autos?.modelo || vehiculo.modelo}
+                            {marcaReal} {getStringValue(modeloAutos.modelo) || getStringValue(vehiculo.modelo)}
                         </Typography>
                         <Typography variant='body2' color='text.secondary'>
-                            Año {vehiculo.modelo_autos?.año || vehiculo.vehiculo_ano}
+                            Año {getStringValue(modeloAutos.año) || getStringValue(vehiculo.vehiculo_ano)}
                         </Typography>
                     </Stack>
                 </Stack>
@@ -97,7 +153,7 @@ const VehicleItem = ({ item: vehiculo, onEdit, onDelete }) => {
             {/* Año */}
             <TableCell>
                 <Typography variant='body2'>
-                    {vehiculo.modelo_autos?.año || vehiculo.vehiculo_ano || 'N/A'}
+                    {getStringValue(modeloAutos.año) || getStringValue(vehiculo.vehiculo_ano) || 'N/A'}
                 </Typography>
             </TableCell>
 
@@ -111,7 +167,7 @@ const VehicleItem = ({ item: vehiculo, onEdit, onDelete }) => {
             {/* Combustible */}
             <TableCell>
                 <Typography variant='body2'>
-                    {vehiculo.modelo_autos?.combustible || vehiculo.combustible || 'N/A'}
+                    {getStringValue(modeloAutos.combustible) || getStringValue(vehiculo.combustible) || 'N/A'}
                 </Typography>
             </TableCell>
 
@@ -125,7 +181,7 @@ const VehicleItem = ({ item: vehiculo, onEdit, onDelete }) => {
             {/* Estado */}
             <TableCell>
                 <Chip
-                    label={vehiculo.estado || 'Sin estado'}
+                    label={getEstadoLabel(vehiculo.estado)}
                     color={getEstadoColor(vehiculo.estado)}
                     size='small'
                     sx={{ textTransform: 'capitalize' }}
@@ -152,11 +208,9 @@ const VehicleItem = ({ item: vehiculo, onEdit, onDelete }) => {
                     <JumboDdMenu
                         menuItems={menuItems}
                         icon={
-                            <IconButton size='small'>
-                                <Box sx={{ width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    ⋮
-                                </Box>
-                            </IconButton>
+                            <Box sx={{ width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                ⋮
+                            </Box>
                         }
                     />
                 </Stack>
