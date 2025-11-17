@@ -35,12 +35,14 @@ class VehiculosService {
                     // Transformar parámetros específicos según la API
                     switch (key) {
                         case "marca":
-                            // ✅ REACTIVADO - El backend ahora soporta filtrado por marca
-                            params.append("marca", value)
+                            // ⚠️ TEMPORALMENTE DESHABILITADO - Backend tiene problemas con filtros de marca
+                            // El backend intenta usar marca.id en lugar de marca.nombre
+                            console.warn(`⚠️ Filtro ${key} temporalmente deshabilitado debido a errores de Prisma en el backend`)
                             break
                         case "modelo":
-                            // ✅ REACTIVADO - El backend ahora soporta filtrado por modelo (ID)
-                            params.append("modelo", value)
+                            // ⚠️ TEMPORALMENTE DESHABILITADO - Backend tiene problemas con filtros de modelo  
+                            // El backend intenta usar modelo.id con nombres en lugar de IDs
+                            console.warn(`⚠️ Filtro ${key} temporalmente deshabilitado debido a errores de Prisma en el backend`)
                             break
                         case "search":
                             // ✅ REACTIVADO - El backend ahora soporta búsqueda en marca/modelo
@@ -77,6 +79,12 @@ class VehiculosService {
 
             console.log("🚗 Obteniendo vehículos desde API:", url)
             console.log("🔍 Filtros procesados:", Object.fromEntries(params))
+
+            // Advertir sobre filtros deshabilitados  
+            if (options.marca || options.modelo) {
+                console.warn("⚠️ Filtros de marca/modelo temporalmente deshabilitados debido a errores de Prisma en el backend")
+                console.warn("📝 El backend necesita corregir el mapeo de campos: marca.nombre en lugar de marca.id")
+            }
 
             const response = await apiClient.get(url)
 

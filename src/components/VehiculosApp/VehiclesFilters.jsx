@@ -299,7 +299,24 @@ export const VehiclesFilters = ({
                             Filtros activos: {[filters.marca, filters.modelo, filters.año, filters.estado, filters.search].filter(Boolean).length}
                         </Typography>
                     )}
-                    {!loadingOptions && (filters.marca || filters.modelo || filters.search) && (
+                    {(filters.marca || filters.modelo) && (
+                        <Typography
+                            variant="caption"
+                            color="warning.main"
+                            sx={{
+                                alignSelf: 'center',
+                                fontWeight: 500,
+                                backgroundColor: 'warning.light',
+                                px: 1,
+                                py: 0.5,
+                                borderRadius: 1,
+                                fontSize: '0.7rem'
+                            }}
+                        >
+                            ⚠️ Filtros marca/modelo temporalmente deshabilitados (error Prisma backend)
+                        </Typography>
+                    )}
+                    {filters.search && !filters.marca && !filters.modelo && (
                         <Typography
                             variant="caption"
                             color="success.main"
@@ -313,7 +330,7 @@ export const VehiclesFilters = ({
                                 fontSize: '0.7rem'
                             }}
                         >
-                            ✅ Filtros jerárquicos activos
+                            ✅ Búsqueda general activa
                         </Typography>
                     )}
                 </Stack>
