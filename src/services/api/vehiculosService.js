@@ -29,39 +29,43 @@ class VehiculosService {
         try {
             const params = new URLSearchParams()
 
-            // Procesar y agregar parámetros solo si tienen valor
-            // Por ahora, evitamos enviar marca, modelo y search para prevenir errores Prisma
+            // Procesar y agregar parámetros según la nueva API documentada
             Object.entries(options).forEach(([key, value]) => {
                 if (value !== undefined && value !== null && value !== "") {
                     // Transformar parámetros específicos según la API
                     switch (key) {
-                        case 'marca':
-                        case 'modelo':
-                        case 'search':
-                            // TEMPORALMENTE DESHABILITADOS - Causan errores Prisma en el backend
-                            // TODO: Habilitar cuando el backend maneje correctamente las relaciones
-                            console.warn(`⚠️ Filtro ${key} temporalmente deshabilitado debido a limitaciones del backend`)
+                        case "marca":
+                            // ✅ REACTIVADO - El backend ahora soporta filtrado por marca
+                            params.append("marca", value)
                             break
-                        case 'año':
-                            // El año se envía como vehiculo_ano
-                            params.append('vehiculo_ano', value)
+                        case "modelo":
+                            // ✅ REACTIVADO - El backend ahora soporta filtrado por modelo (ID)
+                            params.append("modelo", value)
                             break
-                        case 'estado':
+                        case "search":
+                            // ✅ REACTIVADO - El backend ahora soporta búsqueda en marca/modelo
+                            params.append("search", value)
+                            break
+                        case "año":
+                            // Mapear a 'ano' según la documentación de la API
+                            params.append("ano", value)
+                            break
+                        case "estado":
                             // Si se envía 'estado', convertir a 'estado_codigo'
                             if (options.estado_codigo) {
-                                params.append('estado_codigo', options.estado_codigo)
+                                params.append("estado_codigo", options.estado_codigo)
                             } else {
-                                params.append('estado_codigo', value)
+                                params.append("estado_codigo", value)
                             }
                             break
-                        case 'estado_codigo':
+                        case "estado_codigo":
                             // Solo agregar si no se procesó en el caso anterior
-                            if (!params.has('estado_codigo')) {
-                                params.append('estado_codigo', value)
+                            if (!params.has("estado_codigo")) {
+                                params.append("estado_codigo", value)
                             }
                             break
                         default:
-                            // Agregar parámetros normalmente (excepto los problemáticos)
+                            // Agregar parámetros normalmente
                             params.append(key, value)
                             break
                     }
@@ -73,12 +77,6 @@ class VehiculosService {
 
             console.log("🚗 Obteniendo vehículos desde API:", url)
             console.log("🔍 Filtros procesados:", Object.fromEntries(params))
-            
-            // Advertir sobre filtros deshabilitados
-            if (options.marca || options.modelo || options.search) {
-                console.warn("⚠️ Filtros de marca/modelo/búsqueda temporalmente deshabilitados debido a limitaciones del backend")
-                console.warn("📝 Los vehículos se cargarán sin filtrado por marca/modelo hasta que se actualice el backend")
-            }
 
             const response = await apiClient.get(url)
 
@@ -313,7 +311,7 @@ class VehiculosService {
     }
 
     /**
-     * Obtener marcas con modelos y versiones para filtros jerárquicos
+     * Obtener marcas con modelos y versiones para filtros jerárquicos (desde nuevo endpoint)
      * @returns {Promise<Object>} Lista de marcas con modelos y versiones
      */
     async getMarcasModelos() {
@@ -328,7 +326,7 @@ class VehiculosService {
                 message: response.message || "Marcas y modelos obtenidos exitosamente"
             }
         } catch (error) {
-            console.warn("⚠️ Endpoint de filtros no disponible, usando fallback:", error.message)
+            console.warn("⚠️ Endpoint de marcas-modelos no disponible, usando fallback:", error.message)
 
             // Fallback: construir estructura jerárquica desde vehículos existentes
             try {
@@ -338,9 +336,9 @@ class VehiculosService {
                     const marcasMap = new Map()
 
                     vehiculosResponse.vehiculos.forEach((vehiculo) => {
-                        const marca = vehiculo?.modelo?.marca || vehiculo?.modelo_auto?.marca
-                        const modelo = vehiculo?.modelo?.modelo || vehiculo?.modelo_auto?.modelo
-                        const version = vehiculo?.modelo?.version || vehiculo?.modelo_auto?.version
+                        const marca = vehiculo?.modelo_auto?.marca
+                        const modelo = vehiculo?.modelo_auto?.modelo
+                        const version = vehiculo?.modelo_auto?.version
 
                         if (marca && modelo) {
                             if (!marcasMap.has(marca)) {
@@ -348,7 +346,7 @@ class VehiculosService {
                             }
 
                             const marcaData = marcasMap.get(marca)
-                            let modeloData = marcaData.modelos.find(m => m.modelo === modelo)
+                            let modeloData = marcaData.modelos.find((m) => m.modelo === modelo)
 
                             if (!modeloData) {
                                 modeloData = { modelo, versiones: [] }
@@ -383,47 +381,125 @@ class VehiculosService {
     }
 
     /**
-     * Obtener marcas únicas de los vehículos (extraídas de modelo_auto) - DEPRECATED
-     * Usar getMarcasModelos() para obtener estructura jerárquica
+     * Obtener marcas disponibles que tienen vehículos (desde nuevo endpoint)
      * @returns {Promise<Object>} Lista de marcas
      */
     async getMarcas() {
         try {
-            console.log("🚗 Obteniendo marcas desde nuevo endpoint")
+            console.log("🚗 Obteniendo marcas desde API")
 
-            const response = await this.getMarcasModelos()
-
-            if (response.success && response.marcas) {
-                // Convertir estructura jerárquica a lista simple de marcas
-                const marcasSimples = response.marcas.map((marcaData, index) => ({
-                    id: index + 1,
-                    nombre: marcaData.marca,
-                    codigo: marcaData.marca?.toLowerCase().replace(/ /g, "_"),
-                    activo: true
-                }))
-
-                return {
-                    success: true,
-                    marcas: marcasSimples,
-                    data: marcasSimples,
-                    message: "Marcas obtenidas exitosamente"
-                }
-            }
+            const response = await apiClient.get("/api/vehiculos/filtros/marcas")
 
             return {
                 success: true,
-                marcas: [],
-                data: [],
-                message: "No se encontraron marcas"
+                marcas: response.marcas || response.data || [],
+                message: response.message || "Marcas obtenidas exitosamente"
             }
         } catch (error) {
-            console.error("❌ Error al obtener marcas:", error)
-            throw new Error(error.message || "Error al obtener las marcas")
+            console.warn("⚠️ Endpoint de marcas no disponible, usando fallback:", error.message)
+
+            // Fallback: construir desde vehículos existentes
+            try {
+                const vehiculosResponse = await this.getVehiculos({ limit: 200 })
+
+                if (vehiculosResponse.success && vehiculosResponse.vehiculos) {
+                    const marcasSet = new Set()
+
+                    vehiculosResponse.vehiculos.forEach((vehiculo) => {
+                        const marca = vehiculo?.modelo_auto?.marca
+                        if (marca) {
+                            marcasSet.add(marca)
+                        }
+                    })
+
+                    const marcas = Array.from(marcasSet).sort()
+
+                    return {
+                        success: true,
+                        marcas: marcas,
+                        message: "Marcas obtenidas desde fallback"
+                    }
+                }
+
+                return {
+                    success: true,
+                    marcas: [],
+                    message: "No se encontraron marcas"
+                }
+            } catch (fallbackError) {
+                console.error("❌ Error en fallback:", fallbackError)
+                throw new Error(fallbackError.message || "Error al obtener las marcas")
+            }
         }
     }
 
     /**
-     * Obtener modelos únicos de una marca específica (desde endpoint jerárquico)
+     * Obtener modelos disponibles, opcionalmente filtrados por marca
+     * @param {string} marcaId - ID o nombre de la marca (opcional)
+     * @returns {Promise<Object>} Lista de modelos
+     */
+    async getModelos(marcaId = null) {
+        try {
+            console.log("🚗 Obteniendo modelos desde API", marcaId ? `para marca: ${marcaId}` : "")
+
+            const url = marcaId ? `/api/vehiculos/filtros/modelos?marcaId=${marcaId}` : "/api/vehiculos/filtros/modelos"
+            const response = await apiClient.get(url)
+
+            return {
+                success: true,
+                modelos: response.modelos || response.data || [],
+                message: response.message || "Modelos obtenidos exitosamente"
+            }
+        } catch (error) {
+            console.warn("⚠️ Endpoint de modelos no disponible, usando fallback:", error.message)
+
+            // Fallback: construir desde vehículos existentes
+            try {
+                const vehiculosResponse = await this.getVehiculos({ limit: 200 })
+
+                if (vehiculosResponse.success && vehiculosResponse.vehiculos) {
+                    const modelosMap = new Map()
+
+                    vehiculosResponse.vehiculos.forEach((vehiculo) => {
+                        const marca = vehiculo?.modelo_auto?.marca
+                        const modelo = vehiculo?.modelo_auto?.modelo
+                        const modeloId = vehiculo?.modelo_id
+
+                        if (marca && modelo && (!marcaId || marca.toLowerCase() === marcaId.toLowerCase())) {
+                            const key = `${marca}-${modelo}`
+                            if (!modelosMap.has(key)) {
+                                modelosMap.set(key, {
+                                    id: modeloId || key,
+                                    nombre: modelo,
+                                    marca: marca
+                                })
+                            }
+                        }
+                    })
+
+                    const modelos = Array.from(modelosMap.values()).sort((a, b) => a.nombre.localeCompare(b.nombre))
+
+                    return {
+                        success: true,
+                        modelos: modelos,
+                        message: "Modelos obtenidos desde fallback"
+                    }
+                }
+
+                return {
+                    success: true,
+                    modelos: [],
+                    message: "No se encontraron modelos"
+                }
+            } catch (fallbackError) {
+                console.error("❌ Error en fallback de modelos:", fallbackError)
+                throw new Error(fallbackError.message || "Error al obtener los modelos")
+            }
+        }
+    }
+
+    /**
+     * Obtener modelos de una marca específica (usando endpoint optimizado)
      * @param {string} marca - Nombre de la marca
      * @returns {Promise<Object>} Lista de modelos
      */
@@ -432,7 +508,6 @@ class VehiculosService {
             return {
                 success: true,
                 modelos: [],
-                data: [],
                 message: "Marca no especificada"
             }
         }
@@ -440,39 +515,10 @@ class VehiculosService {
         try {
             console.log("🚗 Obteniendo modelos para marca:", marca)
 
-            // Obtener estructura jerárquica completa
-            const response = await this.getMarcasModelos()
+            // Usar el endpoint específico de modelos con filtro de marca
+            const response = await this.getModelos(marca)
 
-            if (response.success && response.marcas) {
-                // Buscar la marca específica y extraer sus modelos
-                const marcaData = response.marcas.find(m => 
-                    m.marca?.toLowerCase() === marca.toLowerCase()
-                )
-
-                if (marcaData && marcaData.modelos) {
-                    const modelos = marcaData.modelos.map((modeloData, index) => ({
-                        id: index + 1,
-                        nombre: modeloData.modelo,
-                        marca: marca,
-                        versiones: modeloData.versiones || [],
-                        activo: true
-                    }))
-
-                    return {
-                        success: true,
-                        modelos: modelos,
-                        data: modelos,
-                        message: "Modelos obtenidos exitosamente"
-                    }
-                }
-            }
-
-            return {
-                success: true,
-                modelos: [],
-                data: [],
-                message: `No se encontraron modelos para la marca ${marca}`
-            }
+            return response
         } catch (error) {
             console.error("❌ Error al obtener modelos:", error)
             throw new Error(error.message || `Error al obtener modelos de ${marca}`)
@@ -480,7 +526,7 @@ class VehiculosService {
     }
 
     /**
-     * Obtener años únicos disponibles para filtros
+     * Obtener años únicos disponibles para filtros (desde nuevo endpoint)
      * @returns {Promise<Object>} Lista de años
      */
     async getAños() {
@@ -505,7 +551,7 @@ class VehiculosService {
                     const añosSet = new Set()
 
                     vehiculosResponse.vehiculos.forEach((vehiculo) => {
-                        const año = vehiculo?.modelo?.modelo_ano || vehiculo?.vehiculo_ano || vehiculo?.año
+                        const año = vehiculo?.modelo_auto?.modelo_ano || vehiculo?.vehiculo_ano || vehiculo?.año
                         if (año && !isNaN(año)) {
                             añosSet.add(parseInt(año))
                         }

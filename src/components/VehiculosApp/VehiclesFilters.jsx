@@ -31,7 +31,7 @@ export const VehiclesFilters = ({
             // Si cambia la marca, limpiar el modelo seleccionado y actualizar automáticamente
             if (field === 'marca') {
                 newFilters.modelo = '' // Limpiar modelo cuando cambia marca
-                
+
                 // Si se selecciona una marca específica y solo tiene un modelo, seleccionarlo automáticamente
                 const modelos = getModelosForMarca(value)
                 if (modelos && modelos.length === 1) {
@@ -42,7 +42,7 @@ export const VehiclesFilters = ({
             // Si cambia el modelo, verificar que la marca correspondiente esté seleccionada
             if (field === 'modelo' && value && !filters.marca) {
                 // Buscar la marca del modelo seleccionado
-                const marcaDelModelo = marcasModelos.find(marcaData => 
+                const marcaDelModelo = marcasModelos.find(marcaData =>
                     marcaData.modelos.some(modeloData => modeloData.modelo === value)
                 )
                 if (marcaDelModelo) {
@@ -294,21 +294,21 @@ export const VehiclesFilters = ({
                             Filtros activos: {[filters.marca, filters.modelo, filters.año, filters.estado, filters.search].filter(Boolean).length}
                         </Typography>
                     )}
-                    {(filters.marca || filters.modelo || filters.search) && (
-                        <Typography 
-                            variant="caption" 
-                            color="warning.main" 
-                            sx={{ 
+                    {!loadingOptions && (filters.marca || filters.modelo || filters.search) && (
+                        <Typography
+                            variant="caption"
+                            color="success.main"
+                            sx={{
                                 alignSelf: 'center',
                                 fontWeight: 500,
-                                backgroundColor: 'warning.light',
+                                backgroundColor: 'success.light',
                                 px: 1,
                                 py: 0.5,
                                 borderRadius: 1,
                                 fontSize: '0.7rem'
                             }}
                         >
-                            ⚠️ Filtros de marca/modelo temporalmente deshabilitados
+                            ✅ Filtros jerárquicos activos
                         </Typography>
                     )}
                 </Stack>
