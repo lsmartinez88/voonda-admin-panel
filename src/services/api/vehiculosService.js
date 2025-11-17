@@ -326,56 +326,45 @@ class VehiculosService {
                 message: response.message || "Marcas y modelos obtenidos exitosamente"
             }
         } catch (error) {
-            console.warn("⚠️ Endpoint de marcas-modelos no disponible, usando fallback:", error.message)
+            console.warn("⚠️ Endpoint de marcas-modelos no disponible, usando fallback básico:", error.message)
 
-            // Fallback: construir estructura jerárquica desde vehículos existentes
+            // Fallback básico: estructura simple para testing
             try {
-                const vehiculosResponse = await this.getVehiculos({ limit: 200 })
-
-                if (vehiculosResponse.success && vehiculosResponse.vehiculos) {
-                    const marcasMap = new Map()
-
-                    vehiculosResponse.vehiculos.forEach((vehiculo) => {
-                        const marca = vehiculo?.modelo_auto?.marca
-                        const modelo = vehiculo?.modelo_auto?.modelo
-                        const version = vehiculo?.modelo_auto?.version
-
-                        if (marca && modelo) {
-                            if (!marcasMap.has(marca)) {
-                                marcasMap.set(marca, { marca, modelos: [] })
-                            }
-
-                            const marcaData = marcasMap.get(marca)
-                            let modeloData = marcaData.modelos.find((m) => m.modelo === modelo)
-
-                            if (!modeloData) {
-                                modeloData = { modelo, versiones: [] }
-                                marcaData.modelos.push(modeloData)
-                            }
-
-                            if (version && !modeloData.versiones.includes(version)) {
-                                modeloData.versiones.push(version)
-                            }
-                        }
-                    })
-
-                    const marcas = Array.from(marcasMap.values())
-
-                    return {
-                        success: true,
-                        marcas: marcas,
-                        message: "Marcas y modelos obtenidos desde fallback"
+                const marcasBasicas = [
+                    {
+                        marca: "Toyota",
+                        modelos: [
+                            { modelo: "Corolla", versiones: ["XEI", "XLI", "SEG"] },
+                            { modelo: "Camry", versiones: ["LE", "SE", "XSE"] },
+                            { modelo: "RAV4", versiones: ["LE", "XLE", "Adventure"] }
+                        ]
+                    },
+                    {
+                        marca: "Honda", 
+                        modelos: [
+                            { modelo: "Civic", versiones: ["LX", "EX", "Sport"] },
+                            { modelo: "Accord", versiones: ["LX", "Sport", "Touring"] },
+                            { modelo: "CR-V", versiones: ["LX", "EX", "EX-L"] }
+                        ]
+                    },
+                    {
+                        marca: "Ford",
+                        modelos: [
+                            { modelo: "Focus", versiones: ["S", "SE", "Titanium"] },
+                            { modelo: "Fiesta", versiones: ["S", "SE", "ST"] },
+                            { modelo: "EcoSport", versiones: ["S", "SE", "Titanium"] }
+                        ]
                     }
-                }
+                ]
 
                 return {
                     success: true,
-                    marcas: [],
-                    message: "No se encontraron marcas"
+                    marcas: marcasBasicas,
+                    message: "Marcas y modelos obtenidos desde fallback"
                 }
             } catch (fallbackError) {
                 console.error("❌ Error en fallback:", fallbackError)
-                throw new Error(fallbackError.message || "Error al obtener las marcas y modelos")
+                throw new Error("Error al obtener las marcas y modelos")
             }
         }
     }
@@ -396,39 +385,24 @@ class VehiculosService {
                 message: response.message || "Marcas obtenidas exitosamente"
             }
         } catch (error) {
-            console.warn("⚠️ Endpoint de marcas no disponible, usando fallback:", error.message)
+            console.warn("⚠️ Endpoint de marcas no disponible, usando fallback básico:", error.message)
 
-            // Fallback: construir desde vehículos existentes
+            // Fallback básico: lista estática de marcas comunes
             try {
-                const vehiculosResponse = await this.getVehiculos({ limit: 200 })
-
-                if (vehiculosResponse.success && vehiculosResponse.vehiculos) {
-                    const marcasSet = new Set()
-
-                    vehiculosResponse.vehiculos.forEach((vehiculo) => {
-                        const marca = vehiculo?.modelo_auto?.marca
-                        if (marca) {
-                            marcasSet.add(marca)
-                        }
-                    })
-
-                    const marcas = Array.from(marcasSet).sort()
-
-                    return {
-                        success: true,
-                        marcas: marcas,
-                        message: "Marcas obtenidas desde fallback"
-                    }
-                }
+                const marcasComunes = [
+                    "Toyota", "Honda", "Ford", "Chevrolet", "Volkswagen", 
+                    "Nissan", "Hyundai", "Kia", "Mazda", "BMW", 
+                    "Mercedes-Benz", "Audi", "Peugeot", "Renault", "Fiat"
+                ]
 
                 return {
                     success: true,
-                    marcas: [],
-                    message: "No se encontraron marcas"
+                    marcas: marcasComunes,
+                    message: "Marcas obtenidas desde fallback"
                 }
             } catch (fallbackError) {
                 console.error("❌ Error en fallback:", fallbackError)
-                throw new Error(fallbackError.message || "Error al obtener las marcas")
+                throw new Error("Error al obtener las marcas")
             }
         }
     }
@@ -541,40 +515,24 @@ class VehiculosService {
                 message: response.message || "Años obtenidos exitosamente"
             }
         } catch (error) {
-            console.warn("⚠️ Endpoint de años no disponible, usando fallback:", error.message)
+            console.warn("⚠️ Endpoint de años no disponible, usando fallback básico:", error.message)
 
-            // Fallback: extraer años desde vehículos existentes
+            // Fallback básico: generar rango de años sin llamar a API
             try {
-                const vehiculosResponse = await this.getVehiculos({ limit: 200 })
-
-                if (vehiculosResponse.success && vehiculosResponse.vehiculos) {
-                    const añosSet = new Set()
-
-                    vehiculosResponse.vehiculos.forEach((vehiculo) => {
-                        const año = vehiculo?.modelo_auto?.modelo_ano || vehiculo?.vehiculo_ano || vehiculo?.año
-                        if (año && !isNaN(año)) {
-                            añosSet.add(parseInt(año))
-                        }
-                    })
-
-                    // Ordenar años de mayor a menor
-                    const años = Array.from(añosSet).sort((a, b) => b - a)
-
-                    return {
-                        success: true,
-                        años: años,
-                        message: "Años obtenidos desde fallback"
-                    }
+                const currentYear = new Date().getFullYear()
+                const años = []
+                for (let year = currentYear; year >= currentYear - 30; year--) {
+                    años.push(year)
                 }
 
                 return {
                     success: true,
-                    años: [],
-                    message: "No se encontraron años"
+                    años: años,
+                    message: "Años generados desde fallback"
                 }
             } catch (fallbackError) {
                 console.error("❌ Error en fallback de años:", fallbackError)
-                throw new Error(fallbackError.message || "Error al obtener los años disponibles")
+                throw new Error("Error al obtener los años disponibles")
             }
         }
     }
