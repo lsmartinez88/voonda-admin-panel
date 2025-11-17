@@ -43,7 +43,7 @@ export const VehiclesFilters = ({
             if (field === 'modelo' && value && !filters.marca) {
                 // Buscar la marca del modelo seleccionado
                 const marcaDelModelo = marcasModelos.find(marcaData =>
-                    marcaData.modelos.some(modeloData => 
+                    marcaData.modelos.some(modeloData =>
                         modeloData.modelo === value || modeloData.id === value
                     )
                 )
@@ -232,8 +232,8 @@ export const VehiclesFilters = ({
                             >
                                 <MenuItem value=''>Todos los modelos</MenuItem>
                                 {getModelosDisponibles().map((modeloData, index) => (
-                                    <MenuItem 
-                                        key={`${modeloData.modelo}-${index}`} 
+                                    <MenuItem
+                                        key={`${modeloData.modelo}-${index}`}
                                         value={modeloData.id || modeloData.modelo}
                                     >
                                         {modeloData.modelo}
@@ -297,23 +297,6 @@ export const VehiclesFilters = ({
                     {(filters.marca || filters.modelo || filters.año || filters.estado || filters.search) && (
                         <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'center' }}>
                             Filtros activos: {[filters.marca, filters.modelo, filters.año, filters.estado, filters.search].filter(Boolean).length}
-                        </Typography>
-                    )}
-                    {filters.search && !filters.marca && !filters.modelo && (
-                        <Typography
-                            variant="caption"
-                            color="success.main"
-                            sx={{
-                                alignSelf: 'center',
-                                fontWeight: 500,
-                                backgroundColor: 'success.light',
-                                px: 1,
-                                py: 0.5,
-                                borderRadius: 1,
-                                fontSize: '0.7rem'
-                            }}
-                        >
-                            ✅ Búsqueda general activa
                         </Typography>
                     )}
                 </Stack>

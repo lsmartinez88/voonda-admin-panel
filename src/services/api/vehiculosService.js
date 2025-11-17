@@ -41,9 +41,7 @@ class VehiculosService {
 
                     // Buscar ID de la marca si se especifica
                     if (options.marca) {
-                        const marcaEncontrada = marcasData.find(m => 
-                            m.marca.toLowerCase() === options.marca.toLowerCase()
-                        )
+                        const marcaEncontrada = marcasData.find((m) => m.marca.toLowerCase() === options.marca.toLowerCase())
                         if (marcaEncontrada && marcaEncontrada.id) {
                             marcaId = marcaEncontrada.id
                         } else {
@@ -55,14 +53,11 @@ class VehiculosService {
                     // Buscar ID del modelo si se especifica
                     if (options.modelo) {
                         let modeloEncontrado = null
-                        
+
                         // Buscar en todas las marcas
                         for (const marcaData of marcasData) {
                             if (marcaData.modelos) {
-                                modeloEncontrado = marcaData.modelos.find(m => 
-                                    m.modelo.toLowerCase() === options.modelo.toLowerCase() ||
-                                    m.id === options.modelo
-                                )
+                                modeloEncontrado = marcaData.modelos.find((m) => m.modelo.toLowerCase() === options.modelo.toLowerCase() || m.id === options.modelo)
                                 if (modeloEncontrado) break
                             }
                         }
@@ -94,15 +89,16 @@ class VehiculosService {
                             }
                             break
                         case "modelo":
-                            // ✅ REACTIVADO - Usar modeloId mapeado o nombre directo  
+                            // ✅ REACTIVADO - Usar modeloId mapeado o nombre directo
                             if (modeloId) {
                                 params.append("modeloId", modeloId)
                                 console.log("🚗 Filtro modelo mapeado:", value, "->", modeloId)
                             }
                             break
                         case "search":
-                            // ✅ FUNCIONAL - El backend soporta búsqueda en marca/modelo
+                            // ✅ FUNCIONAL - Parámetro search verificado funcionando (200 OK en logs)
                             params.append("search", value)
+                            console.log("🔍 Búsqueda enviada:", value)
                             break
                         case "año":
                             // Mapear a 'ano' según la documentación de la API
@@ -393,7 +389,7 @@ class VehiculosService {
 
                 const marcasMap = new Map()
 
-                vehiculos.forEach(vehiculo => {
+                vehiculos.forEach((vehiculo) => {
                     if (vehiculo?.modelo_auto?.marca && vehiculo?.modelo_auto?.modelo) {
                         const marca = vehiculo.modelo_auto.marca
                         const modelo = vehiculo.modelo_auto.modelo
@@ -411,8 +407,8 @@ class VehiculosService {
 
                         // Agregar modelo si no existe
                         const marcaData = marcasMap.get(marca)
-                        const modeloExiste = marcaData.modelos.some(m => m.modelo === modelo)
-                        
+                        const modeloExiste = marcaData.modelos.some((m) => m.modelo === modelo)
+
                         if (!modeloExiste) {
                             marcaData.modelos.push({
                                 id: modeloId,
@@ -423,8 +419,7 @@ class VehiculosService {
                     }
                 })
 
-                const marcasArray = Array.from(marcasMap.values())
-                    .sort((a, b) => a.marca.localeCompare(b.marca))
+                const marcasArray = Array.from(marcasMap.values()).sort((a, b) => a.marca.localeCompare(b.marca))
 
                 console.log("✅ Marcas y modelos extraídos desde vehículos:", marcasArray.length, "marcas")
 
@@ -449,7 +444,7 @@ class VehiculosService {
                     },
                     {
                         id: "2",
-                        marca: "Honda", 
+                        marca: "Honda",
                         modelos: [
                             { id: "2-1", modelo: "Civic", versiones: ["LX", "EX", "Sport"] },
                             { id: "2-2", modelo: "Accord", versiones: ["LX", "Sport", "Touring"] },
@@ -496,11 +491,7 @@ class VehiculosService {
 
             // Fallback básico: lista estática de marcas comunes
             try {
-                const marcasComunes = [
-                    "Toyota", "Honda", "Ford", "Chevrolet", "Volkswagen", 
-                    "Nissan", "Hyundai", "Kia", "Mazda", "BMW", 
-                    "Mercedes-Benz", "Audi", "Peugeot", "Renault", "Fiat"
-                ]
+                const marcasComunes = ["Toyota", "Honda", "Ford", "Chevrolet", "Volkswagen", "Nissan", "Hyundai", "Kia", "Mazda", "BMW", "Mercedes-Benz", "Audi", "Peugeot", "Renault", "Fiat"]
 
                 return {
                     success: true,
@@ -607,39 +598,93 @@ class VehiculosService {
     }
 
     /**
-     * Obtener años únicos disponibles para filtros (desde nuevo endpoint)
+     * Obtener años únicos disponibles para filtros (usando fallback directo)
      * @returns {Promise<Object>} Lista de años
      */
     async getAños() {
         try {
-            console.log("🚗 Obteniendo años disponibles desde API")
+            // Intento 1: Probar endpoint estándar de años (si existe)
+            console.log("🚗 Intentando obtener años desde API")
 
-            const response = await apiClient.get("/api/vehiculos/filtros/años")
+            // Primero intentamos con un timeout corto para evitar esperar mucho
+            const controller = new AbortController()
+            const timeoutId = setTimeout(() => controller.abort(), 1000) // 1 segundo timeout
+
+            try {
+                const response = await apiClient.get("/api/vehiculos/filtros/años", {
+                    signal: controller.signal
+                })
+                clearTimeout(timeoutId)
+
+                if (response?.años || response?.data) {
+                    return {
+                        success: true,
+                        años: response.años || response.data || [],
+                        message: response.message || "Años obtenidos exitosamente"
+                    }
+                }
+            } catch (apiError) {
+                clearTimeout(timeoutId)
+                // Si es 404 o timeout, usar fallback silenciosamente
+                if (apiError.response?.status === 404 || apiError.name === "AbortError") {
+                    console.log("📅 Endpoint de años no disponible, usando generación local")
+                } else {
+                    console.warn("⚠️ Error en endpoint de años, usando fallback:", apiError.message)
+                }
+            }
+
+            // Intento 2: Extraer años desde vehículos existentes
+            try {
+                console.log("📅 Extrayendo años desde vehículos existentes")
+                const vehiculosResponse = await apiClient.get("/api/vehiculos?limit=200")
+                const vehiculos = vehiculosResponse.vehiculos || vehiculosResponse.data || []
+
+                const añosSet = new Set()
+                vehiculos.forEach((vehiculo) => {
+                    if (vehiculo?.vehiculo_ano) {
+                        añosSet.add(vehiculo.vehiculo_ano)
+                    }
+                })
+
+                if (añosSet.size > 0) {
+                    const años = Array.from(añosSet).sort((a, b) => b - a) // Ordenar descendente
+                    return {
+                        success: true,
+                        años: años,
+                        message: "Años extraídos desde vehículos existentes"
+                    }
+                }
+            } catch (extractError) {
+                console.warn("⚠️ Error extrayendo años desde vehículos:", extractError.message)
+            }
+
+            // Fallback final: generar rango de años estático
+            console.log("📅 Generando rango de años estático")
+            const currentYear = new Date().getFullYear()
+            const años = []
+            for (let year = currentYear; year >= currentYear - 30; year--) {
+                años.push(year)
+            }
 
             return {
                 success: true,
-                años: response.años || response.data || [],
-                message: response.message || "Años obtenidos exitosamente"
+                años: años,
+                message: "Años generados localmente"
             }
         } catch (error) {
-            console.warn("⚠️ Endpoint de años no disponible, usando fallback básico:", error.message)
+            console.error("❌ Error crítico en getAños:", error)
 
-            // Fallback básico: generar rango de años sin llamar a API
-            try {
-                const currentYear = new Date().getFullYear()
-                const años = []
-                for (let year = currentYear; year >= currentYear - 30; year--) {
-                    años.push(year)
-                }
+            // Último recurso: años básicos
+            const currentYear = new Date().getFullYear()
+            const añosBasicos = []
+            for (let year = currentYear; year >= currentYear - 20; year--) {
+                añosBasicos.push(year)
+            }
 
-                return {
-                    success: true,
-                    años: años,
-                    message: "Años generados desde fallback"
-                }
-            } catch (fallbackError) {
-                console.error("❌ Error en fallback de años:", fallbackError)
-                throw new Error("Error al obtener los años disponibles")
+            return {
+                success: true,
+                años: añosBasicos,
+                message: "Años básicos generados como último recurso"
             }
         }
     }
