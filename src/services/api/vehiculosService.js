@@ -28,28 +28,19 @@ class VehiculosService {
     async getVehiculos(options = {}) {
         try {
             const params = new URLSearchParams()
-            let hasSearch = false
-
-            // Crear término de búsqueda combinado si hay marca/modelo
-            let searchTerm = options.search || ''
-            if (options.marca || options.modelo) {
-                const searchParts = []
-                if (options.marca) searchParts.push(options.marca)
-                if (options.modelo) searchParts.push(options.modelo)
-                if (options.search && !searchParts.some(part => options.search.includes(part))) {
-                    searchParts.push(options.search)
-                }
-                searchTerm = searchParts.join(' ').trim()
-            }
 
             // Procesar y agregar parámetros solo si tienen valor
+            // Por ahora, evitamos enviar marca, modelo y search para prevenir errores Prisma
             Object.entries(options).forEach(([key, value]) => {
                 if (value !== undefined && value !== null && value !== "") {
                     // Transformar parámetros específicos según la API
                     switch (key) {
                         case 'marca':
                         case 'modelo':
-                            // No enviar estos parámetros directamente - se procesan en searchTerm
+                        case 'search':
+                            // TEMPORALMENTE DESHABILITADOS - Causan errores Prisma en el backend
+                            // TODO: Habilitar cuando el backend maneje correctamente las relaciones
+                            console.warn(`⚠️ Filtro ${key} temporalmente deshabilitado debido a limitaciones del backend`)
                             break
                         case 'año':
                             // El año se envía como vehiculo_ano
@@ -69,28 +60,25 @@ class VehiculosService {
                                 params.append('estado_codigo', value)
                             }
                             break
-                        case 'search':
-                            // Se procesa al final con searchTerm
-                            break
                         default:
-                            // Agregar parámetros normalmente
+                            // Agregar parámetros normalmente (excepto los problemáticos)
                             params.append(key, value)
                             break
                     }
                 }
             })
 
-            // Agregar término de búsqueda combinado si existe
-            if (searchTerm) {
-                params.append('search', searchTerm)
-            }
-
             const queryString = params.toString()
             const url = queryString ? `/api/vehiculos?${queryString}` : "/api/vehiculos"
 
             console.log("🚗 Obteniendo vehículos desde API:", url)
             console.log("🔍 Filtros procesados:", Object.fromEntries(params))
-            console.log("🔍 Término de búsqueda:", searchTerm)
+            
+            // Advertir sobre filtros deshabilitados
+            if (options.marca || options.modelo || options.search) {
+                console.warn("⚠️ Filtros de marca/modelo/búsqueda temporalmente deshabilitados debido a limitaciones del backend")
+                console.warn("📝 Los vehículos se cargarán sin filtrado por marca/modelo hasta que se actualice el backend")
+            }
 
             const response = await apiClient.get(url)
 

@@ -294,9 +294,21 @@ export const VehiclesFilters = ({
                             Filtros activos: {[filters.marca, filters.modelo, filters.año, filters.estado, filters.search].filter(Boolean).length}
                         </Typography>
                     )}
-                    {loadingOptions && (
-                        <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'center' }}>
-                            Cargando opciones de filtros...
+                    {(filters.marca || filters.modelo || filters.search) && (
+                        <Typography 
+                            variant="caption" 
+                            color="warning.main" 
+                            sx={{ 
+                                alignSelf: 'center',
+                                fontWeight: 500,
+                                backgroundColor: 'warning.light',
+                                px: 1,
+                                py: 0.5,
+                                borderRadius: 1,
+                                fontSize: '0.7rem'
+                            }}
+                        >
+                            ⚠️ Filtros de marca/modelo temporalmente deshabilitados
                         </Typography>
                     )}
                 </Stack>
