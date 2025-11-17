@@ -43,7 +43,9 @@ export const VehiclesFilters = ({
             if (field === 'modelo' && value && !filters.marca) {
                 // Buscar la marca del modelo seleccionado
                 const marcaDelModelo = marcasModelos.find(marcaData =>
-                    marcaData.modelos.some(modeloData => modeloData.modelo === value)
+                    marcaData.modelos.some(modeloData => 
+                        modeloData.modelo === value || modeloData.id === value
+                    )
                 )
                 if (marcaDelModelo) {
                     newFilters.marca = marcaDelModelo.marca
@@ -230,7 +232,10 @@ export const VehiclesFilters = ({
                             >
                                 <MenuItem value=''>Todos los modelos</MenuItem>
                                 {getModelosDisponibles().map((modeloData, index) => (
-                                    <MenuItem key={`${modeloData.modelo}-${index}`} value={modeloData.modelo}>
+                                    <MenuItem 
+                                        key={`${modeloData.modelo}-${index}`} 
+                                        value={modeloData.id || modeloData.modelo}
+                                    >
                                         {modeloData.modelo}
                                         {filters.marca === '' && (
                                             <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>
