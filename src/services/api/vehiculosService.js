@@ -29,23 +29,79 @@ class VehiculosService {
         try {
             const params = new URLSearchParams()
 
+            // Si hay filtros de marca o modelo, necesitamos obtener los IDs correspondientes
+            let marcaId = null
+            let modeloId = null
+
+            if (options.marca || options.modelo) {
+                try {
+                    // Obtener información de marcas y modelos para mapeo
+                    const marcasResponse = await this.getMarcasModelos()
+                    const marcasData = marcasResponse.marcas || []
+
+                    // Buscar ID de la marca si se especifica
+                    if (options.marca) {
+                        const marcaEncontrada = marcasData.find(m => 
+                            m.marca.toLowerCase() === options.marca.toLowerCase()
+                        )
+                        if (marcaEncontrada && marcaEncontrada.id) {
+                            marcaId = marcaEncontrada.id
+                        } else {
+                            // Si no encontramos la marca por ID, intentar usar el nombre directamente
+                            marcaId = options.marca
+                        }
+                    }
+
+                    // Buscar ID del modelo si se especifica
+                    if (options.modelo) {
+                        let modeloEncontrado = null
+                        
+                        // Buscar en todas las marcas
+                        for (const marcaData of marcasData) {
+                            if (marcaData.modelos) {
+                                modeloEncontrado = marcaData.modelos.find(m => 
+                                    m.modelo.toLowerCase() === options.modelo.toLowerCase() ||
+                                    m.id === options.modelo
+                                )
+                                if (modeloEncontrado) break
+                            }
+                        }
+
+                        if (modeloEncontrado && modeloEncontrado.id) {
+                            modeloId = modeloEncontrado.id
+                        } else {
+                            // Si no encontramos el modelo por ID, intentar usar el nombre directamente
+                            modeloId = options.modelo
+                        }
+                    }
+                } catch (mappingError) {
+                    console.warn("⚠️ Error al mapear marca/modelo a IDs, usando nombres directos:", mappingError.message)
+                    marcaId = options.marca
+                    modeloId = options.modelo
+                }
+            }
+
             // Procesar y agregar parámetros según la nueva API documentada
             Object.entries(options).forEach(([key, value]) => {
                 if (value !== undefined && value !== null && value !== "") {
                     // Transformar parámetros específicos según la API
                     switch (key) {
                         case "marca":
-                            // ⚠️ TEMPORALMENTE DESHABILITADO - Backend tiene problemas con filtros de marca
-                            // El backend intenta usar marca.id en lugar de marca.nombre
-                            console.warn(`⚠️ Filtro ${key} temporalmente deshabilitado debido a errores de Prisma en el backend`)
+                            // ✅ REACTIVADO - Usar marcaId mapeado o nombre directo
+                            if (marcaId) {
+                                params.append("marcaId", marcaId)
+                                console.log("🏷️ Filtro marca mapeado:", value, "->", marcaId)
+                            }
                             break
                         case "modelo":
-                            // ⚠️ TEMPORALMENTE DESHABILITADO - Backend tiene problemas con filtros de modelo  
-                            // El backend intenta usar modelo.id con nombres en lugar de IDs
-                            console.warn(`⚠️ Filtro ${key} temporalmente deshabilitado debido a errores de Prisma en el backend`)
+                            // ✅ REACTIVADO - Usar modeloId mapeado o nombre directo  
+                            if (modeloId) {
+                                params.append("modeloId", modeloId)
+                                console.log("🚗 Filtro modelo mapeado:", value, "->", modeloId)
+                            }
                             break
                         case "search":
-                            // ✅ REACTIVADO - El backend ahora soporta búsqueda en marca/modelo
+                            // ✅ FUNCIONAL - El backend soporta búsqueda en marca/modelo
                             params.append("search", value)
                             break
                         case "año":
@@ -79,12 +135,6 @@ class VehiculosService {
 
             console.log("🚗 Obteniendo vehículos desde API:", url)
             console.log("🔍 Filtros procesados:", Object.fromEntries(params))
-
-            // Advertir sobre filtros deshabilitados  
-            if (options.marca || options.modelo) {
-                console.warn("⚠️ Filtros de marca/modelo temporalmente deshabilitados debido a errores de Prisma en el backend")
-                console.warn("📝 El backend necesita corregir el mapeo de campos: marca.nombre en lugar de marca.id")
-            }
 
             const response = await apiClient.get(url)
 
@@ -334,33 +384,85 @@ class VehiculosService {
                 message: response.message || "Marcas y modelos obtenidos exitosamente"
             }
         } catch (error) {
-            console.warn("⚠️ Endpoint de marcas-modelos no disponible, usando fallback básico:", error.message)
+            console.warn("⚠️ Endpoint de marcas-modelos no disponible, extrayendo desde vehículos:", error.message)
 
-            // Fallback básico: estructura simple para testing
+            // Fallback: extraer marcas y modelos desde vehículos existentes con IDs
             try {
+                const vehiculosResponse = await apiClient.get("/api/vehiculos?limit=200")
+                const vehiculos = vehiculosResponse.vehiculos || vehiculosResponse.data || []
+
+                const marcasMap = new Map()
+
+                vehiculos.forEach(vehiculo => {
+                    if (vehiculo?.modelo_auto?.marca && vehiculo?.modelo_auto?.modelo) {
+                        const marca = vehiculo.modelo_auto.marca
+                        const modelo = vehiculo.modelo_auto.modelo
+                        const marcaId = vehiculo.modelo_auto.marca_id || marca
+                        const modeloId = vehiculo.modelo_id || `${marca}-${modelo}`.toLowerCase()
+
+                        // Crear entrada de marca si no existe
+                        if (!marcasMap.has(marca)) {
+                            marcasMap.set(marca, {
+                                id: marcaId,
+                                marca: marca,
+                                modelos: []
+                            })
+                        }
+
+                        // Agregar modelo si no existe
+                        const marcaData = marcasMap.get(marca)
+                        const modeloExiste = marcaData.modelos.some(m => m.modelo === modelo)
+                        
+                        if (!modeloExiste) {
+                            marcaData.modelos.push({
+                                id: modeloId,
+                                modelo: modelo,
+                                versiones: []
+                            })
+                        }
+                    }
+                })
+
+                const marcasArray = Array.from(marcasMap.values())
+                    .sort((a, b) => a.marca.localeCompare(b.marca))
+
+                console.log("✅ Marcas y modelos extraídos desde vehículos:", marcasArray.length, "marcas")
+
+                return {
+                    success: true,
+                    marcas: marcasArray,
+                    message: "Marcas y modelos extraídos desde vehículos"
+                }
+            } catch (fallbackError) {
+                console.warn("⚠️ Error extrayendo desde vehículos, usando fallback básico:", fallbackError.message)
+
+                // Fallback básico: estructura simple para testing con IDs
                 const marcasBasicas = [
                     {
+                        id: "1",
                         marca: "Toyota",
                         modelos: [
-                            { modelo: "Corolla", versiones: ["XEI", "XLI", "SEG"] },
-                            { modelo: "Camry", versiones: ["LE", "SE", "XSE"] },
-                            { modelo: "RAV4", versiones: ["LE", "XLE", "Adventure"] }
+                            { id: "1-1", modelo: "Corolla", versiones: ["XEI", "XLI", "SEG"] },
+                            { id: "1-2", modelo: "Camry", versiones: ["LE", "SE", "XSE"] },
+                            { id: "1-3", modelo: "RAV4", versiones: ["LE", "XLE", "Adventure"] }
                         ]
                     },
                     {
+                        id: "2",
                         marca: "Honda", 
                         modelos: [
-                            { modelo: "Civic", versiones: ["LX", "EX", "Sport"] },
-                            { modelo: "Accord", versiones: ["LX", "Sport", "Touring"] },
-                            { modelo: "CR-V", versiones: ["LX", "EX", "EX-L"] }
+                            { id: "2-1", modelo: "Civic", versiones: ["LX", "EX", "Sport"] },
+                            { id: "2-2", modelo: "Accord", versiones: ["LX", "Sport", "Touring"] },
+                            { id: "2-3", modelo: "CR-V", versiones: ["LX", "EX", "EX-L"] }
                         ]
                     },
                     {
+                        id: "3",
                         marca: "Ford",
                         modelos: [
-                            { modelo: "Focus", versiones: ["S", "SE", "Titanium"] },
-                            { modelo: "Fiesta", versiones: ["S", "SE", "ST"] },
-                            { modelo: "EcoSport", versiones: ["S", "SE", "Titanium"] }
+                            { id: "3-1", modelo: "Focus", versiones: ["S", "SE", "Titanium"] },
+                            { id: "3-2", modelo: "Fiesta", versiones: ["S", "SE", "ST"] },
+                            { id: "3-3", modelo: "EcoSport", versiones: ["S", "SE", "Titanium"] }
                         ]
                     }
                 ]
@@ -368,11 +470,8 @@ class VehiculosService {
                 return {
                     success: true,
                     marcas: marcasBasicas,
-                    message: "Marcas y modelos obtenidos desde fallback"
+                    message: "Marcas y modelos obtenidos desde fallback básico"
                 }
-            } catch (fallbackError) {
-                console.error("❌ Error en fallback:", fallbackError)
-                throw new Error("Error al obtener las marcas y modelos")
             }
         }
     }

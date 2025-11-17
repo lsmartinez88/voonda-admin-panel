@@ -302,18 +302,18 @@ export const VehiclesFilters = ({
                     {(filters.marca || filters.modelo) && (
                         <Typography
                             variant="caption"
-                            color="warning.main"
+                            color="success.main"
                             sx={{
                                 alignSelf: 'center',
                                 fontWeight: 500,
-                                backgroundColor: 'warning.light',
+                                backgroundColor: 'success.light',
                                 px: 1,
                                 py: 0.5,
                                 borderRadius: 1,
                                 fontSize: '0.7rem'
                             }}
                         >
-                            ⚠️ Filtros marca/modelo temporalmente deshabilitados (error Prisma backend)
+                            ✅ Filtros marca/modelo activos (adaptados al backend)
                         </Typography>
                     )}
                     {filters.search && !filters.marca && !filters.modelo && (
