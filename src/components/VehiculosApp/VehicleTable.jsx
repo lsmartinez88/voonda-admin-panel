@@ -24,11 +24,11 @@ export const VehicleTable = ({ vehiculos, onEdit, onDelete }) => {
                         }}
                     >
                         <TableCell>Vehículo</TableCell>
-                        <TableCell width={120}>Año</TableCell>
-                        <TableCell width={120}>Motor</TableCell>
-                        <TableCell width={120}>Combustible</TableCell>
                         <TableCell width={150}>Precio</TableCell>
-                        <TableCell width={120}>Estado</TableCell>
+                        <TableCell width={120}>Kilometraje</TableCell>
+                        <TableCell width={150}>Patente</TableCell>
+                        <TableCell width={120}>Fecha Ingreso</TableCell>
+                        <TableCell width={120}>Vendedor</TableCell>
                         <TableCell width={100} align="right">Acciones</TableCell>
                     </TableRow>
                 </TableHead>

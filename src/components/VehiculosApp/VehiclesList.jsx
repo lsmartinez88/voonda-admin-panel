@@ -2,7 +2,6 @@
 import {
     Box,
     Typography,
-    Pagination,
     Stack,
     Tabs,
     Tab,
@@ -40,7 +39,8 @@ export const VehiclesList = ({
     onPageChange,
     onEdit,
     onDelete,
-    headerActions
+    filters,
+    onFiltersChange
 }) => {
     const [viewMode, setViewMode] = useState('cards')
 
@@ -83,12 +83,7 @@ export const VehiclesList = ({
     return (
         <>
             {/* Controles superiores estilo ContactApp */}
-            <Stack direction='row' justifyContent='space-between' alignItems='center' sx={{ mb: 3 }}>
-                {/* Botones de acción para desktop */}
-                <Box sx={{ display: { xs: 'none', lg: 'block' } }}>
-                    {headerActions}
-                </Box>
-
+            <Stack direction='row' justifyContent='flex-end' alignItems='center' sx={{ mb: 3 }}>
                 {/* Controles de vista */}
                 <Stack direction='row' alignItems='center' spacing={2}>
                     <FormControl size='small' sx={{ minWidth: 140 }}>
@@ -103,6 +98,27 @@ export const VehiclesList = ({
                                     {option.label}
                                 </MenuItem>
                             ))}
+                        </Select>
+                    </FormControl>
+
+                    <FormControl size="small" sx={{ minWidth: 180 }}>
+                        <InputLabel>Ordenar por</InputLabel>
+                        <Select
+                            value={`${filters?.orderBy || 'created_at'}_${filters?.order || 'desc'}`}
+                            label="Ordenar por"
+                            onChange={(e) => {
+                                const [orderBy, order] = e.target.value.split('_')
+                                onFiltersChange({ ...filters, orderBy, order })
+                            }}
+                        >
+                            <MenuItem value="created_at_desc">Más recientes</MenuItem>
+                            <MenuItem value="created_at_asc">Más antiguos</MenuItem>
+                            <MenuItem value="valor_asc">Precio menor</MenuItem>
+                            <MenuItem value="valor_desc">Precio mayor</MenuItem>
+                            <MenuItem value="vehiculo_ano_desc">Año más nuevo</MenuItem>
+                            <MenuItem value="vehiculo_ano_asc">Año más viejo</MenuItem>
+                            <MenuItem value="kilometros_asc">Menos kilómetros</MenuItem>
+                            <MenuItem value="kilometros_desc">Más kilómetros</MenuItem>
                         </Select>
                     </FormControl>
 
@@ -164,21 +180,6 @@ export const VehiclesList = ({
                         onDelete={onDelete}
                     />
                 </JumboCard>
-            )}
-
-            {/* Paginación inferior */}
-            {totalPages > 1 && (
-                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-                    <Pagination
-                        count={totalPages}
-                        page={currentPage}
-                        onChange={(event, newPage) => onPageChange(newPage)}
-                        color='primary'
-                        showFirstButton
-                        showLastButton
-                        size='large'
-                    />
-                </Box>
             )}
         </>
     )

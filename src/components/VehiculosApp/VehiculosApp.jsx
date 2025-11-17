@@ -9,6 +9,7 @@ import vehiculosService from '../../services/api/vehiculosService';
 import { VehiclesList } from './VehiclesList';
 import { VehiclesFilters } from './VehiclesFilters';
 import { VehicleModal } from './VehicleModal';
+import { VehiclesPagination } from './VehiclesPagination';
 
 // Icons
 import AddIcon from '@mui/icons-material/Add';
@@ -23,6 +24,12 @@ export const VehiculosApp = () => {
     // Estados principales
     const [vehiculos, setVehiculos] = useState([]);
     const [totalVehiculos, setTotalVehiculos] = useState(0);
+    const [pagination, setPagination] = useState({
+        page: 1,
+        pages: 1,
+        total: 0,
+        limit: 12
+    });
     const [loading, setLoading] = useState(false);
     const [selectedVehicle, setSelectedVehicle] = useState(null);
     const [showModal, setShowModal] = useState(false);
@@ -40,7 +47,7 @@ export const VehiculosApp = () => {
         sortBy: 'fecha_ingreso',
         order: 'desc',
         page: 1,
-        limit: 20
+        limit: 12
     });
 
     // Fetch vehículos usando API service
@@ -56,6 +63,15 @@ export const VehiculosApp = () => {
                 console.log('✅ Vehículos obtenidos:', response);
                 setVehiculos(response.vehiculos || []);
                 setTotalVehiculos(response.pagination?.total || response.vehiculos?.length || 0);
+
+                // Actualizar estado de paginación
+                const paginationData = response.pagination || {};
+                setPagination({
+                    page: paginationData.page || 1,
+                    pages: paginationData.pages || Math.ceil((paginationData.total || 0) / filters.limit),
+                    total: paginationData.total || 0,
+                    limit: paginationData.limit || filters.limit
+                });
             } else {
                 console.error('❌ Error en respuesta:', response);
                 setVehiculos([]);
@@ -242,6 +258,23 @@ export const VehiculosApp = () => {
         }
     }, [filters.marca]);
 
+    // Manejar cambio de página
+    const handlePageChange = (newPage) => {
+        setFilters(prev => ({
+            ...prev,
+            page: newPage
+        }));
+    };
+
+    // Manejar cambio de elementos por página
+    const handleItemsPerPageChange = (newLimit) => {
+        setFilters(prev => ({
+            ...prev,
+            limit: newLimit,
+            page: 1 // Reset a primera página cuando cambia el límite
+        }));
+    };
+
     // Si no está autenticado, no mostrar nada
     if (!user) {
         return (
@@ -317,9 +350,25 @@ export const VehiculosApp = () => {
             <VehiclesList
                 vehiculos={vehiculos}
                 loading={loading}
+                totalVehiculos={totalVehiculos}
+                currentPage={pagination.page}
+                itemsPerPage={pagination.limit}
+                setItemsPerPage={handleItemsPerPageChange}
+                onPageChange={handlePageChange}
                 onEdit={handleEditVehicle}
                 onDelete={handleDeleteVehicle}
+                filters={filters}
+                onFiltersChange={setFilters}
             />
+
+            {/* Paginación personalizada */}
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+                <VehiclesPagination
+                    pagination={pagination}
+                    onPageChange={handlePageChange}
+                    limit={pagination.limit}
+                />
+            </Box>
 
             {/* Vehicle Modal */}
             {showModal && (

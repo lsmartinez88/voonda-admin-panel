@@ -211,27 +211,6 @@ export const VehiclesFilters = ({
                     >
                         Limpiar Filtros
                     </Button>
-
-                    <FormControl size="small" sx={{ minWidth: 200 }}>
-                        <InputLabel>Ordenar por</InputLabel>
-                        <Select
-                            value={`${filters.orderBy || 'created_at'}_${filters.order || 'desc'}`}
-                            label="Ordenar por"
-                            onChange={(e) => {
-                                const [orderBy, order] = e.target.value.split('_')
-                                onFiltersChange({ ...filters, orderBy, order })
-                            }}
-                        >
-                            <MenuItem value="created_at_desc">Más recientes</MenuItem>
-                            <MenuItem value="created_at_asc">Más antiguos</MenuItem>
-                            <MenuItem value="valor_asc">Precio menor</MenuItem>
-                            <MenuItem value="valor_desc">Precio mayor</MenuItem>
-                            <MenuItem value="vehiculo_ano_desc">Año más nuevo</MenuItem>
-                            <MenuItem value="vehiculo_ano_asc">Año más viejo</MenuItem>
-                            <MenuItem value="kilometros_asc">Menos kilómetros</MenuItem>
-                            <MenuItem value="kilometros_desc">Más kilómetros</MenuItem>
-                        </Select>
-                    </FormControl>
                 </Stack>
             </Box>
         </JumboCard>

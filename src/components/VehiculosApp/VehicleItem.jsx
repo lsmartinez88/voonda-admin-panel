@@ -1,219 +1,297 @@
-﻿import React from 'react'
+﻿import React, { useState } from 'react'
 import {
     TableCell,
     TableRow,
     Typography,
     Chip,
-    Avatar,
     Stack,
     IconButton,
     Tooltip,
-    Box
+    Box,
+    Menu,
+    MenuItem,
+    ListItemIcon,
+    ListItemText,
+    Divider
 } from '@mui/material'
-import { JumboDdMenu } from '@jumbo/components'
-import { getCarBrandLogo, getBrandColor } from '@/utilities/carBrands'
-import { FaEdit, FaTrash, FaEye } from 'react-icons/fa'
+import EditIcon from '@mui/icons-material/Edit'
+import DeleteIcon from '@mui/icons-material/Delete'
+import MoreVertIcon from '@mui/icons-material/MoreVert'
 
-const formatPrice = (price) => {
+const formatPrice = (price, moneda) => {
     if (!price) return 'Consultar precio'
-    return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0
-    }).format(price)
+
+    const numericPrice = typeof price === 'string' ? parseFloat(price) : price
+    if (isNaN(numericPrice)) return 'Consultar precio'
+
+    // Formatear con punto como separador de miles
+    const formattedNumber = numericPrice.toLocaleString('de-DE')
+
+    // Determinar símbolo según moneda
+    const symbol = moneda?.toUpperCase() === 'USD' ? 'US$' : '$'
+
+    return `${symbol} ${formattedNumber}`
 }
 
+// Función para obtener color basado en el estado
 const getEstadoColor = (estado) => {
-    // Manejar diferentes formatos del estado
-    let estadoNombre = ''
+    let estadoCodigo = ''
 
     if (typeof estado === 'string') {
-        estadoNombre = estado
+        estadoCodigo = estado
+    } else if (typeof estado === 'object' && estado?.codigo) {
+        estadoCodigo = estado.codigo
     } else if (typeof estado === 'object' && estado?.nombre) {
-        estadoNombre = estado.nombre
-    } else if (typeof estado === 'object' && estado?.estado) {
-        estadoNombre = estado.estado
+        estadoCodigo = estado.nombre
     } else if (typeof estado === 'number') {
-        // Mapear IDs comunes de estados
         const estadosMap = {
-            1: 'disponible',
-            2: 'vendido',
-            3: 'reservado',
-            4: 'mantenimiento'
+            1: 'DISPONIBLE',
+            2: 'VENDIDO',
+            3: 'RESERVADO',
+            4: 'MANTENIMIENTO'
         }
-        estadoNombre = estadosMap[estado] || 'disponible'
+        estadoCodigo = estadosMap[estado] || 'DISPONIBLE'
     } else {
-        estadoNombre = 'disponible' // default
+        estadoCodigo = 'DISPONIBLE'
     }
 
-    switch (estadoNombre?.toLowerCase()) {
-        case 'disponible':
-            return 'success'
-        case 'vendido':
-            return 'error'
-        case 'reservado':
-            return 'warning'
-        case 'mantenimiento':
-            return 'info'
+    switch (estadoCodigo?.toUpperCase()) {
+        case 'DISPONIBLE':
+            return '#4fc3f7' // Celeste más oscuro
+        case 'VENDIDO':
+            return '#66bb6a' // Verde más fuerte
+        case 'RESERVADO':
+            return '#ffa726' // Naranja más fuerte
+        case 'EN_REPARACION':
+        case 'MANTENIMIENTO':
+            return '#ef5350' // Rojo más fuerte
+        case 'EN_TRANSITO':
+            return '#9c27b0' // Violeta
+        case 'BAJA':
+            return '#424242' // Negro suave
         default:
-            return 'default'
+            return '#757575' // Gris por defecto
     }
 }
 
 const getEstadoLabel = (estado) => {
+    let estadoCodigo = ''
+    let estadoNombre = ''
+
     if (typeof estado === 'string') {
-        return estado
+        estadoCodigo = estado
+        estadoNombre = estado
+    } else if (typeof estado === 'object' && estado?.codigo) {
+        estadoCodigo = estado.codigo
+        estadoNombre = estado.nombre || estado.codigo
     } else if (typeof estado === 'object' && estado?.nombre) {
-        return estado.nombre
-    } else if (typeof estado === 'object' && estado?.estado) {
-        return estado.estado
+        estadoCodigo = estado.nombre
+        estadoNombre = estado.nombre
     } else if (typeof estado === 'number') {
         const estadosMap = {
-            1: 'Disponible',
-            2: 'Vendido',
-            3: 'Reservado',
-            4: 'Mantenimiento'
+            1: { codigo: 'DISPONIBLE', nombre: 'Disponible' },
+            2: { codigo: 'VENDIDO', nombre: 'Vendido' },
+            3: { codigo: 'RESERVADO', nombre: 'Reservado' },
+            4: { codigo: 'MANTENIMIENTO', nombre: 'Mantenimiento' }
         }
-        return estadosMap[estado] || 'Disponible'
+        const estadoInfo = estadosMap[estado] || { codigo: 'DISPONIBLE', nombre: 'Disponible' }
+        estadoCodigo = estadoInfo.codigo
+        estadoNombre = estadoInfo.nombre
+    } else {
+        return 'Sin estado'
     }
-    return 'Sin estado'
+
+    // Mapear códigos a nombres amigables
+    const codigosMap = {
+        'DISPONIBLE': 'Disponible',
+        'VENDIDO': 'Vendido',
+        'RESERVADO': 'Reservado',
+        'EN_REPARACION': 'En Reparación',
+        'EN_TRANSITO': 'En Tránsito',
+        'MANTENIMIENTO': 'Mantenimiento',
+        'BAJA': 'Baja'
+    }
+
+    return codigosMap[estadoCodigo?.toUpperCase()] || estadoNombre || 'Sin estado'
 }
 
 const VehicleItem = ({ vehiculo, onEdit, onDelete }) => {
+    const [anchorEl, setAnchorEl] = useState(null)
+    const open = Boolean(anchorEl)
+
+    const handleMenuClick = (event) => {
+        setAnchorEl(event.currentTarget)
+    }
+
+    const handleMenuClose = () => {
+        setAnchorEl(null)
+    }
+
+    const handleEdit = () => {
+        onEdit(vehiculo)
+        handleMenuClose()
+    }
+
+    const handleDelete = () => {
+        onDelete(vehiculo.id)
+        handleMenuClose()
+    }
+
     // Protección contra vehiculo undefined o null
     if (!vehiculo) {
-        return null // No renderizar nada si no hay vehiculo
+        return null
     }
 
-    // Función auxiliar para obtener valores string seguros
-    const getStringValue = (value, defaultValue = '') => {
-        if (typeof value === 'string') return value
-        if (typeof value === 'number') return value.toString()
-        if (typeof value === 'object' && value?.nombre) return value.nombre
-        if (typeof value === 'object' && value?.valor) return value.valor
-        return defaultValue
-    }
-
-    // Usar la misma lógica que VehicleCard para obtener la marca real
-    const modeloAutos = vehiculo?.modelo_autos || {}
-    const marcaReal = getStringValue(modeloAutos.marca) || getStringValue(vehiculo.marca)
-    const brandInfo = getCarBrandLogo(marcaReal)
-    const brandColor = getBrandColor(marcaReal)
-
-    const menuItems = [
-        {
-            title: 'Ver detalles',
-            slug: 'view',
-            onClick: () => console.log('Ver', vehiculo.id)
-        },
-        {
-            title: 'Editar',
-            slug: 'edit',
-            onClick: () => onEdit(vehiculo)
-        },
-        {
-            title: 'Eliminar',
-            slug: 'delete',
-            onClick: () => onDelete(vehiculo.id)
-        }
-    ]
+    const estadoColor = getEstadoColor(vehiculo.estado)
 
     return (
         <TableRow>
-            {/* Vehículo */}
-            <TableCell
-                sx={{
-                    pl: 3,
-                }}
-            >
-                <Stack direction='row' alignItems='center' spacing={2}>
-                    <Avatar
-                        sx={{
-                            bgcolor: brandColor,
-                            width: 32,
-                            height: 32,
-                            fontSize: '0.75rem',
-                            fontWeight: 600
-                        }}
-                    >
-                        {brandInfo?.initials || 'VH'}
-                    </Avatar>
-                    <Stack>
-                        <Typography variant='subtitle2' fontWeight={700}>
-                            {marcaReal} {getStringValue(modeloAutos.modelo) || getStringValue(vehiculo.modelo)}
-                        </Typography>
+            {/* Vehículo - Primera columna: Marca y modelo en negrita arriba, año versión abajo, badge de estado */}
+            <TableCell sx={{ pl: 3 }}>
+                <Stack spacing={1}>
+                    {/* Marca y modelo en negrita */}
+                    <Typography variant='subtitle1' sx={{ fontWeight: 600, mb: 0 }}>
+                        {vehiculo?.modelo?.marca || 'Sin marca'} {vehiculo?.modelo?.modelo || 'Sin modelo'}
+                    </Typography>
+                    {/* Año - versión con badge de estado */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Typography variant='body2' color='text.secondary'>
-                            Año {getStringValue(modeloAutos.año) || getStringValue(vehiculo.vehiculo_ano)}
+                            {vehiculo?.modelo?.modelo_ano || vehiculo?.vehiculo_ano || 'N/A'} - {vehiculo?.modelo?.version || 'Sin versión'}
                         </Typography>
-                    </Stack>
+                        <Chip
+                            label={getEstadoLabel(vehiculo.estado)}
+                            size='small'
+                            variant='outlined'
+                            sx={{
+                                borderColor: estadoColor,
+                                color: estadoColor,
+                                '& .MuiChip-label': {
+                                    fontWeight: 500,
+                                    fontSize: '0.7rem'
+                                }
+                            }}
+                        />
+                    </Box>
                 </Stack>
             </TableCell>
 
-            {/* Año */}
+            {/* Precio - mismo formato que en la card */}
+            <TableCell>
+                <Typography
+                    variant='subtitle1'
+                    sx={{
+                        fontWeight: 600,
+                        color: vehiculo.moneda?.toUpperCase() === 'USD' ? '#2e7d32' : 'primary.main'
+                    }}
+                >
+                    {formatPrice(vehiculo.valor, vehiculo.moneda)}
+                </Typography>
+            </TableCell>
+
+            {/* Kilometraje */}
             <TableCell>
                 <Typography variant='body2'>
-                    {getStringValue(modeloAutos.año) || getStringValue(vehiculo.vehiculo_ano) || 'N/A'}
+                    {vehiculo.kilometros ? `${vehiculo.kilometros.toLocaleString('de-DE')} km` : '-'}
                 </Typography>
             </TableCell>
 
-            {/* Motor */}
+            {/* Patente */}
             <TableCell>
                 <Typography variant='body2'>
-                    {vehiculo.motor || 'N/A'}
+                    {vehiculo.patente || '-'}
                 </Typography>
             </TableCell>
 
-            {/* Combustible */}
+            {/* Fecha Ingreso */}
             <TableCell>
                 <Typography variant='body2'>
-                    {getStringValue(modeloAutos.combustible) || getStringValue(vehiculo.combustible) || 'N/A'}
+                    {vehiculo.created_at ? new Date(vehiculo.created_at).toLocaleDateString('es-AR') : '-'}
                 </Typography>
             </TableCell>
 
-            {/* Precio */}
+            {/* Vendedor */}
             <TableCell>
-                <Typography variant='subtitle2' fontWeight={600} color='primary'>
-                    {formatPrice(vehiculo.valor)}
-                </Typography>
-            </TableCell>
-
-            {/* Estado */}
-            <TableCell>
-                <Chip
-                    label={getEstadoLabel(vehiculo.estado)}
-                    color={getEstadoColor(vehiculo.estado)}
-                    size='small'
-                    sx={{ textTransform: 'capitalize' }}
-                />
-            </TableCell>
-
-            {/* Acciones */}
-            <TableCell
-                align="right"
-                sx={{
-                    pr: 3,
-                }}
-            >
-                <Stack direction='row' alignItems='center' spacing={0.5} justifyContent="flex-end">
-                    <Tooltip title='Editar'>
-                        <IconButton
-                            size='small'
-                            color='primary'
-                            onClick={() => onEdit(vehiculo)}
-                        >
-                            <FaEdit size={14} />
-                        </IconButton>
-                    </Tooltip>
-                    <JumboDdMenu
-                        menuItems={menuItems}
-                        icon={
-                            <Box sx={{ width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                ⋮
+                {vehiculo.vendedor ? (
+                    <Tooltip
+                        title={
+                            <Box sx={{ p: 1 }}>
+                                <Typography variant='body2' sx={{ fontWeight: 600, mb: 0.5 }}>
+                                    {vehiculo.vendedor.nombre} {vehiculo.vendedor.apellido}
+                                </Typography>
+                                {vehiculo.vendedor.telefono && (
+                                    <Typography variant='caption' display='block'>
+                                        📞 {vehiculo.vendedor.telefono}
+                                    </Typography>
+                                )}
+                                {vehiculo.vendedor.email && (
+                                    <Typography variant='caption' display='block'>
+                                        ✉️ {vehiculo.vendedor.email}
+                                    </Typography>
+                                )}
                             </Box>
                         }
-                    />
-                </Stack>
+                        arrow
+                        placement="top"
+                    >
+                        <Typography
+                            variant='body2'
+                            sx={{
+                                cursor: 'pointer',
+                                '&:hover': {
+                                    textDecoration: 'underline',
+                                    color: 'primary.main'
+                                }
+                            }}
+                        >
+                            {vehiculo.vendedor.nombre} {vehiculo.vendedor.apellido}
+                        </Typography>
+                    </Tooltip>
+                ) : (
+                    <Typography variant='body2' color='text.secondary'>
+                        -
+                    </Typography>
+                )}
+            </TableCell>
+
+            {/* Acciones - mismo icono y opciones que en las cards */}
+            <TableCell align="right" sx={{ pr: 3 }}>
+                <IconButton
+                    size='small'
+                    onClick={handleMenuClick}
+                    aria-label="opciones"
+                >
+                    <MoreVertIcon />
+                </IconButton>
+                <Menu
+                    anchorEl={anchorEl}
+                    open={open}
+                    onClose={handleMenuClose}
+                    PaperProps={{
+                        elevation: 3,
+                        sx: {
+                            overflow: 'visible',
+                            filter: 'drop-shadow(0px 2px 8px rgba(0,0,0,0.32))',
+                            mt: 1.5,
+                            minWidth: 140,
+                        },
+                    }}
+                    transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+                    anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+                >
+                    <MenuItem onClick={handleEdit}>
+                        <ListItemIcon>
+                            <EditIcon fontSize="small" />
+                        </ListItemIcon>
+                        <ListItemText>Editar</ListItemText>
+                    </MenuItem>
+                    <Divider sx={{ borderColor: 'error.main' }} />
+                    <MenuItem onClick={handleDelete} sx={{ color: 'error.main' }}>
+                        <ListItemIcon>
+                            <DeleteIcon fontSize="small" color="error" />
+                        </ListItemIcon>
+                        <ListItemText>Eliminar</ListItemText>
+                    </MenuItem>
+                </Menu>
             </TableCell>
         </TableRow>
     )
