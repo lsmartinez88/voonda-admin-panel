@@ -17,39 +17,55 @@ export const VehiclesFilters = ({
     filters = {},
     onFiltersChange,
     loading = false,
-    marcas = [],
-    modelos = [],
+    marcasModelos = [],
+    años = [],
     estados = [],
     loadingOptions = false,
-    onMarcaChange
+    getModelosForMarca
 }) => {
 
     const handleFilterChange = (field, value) => {
         if (onFiltersChange) {
-            const newFilters = { ...filters, [field]: value };
+            const newFilters = { ...filters, [field]: value }
 
-            // Si cambia la marca, limpiar el modelo seleccionado
+            // Si cambia la marca, limpiar el modelo seleccionado y actualizar automáticamente
             if (field === 'marca') {
-                newFilters.modelo = '';
-                // Cargar modelos de la nueva marca
-                if (onMarcaChange) {
-                    onMarcaChange(value);
+                newFilters.modelo = '' // Limpiar modelo cuando cambia marca
+                
+                // Si se selecciona una marca específica y solo tiene un modelo, seleccionarlo automáticamente
+                const modelos = getModelosForMarca(value)
+                if (modelos && modelos.length === 1) {
+                    newFilters.modelo = modelos[0].modelo
                 }
             }
 
-            // Si cambia el estado, mapear nombre a código
+            // Si cambia el modelo, verificar que la marca correspondiente esté seleccionada
+            if (field === 'modelo' && value && !filters.marca) {
+                // Buscar la marca del modelo seleccionado
+                const marcaDelModelo = marcasModelos.find(marcaData => 
+                    marcaData.modelos.some(modeloData => modeloData.modelo === value)
+                )
+                if (marcaDelModelo) {
+                    newFilters.marca = marcaDelModelo.marca
+                }
+            }
+
+            // Si cambia el estado, usar el código del estado
             if (field === 'estado') {
                 // Buscar el estado seleccionado para obtener su código
-                const estadoSeleccionado = estados.find(estado => estado.nombre === value);
+                const estadoSeleccionado = estados.find(estado => estado.codigo === value)
                 if (estadoSeleccionado) {
-                    newFilters.estado_codigo = estadoSeleccionado.codigo;
+                    newFilters.estado_codigo = estadoSeleccionado.codigo
+                    newFilters.estado = value
+                } else if (value === '') {
+                    delete newFilters.estado_codigo
+                    newFilters.estado = ''
                 }
-                delete newFilters.estado; // Remover el campo estado ya que usamos estado_codigo
             }
 
-            onFiltersChange(newFilters);
+            onFiltersChange(newFilters)
         }
-    };
+    }
 
     const handleClearFilters = () => {
         if (onFiltersChange) {
@@ -57,7 +73,8 @@ export const VehiclesFilters = ({
                 search: '',
                 marca: '',
                 modelo: '',
-                estado_codigo: '',
+                año: '',
+                estado: '',
                 yearFrom: '',
                 yearTo: '',
                 priceFrom: '',
@@ -66,6 +83,36 @@ export const VehiclesFilters = ({
                 order: 'desc'
             })
         }
+    }
+
+    // Obtener todas las marcas disponibles
+    const getAllMarcas = () => {
+        return marcasModelos.map(marcaData => marcaData.marca)
+    }
+
+    // Obtener todos los modelos disponibles
+    const getAllModelos = () => {
+        const todosLosModelos = []
+        marcasModelos.forEach(marcaData => {
+            if (marcaData.modelos) {
+                marcaData.modelos.forEach(modeloData => {
+                    todosLosModelos.push({
+                        modelo: modeloData.modelo,
+                        marca: marcaData.marca,
+                        versiones: modeloData.versiones || []
+                    })
+                })
+            }
+        })
+        return todosLosModelos
+    }
+
+    // Obtener modelos según la marca seleccionada
+    const getModelosDisponibles = () => {
+        if (filters.marca) {
+            return getModelosForMarca(filters.marca)
+        }
+        return getAllModelos()
     }
 
     return (
@@ -89,19 +136,15 @@ export const VehiclesFilters = ({
                 />
                 <FormControl size='small' sx={{ minWidth: 120 }}>
                     <Select
-                        value={
-                            filters.estado_codigo && estados.length > 0
-                                ? estados.find(e => e.codigo === filters.estado_codigo)?.nombre || ''
-                                : ''
-                        }
+                        value={filters.estado || ''}
                         onChange={(e) => handleFilterChange('estado', e.target.value)}
                         displayEmpty
                         sx={{ borderRadius: 4 }}
                         disabled={loadingOptions}
                     >
                         <MenuItem value=''>Todos los estados</MenuItem>
-                        {estados.filter(estado => estado.activo).map(estado => (
-                            <MenuItem key={estado.codigo || estado.id} value={estado.nombre}>
+                        {estados.map(estado => (
+                            <MenuItem key={estado.id || estado.codigo} value={estado.codigo}>
                                 {estado.nombre}
                             </MenuItem>
                         ))}
@@ -116,9 +159,25 @@ export const VehiclesFilters = ({
                         disabled={loadingOptions}
                     >
                         <MenuItem value=''>Todas las marcas</MenuItem>
-                        {marcas.map(marca => (
-                            <MenuItem key={marca.codigo || marca.id} value={marca.nombre}>
-                                {marca.nombre}
+                        {getAllMarcas().map(marca => (
+                            <MenuItem key={marca} value={marca}>
+                                {marca}
+                            </MenuItem>
+                        ))}
+                    </Select>
+                </FormControl>
+                <FormControl size='small' sx={{ minWidth: 120 }}>
+                    <Select
+                        value={filters.año || ''}
+                        onChange={(e) => handleFilterChange('año', e.target.value)}
+                        displayEmpty
+                        sx={{ borderRadius: 4 }}
+                        disabled={loadingOptions}
+                    >
+                        <MenuItem value=''>Todos los años</MenuItem>
+                        {años.map(año => (
+                            <MenuItem key={año} value={año}>
+                                {año}
                             </MenuItem>
                         ))}
                     </Select>
@@ -132,7 +191,7 @@ export const VehiclesFilters = ({
                 </Typography>
 
                 <Grid container spacing={3} sx={{ mb: 3 }}>
-                    <Grid size={{ xs: 12, md: 3 }}>
+                    <Grid size={{ xs: 12, md: 2.4 }}>
                         <TextField
                             fullWidth
                             label='Buscar'
@@ -142,7 +201,7 @@ export const VehiclesFilters = ({
                             size='small'
                         />
                     </Grid>
-                    <Grid size={{ xs: 12, md: 3 }}>
+                    <Grid size={{ xs: 12, md: 2.4 }}>
                         <FormControl fullWidth size='small'>
                             <InputLabel>Marca</InputLabel>
                             <Select
@@ -152,48 +211,67 @@ export const VehiclesFilters = ({
                                 disabled={loadingOptions}
                             >
                                 <MenuItem value=''>Todas las marcas</MenuItem>
-                                {marcas.map(marca => (
-                                    <MenuItem key={marca.codigo || marca.id} value={marca.nombre}>
-                                        {marca.nombre}
+                                {getAllMarcas().map(marca => (
+                                    <MenuItem key={marca} value={marca}>
+                                        {marca}
                                     </MenuItem>
                                 ))}
                             </Select>
                         </FormControl>
                     </Grid>
-                    <Grid size={{ xs: 12, md: 3 }}>
+                    <Grid size={{ xs: 12, md: 2.4 }}>
                         <FormControl fullWidth size='small'>
                             <InputLabel>Modelo</InputLabel>
                             <Select
                                 value={filters.modelo || ''}
                                 label='Modelo'
                                 onChange={(e) => handleFilterChange('modelo', e.target.value)}
-                                disabled={loadingOptions || !filters.marca}
+                                disabled={loadingOptions}
                             >
                                 <MenuItem value=''>Todos los modelos</MenuItem>
-                                {modelos.map(modelo => (
-                                    <MenuItem key={modelo.id} value={modelo.nombre}>
-                                        {modelo.nombre}
+                                {getModelosDisponibles().map((modeloData, index) => (
+                                    <MenuItem key={`${modeloData.modelo}-${index}`} value={modeloData.modelo}>
+                                        {modeloData.modelo}
+                                        {filters.marca === '' && (
+                                            <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                                                ({modeloData.marca})
+                                            </Typography>
+                                        )}
                                     </MenuItem>
                                 ))}
                             </Select>
                         </FormControl>
                     </Grid>
-                    <Grid size={{ xs: 12, md: 3 }}>
+                    <Grid size={{ xs: 12, md: 2.4 }}>
+                        <FormControl fullWidth size='small'>
+                            <InputLabel>Año</InputLabel>
+                            <Select
+                                value={filters.año || ''}
+                                label='Año'
+                                onChange={(e) => handleFilterChange('año', e.target.value)}
+                                disabled={loadingOptions}
+                            >
+                                <MenuItem value=''>Todos los años</MenuItem>
+                                {años.map(año => (
+                                    <MenuItem key={año} value={año}>
+                                        {año}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 2.4 }}>
                         <FormControl fullWidth size='small'>
                             <InputLabel>Estado</InputLabel>
                             <Select
-                                value={
-                                    filters.estado_codigo && estados.length > 0
-                                        ? estados.find(e => e.codigo === filters.estado_codigo)?.nombre || ''
-                                        : ''
-                                }
+                                value={filters.estado || ''}
                                 label='Estado'
                                 onChange={(e) => handleFilterChange('estado', e.target.value)}
                                 disabled={loadingOptions}
                             >
                                 <MenuItem value=''>Todos los estados</MenuItem>
-                                {estados.filter(estado => estado.activo).map(estado => (
-                                    <MenuItem key={estado.codigo || estado.id} value={estado.nombre}>
+                                {estados.map(estado => (
+                                    <MenuItem key={estado.id || estado.codigo} value={estado.codigo}>
                                         {estado.nombre}
                                     </MenuItem>
                                 ))}
@@ -211,6 +289,16 @@ export const VehiclesFilters = ({
                     >
                         Limpiar Filtros
                     </Button>
+                    {(filters.marca || filters.modelo || filters.año || filters.estado || filters.search) && (
+                        <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'center' }}>
+                            Filtros activos: {[filters.marca, filters.modelo, filters.año, filters.estado, filters.search].filter(Boolean).length}
+                        </Typography>
+                    )}
+                    {loadingOptions && (
+                        <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'center' }}>
+                            Cargando opciones de filtros...
+                        </Typography>
+                    )}
                 </Stack>
             </Box>
         </JumboCard>

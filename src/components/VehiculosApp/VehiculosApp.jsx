@@ -35,20 +35,21 @@ export const VehiculosApp = () => {
     const [showModal, setShowModal] = useState(false);
 
     // Estados para opciones de filtros
-    const [marcas, setMarcas] = useState([]);
-    const [modelos, setModelos] = useState([]);
-    const [estados, setEstados] = useState([]);
-    const [loadingOptions, setLoadingOptions] = useState(false);
+    const [marcasModelos, setMarcasModelos] = useState([])
+    const [años, setAños] = useState([])
+    const [estados, setEstados] = useState([])
+    const [loadingOptions, setLoadingOptions] = useState(false)
     const [filters, setFilters] = useState({
         search: '',
         marca: '',
         modelo: '',
+        año: '',
         estado: '',
         sortBy: 'fecha_ingreso',
         order: 'desc',
         page: 1,
         limit: 12
-    });
+    })
 
     // Fetch vehículos usando API service
     const fetchVehiculos = async () => {
@@ -101,46 +102,52 @@ export const VehiculosApp = () => {
     // Cargar opciones para filtros
     const loadFilterOptions = async () => {
         try {
-            setLoadingOptions(true);
+            setLoadingOptions(true)
 
-            // Cargar marcas, estados en paralelo
-            const [marcasResponse, estadosResponse] = await Promise.all([
-                vehiculosService.getMarcas(),
+            // Cargar marcas-modelos, años, estados en paralelo usando los nuevos endpoints
+            const [marcasModelosResponse, añosResponse, estadosResponse] = await Promise.all([
+                vehiculosService.getMarcasModelos(),
+                vehiculosService.getAños(),
                 vehiculosService.getEstados()
-            ]);
+            ])
 
-            if (marcasResponse.success) {
-                setMarcas(marcasResponse.marcas || marcasResponse.data || []);
+            if (marcasModelosResponse.success) {
+                setMarcasModelos(marcasModelosResponse.marcas || [])
+                console.log('✅ Marcas y modelos cargados:', marcasModelosResponse.marcas)
+            }
+
+            if (añosResponse.success) {
+                setAños(añosResponse.años || [])
+                console.log('✅ Años cargados:', añosResponse.años)
             }
 
             if (estadosResponse.success) {
-                setEstados(estadosResponse.estados || estadosResponse.data || []);
+                setEstados(estadosResponse.estados || [])
+                console.log('✅ Estados cargados:', estadosResponse.estados)
             }
 
         } catch (error) {
-            console.error('❌ Error al cargar opciones de filtros:', error);
+            console.error('❌ Error al cargar opciones de filtros:', error)
+            showDialog({
+                title: 'Error',
+                content: `Error al cargar opciones de filtros: ${error.message}`,
+                variant: 'error'
+            })
         } finally {
-            setLoadingOptions(false);
+            setLoadingOptions(false)
         }
-    };
+    }
 
-    // Cargar modelos cuando cambia la marca seleccionada
-    const loadModelos = async (marca) => {
-        if (!marca) {
-            setModelos([]);
-            return;
+    // Cargar modelos cuando cambia la marca seleccionada - DEPRECATED
+    // Ahora usamos la estructura jerárquica que ya viene cargada
+    const getModelosForMarca = (marca) => {
+        if (!marca || !marcasModelos.length) {
+            return []
         }
-
-        try {
-            const response = await vehiculosService.getModelosByMarca(marca);
-            if (response.success) {
-                setModelos(response.modelos || response.data || []);
-            }
-        } catch (error) {
-            console.error('❌ Error al cargar modelos:', error);
-            setModelos([]);
-        }
-    };
+        
+        const marcaData = marcasModelos.find(m => m.marca === marca)
+        return marcaData ? marcaData.modelos : []
+    }
 
     // Sincronizar con sheets (deshabilitado temporalmente)
     const sincronizarConSheets = async () => {
@@ -244,19 +251,10 @@ export const VehiculosApp = () => {
     // Cargar datos iniciales solo si el usuario está autenticado
     useEffect(() => {
         if (user) {
-            fetchVehiculos();
-            loadFilterOptions(); // Cargar opciones de filtros
+            fetchVehiculos()
+            loadFilterOptions() // Cargar opciones de filtros
         }
-    }, [filters, user]);
-
-    // Cargar modelos cuando cambia la marca en los filtros
-    useEffect(() => {
-        if (filters.marca) {
-            loadModelos(filters.marca);
-        } else {
-            setModelos([]);
-        }
-    }, [filters.marca]);
+    }, [filters, user])
 
     // Manejar cambio de página
     const handlePageChange = (newPage) => {
@@ -339,11 +337,11 @@ export const VehiculosApp = () => {
                 filters={filters}
                 onFiltersChange={setFilters}
                 loading={loading}
-                marcas={marcas}
-                modelos={modelos}
+                marcasModelos={marcasModelos}
+                años={años}
                 estados={estados}
                 loadingOptions={loadingOptions}
-                onMarcaChange={loadModelos}
+                getModelosForMarca={getModelosForMarca}
             />
 
             {/* Vehicles List */}
