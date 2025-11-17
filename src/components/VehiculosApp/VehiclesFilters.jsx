@@ -299,23 +299,6 @@ export const VehiclesFilters = ({
                             Filtros activos: {[filters.marca, filters.modelo, filters.año, filters.estado, filters.search].filter(Boolean).length}
                         </Typography>
                     )}
-                    {(filters.marca || filters.modelo) && (
-                        <Typography
-                            variant="caption"
-                            color="success.main"
-                            sx={{
-                                alignSelf: 'center',
-                                fontWeight: 500,
-                                backgroundColor: 'success.light',
-                                px: 1,
-                                py: 0.5,
-                                borderRadius: 1,
-                                fontSize: '0.7rem'
-                            }}
-                        >
-                            ✅ Filtros marca/modelo activos (adaptados al backend)
-                        </Typography>
-                    )}
                     {filters.search && !filters.marca && !filters.modelo && (
                         <Typography
                             variant="caption"
