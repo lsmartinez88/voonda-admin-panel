@@ -9,6 +9,7 @@ import vehiculosService from '../../services/api/vehiculosService';
 import { VehiclesList } from './VehiclesList';
 import { VehiclesFilters } from './VehiclesFilters';
 import { VehicleModal } from './VehicleModal';
+import AddVehicleModal from './AddVehicleModal';
 import { VehiclesPagination } from './VehiclesPagination';
 
 // Icons
@@ -33,6 +34,7 @@ export const VehiculosApp = () => {
     const [loading, setLoading] = useState(false);
     const [selectedVehicle, setSelectedVehicle] = useState(null);
     const [showModal, setShowModal] = useState(false);
+    const [showAddModal, setShowAddModal] = useState(false);
 
     // Estados para opciones de filtros
     const [marcasModelos, setMarcasModelos] = useState([])
@@ -248,6 +250,46 @@ export const VehiculosApp = () => {
         setShowModal(true);
     };
 
+    // Crear nuevo vehículo
+    const handleCreateVehicle = async (vehicleData) => {
+        try {
+            setLoading(true);
+            
+            console.log('🚗 Creando vehículo con datos:', vehicleData);
+            
+            // Llamada real a la API
+            const response = await vehiculosService.createVehiculo(vehicleData);
+            
+            if (response.success) {
+                showDialog({
+                    title: 'Éxito',
+                    content: 'Vehículo creado correctamente',
+                    variant: 'success'
+                });
+                
+                // Recargar datos después de crear el vehículo
+                await fetchVehiculos();
+            } else {
+                throw new Error(response.message || 'Error al crear el vehículo');
+            }
+            
+        } catch (error) {
+            console.error('❌ Error al crear vehículo:', error);
+            showDialog({
+                title: 'Error',
+                content: `Error al crear el vehículo: ${error.message}`,
+                variant: 'error'
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Abrir modal de agregar vehículo
+    const handleAddVehicle = () => {
+        setShowAddModal(true);
+    };
+
     // Cargar datos iniciales solo si el usuario está autenticado
     useEffect(() => {
         if (user) {
@@ -313,10 +355,7 @@ export const VehiculosApp = () => {
                         Sincronizar
                     </Button>
                     <Button
-                        onClick={() => {
-                            setSelectedVehicle(null)
-                            setShowModal(true)
-                        }}
+                        onClick={handleAddVehicle}
                         variant='contained'
                         startIcon={<AddIcon />}
                         sx={{
@@ -377,6 +416,15 @@ export const VehiculosApp = () => {
                         setSelectedVehicle(null);
                     }}
                     onSave={handleSaveVehicle}
+                />
+            )}
+
+            {/* Add Vehicle Modal */}
+            {showAddModal && (
+                <AddVehicleModal
+                    open={showAddModal}
+                    onClose={() => setShowAddModal(false)}
+                    onSave={handleCreateVehicle}
                 />
             )}
         </Container>

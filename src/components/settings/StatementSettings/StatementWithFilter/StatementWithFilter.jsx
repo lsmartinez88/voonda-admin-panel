@@ -1,11 +1,8 @@
 import { SortedWithFilter } from "@/components/SortedWithFilter";
 import { Div } from "@jumbo/shared";
-import { alpha, IconButton, Stack, Typography } from "@mui/material";
+import { alpha, IconButton, Stack, Typography, TextField } from "@mui/material";
 
-import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { RiArrowDownSLine, RiFilterLine } from "react-icons/ri";
+import { RiFilterLine } from "react-icons/ri";
 
 const StatementWithFilter = () => {
   return (
@@ -36,51 +33,39 @@ const StatementWithFilter = () => {
         >
           Period
         </Typography>
-        <LocalizationProvider dateAdapter={AdapterDayjs}>
-          <DatePicker
-            slots={{
-              openPickerIcon: RiArrowDownSLine,
-            }}
-            format={"D MMM, YYYY"}
-            slotProps={{ textField: { placeholder: "DD MM, YYYY" } }}
-            sx={{
-              ".MuiInputBase-root": {
-                borderRadius: 6,
-                width: 145,
-              },
-              ".MuiInputBase-input": {
-                py: 0.75,
-              },
-              ".MuiIconButton-root": {
-                p: 0.5,
-              },
-            }}
-          />
-        </LocalizationProvider>
+        <TextField
+          type="date"
+          InputLabelProps={{
+            shrink: true,
+          }}
+          sx={{
+            ".MuiInputBase-root": {
+              borderRadius: 6,
+              width: 145,
+            },
+            ".MuiInputBase-input": {
+              py: 0.75,
+            },
+          }}
+        />
         <Typography variant="body1" mx={1}>
           to
         </Typography>
-        <LocalizationProvider dateAdapter={AdapterDayjs}>
-          <DatePicker
-            slots={{
-              openPickerIcon: RiArrowDownSLine,
-            }}
-            format={"D MMM, YYYY"}
-            slotProps={{ textField: { placeholder: "DD MM, YYYY" } }}
-            sx={{
-              ".MuiInputBase-root": {
-                borderRadius: 6,
-                width: 145,
-              },
-              ".MuiInputBase-input": {
-                py: 0.75,
-              },
-              ".MuiIconButton-root": {
-                p: 0.5,
-              },
-            }}
-          />
-        </LocalizationProvider>
+        <TextField
+          type="date"
+          InputLabelProps={{
+            shrink: true,
+          }}
+          sx={{
+            ".MuiInputBase-root": {
+              borderRadius: 6,
+              width: 145,
+            },
+            ".MuiInputBase-input": {
+              py: 0.75,
+            },
+          }}
+        />
       </Div>
       <Div sx={{ display: "flex", minWidth: 0, alignItems: "center", gap: 1 }}>
         <SortedWithFilter data={[{ label: "Owner" }, { label: "Admin" }]} />
