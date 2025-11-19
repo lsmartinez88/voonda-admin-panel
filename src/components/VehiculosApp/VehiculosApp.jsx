@@ -278,7 +278,7 @@ export const VehiculosApp = () => {
             const apiPayload = {
                 // ID del vehículo para actualizar
                 id: vehicleData.id,
-                
+
                 // Datos del vehículo
                 marca: vehicleData.marca,
                 modelo: vehicleData.modelo,

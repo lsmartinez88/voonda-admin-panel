@@ -67,7 +67,7 @@ const EditVehicleModal = ({ open, onClose, onSave, vehicle }) => {
     useEffect(() => {
         if (vehicle && open) {
             console.log('📝 Cargando vehículo para edición:', vehicle)
-            
+
             // Mapear datos del vehículo existente al formato del formulario
             const mappedData = {
                 // Datos básicos
@@ -300,7 +300,8 @@ const EditVehicleModal = ({ open, onClose, onSave, vehicle }) => {
                 pb: 1
             }}>
                 <Typography variant="h6" component="div">
-                    ✏️ Editar Vehículo - {formData.marca} {formData.modelo}
+                    ✏️ Editar Vehículo
+                    {formData.marca && formData.modelo && ` - ${formData.marca} ${formData.modelo}`}
                 </Typography>
                 <IconButton
                     edge="end"
