@@ -137,7 +137,9 @@ const EditVehicleModal = ({ open, onClose, onSave, vehicle }) => {
             setFormData(mappedData)
             setErrors({})
         }
-    }, [vehicle, open])    const handleTabChange = (event, newValue) => {
+    }, [vehicle, open])
+
+    const handleTabChange = (event, newValue) => {
         setActiveTab(newValue)
     }
 
