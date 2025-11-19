@@ -125,13 +125,13 @@ const AddVehicleModal = ({ open, onClose, onSave }) => {
             moneda: 'ARS',
             fecha_ingreso: new Date().toISOString().split('T')[0],
             estado_codigo: 'DISPONIBLE',
-            
+
             // 🔴 DATOS INVÁLIDOS DEL VENDEDOR PARA TESTING
             vendedor_nombre: 'Juan',
             vendedor_apellido: 'Pérez',
             vendedor_telefono: '123', // ❌ TELÉFONO MUY CORTO
             vendedor_email: 'email-invalido', // ❌ EMAIL SIN FORMATO VÁLIDO
-            
+
             pendientes_preparacion: '',
             comentarios: 'Datos para probar validación de errores',
             publicaciones: []
@@ -410,148 +410,148 @@ const AddVehicleModal = ({ open, onClose, onSave }) => {
         } finally {
             setLoading(false)
         }
-}
+    }
 
-const handleClose = () => {
-    setActiveTab(0)
-    setErrors({})
-    onClose()
-}
+    const handleClose = () => {
+        setActiveTab(0)
+        setErrors({})
+        onClose()
+    }
 
-const tabLabels = ['Datos del Vehículo', 'Vendedor', 'Notas', 'Publicaciones']
+    const tabLabels = ['Datos del Vehículo', 'Vendedor', 'Notas', 'Publicaciones']
 
-return (
-    <Dialog
-        open={open}
-        onClose={handleClose}
-        maxWidth="lg"
-        fullWidth
-        PaperProps={{
-            sx: {
-                minHeight: '600px',
-                maxHeight: '90vh',
-            }
-        }}
-    >
-        <DialogTitle sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            pb: 1
-        }}>
-            <Typography variant="h6" component="div">
-                Agregar Nuevo Vehículo
-            </Typography>
-            <IconButton
-                edge="end"
-                color="inherit"
-                onClick={handleClose}
-                aria-label="close"
-            >
-                <CloseIcon />
-            </IconButton>
-        </DialogTitle>
-
-        {/* Mostrar error general si existe */}
-        {errors.general && (
-            <Box sx={{ px: 3, py: 1, backgroundColor: '#ffebee' }}>
-                <Typography color="error" variant="body2">
-                    ⚠️ {errors.general}
+    return (
+        <Dialog
+            open={open}
+            onClose={handleClose}
+            maxWidth="lg"
+            fullWidth
+            PaperProps={{
+                sx: {
+                    minHeight: '600px',
+                    maxHeight: '90vh',
+                }
+            }}
+        >
+            <DialogTitle sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                pb: 1
+            }}>
+                <Typography variant="h6" component="div">
+                    Agregar Nuevo Vehículo
                 </Typography>
-            </Box>
-        )}
-
-        <DialogContent sx={{ p: 0 }}>
-            <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 3, pt: 1 }}>
-                <Tabs
-                    value={activeTab}
-                    onChange={handleTabChange}
-                    variant="scrollable"
-                    scrollButtons="auto"
+                <IconButton
+                    edge="end"
+                    color="inherit"
+                    onClick={handleClose}
+                    aria-label="close"
                 >
-                    {tabLabels.map((label, index) => (
-                        <Tab
-                            key={index}
-                            label={label}
-                            sx={{
-                                color: errors && Object.keys(errors).some(key => {
-                                    if (index === 0) return ['marca', 'modelo', 'version', 'vehiculo_ano', 'patente', 'kilometros', 'valor', 'estado_codigo'].includes(key)
-                                    if (index === 1) return ['vendedor_nombre', 'vendedor_apellido', 'vendedor_telefono', 'vendedor_email'].includes(key)
-                                    return false
-                                }) ? 'error.main' : 'inherit'
-                            }}
+                    <CloseIcon />
+                </IconButton>
+            </DialogTitle>
+
+            {/* Mostrar error general si existe */}
+            {errors.general && (
+                <Box sx={{ px: 3, py: 1, backgroundColor: '#ffebee' }}>
+                    <Typography color="error" variant="body2">
+                        ⚠️ {errors.general}
+                    </Typography>
+                </Box>
+            )}
+
+            <DialogContent sx={{ p: 0 }}>
+                <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 3, pt: 1 }}>
+                    <Tabs
+                        value={activeTab}
+                        onChange={handleTabChange}
+                        variant="scrollable"
+                        scrollButtons="auto"
+                    >
+                        {tabLabels.map((label, index) => (
+                            <Tab
+                                key={index}
+                                label={label}
+                                sx={{
+                                    color: errors && Object.keys(errors).some(key => {
+                                        if (index === 0) return ['marca', 'modelo', 'version', 'vehiculo_ano', 'patente', 'kilometros', 'valor', 'estado_codigo'].includes(key)
+                                        if (index === 1) return ['vendedor_nombre', 'vendedor_apellido', 'vendedor_telefono', 'vendedor_email'].includes(key)
+                                        return false
+                                    }) ? 'error.main' : 'inherit'
+                                }}
+                            />
+                        ))}
+                    </Tabs>
+                </Box>
+
+                <Box sx={{ p: 3, minHeight: '400px' }}>
+                    {activeTab === 0 && (
+                        <VehicleBasicDataTab
+                            data={formData}
+                            errors={errors}
+                            onChange={(data) => updateFormData('basic', data)}
                         />
-                    ))}
-                </Tabs>
-            </Box>
+                    )}
+                    {activeTab === 1 && (
+                        <VehicleSellerTab
+                            data={formData}
+                            errors={errors}
+                            onChange={(data) => updateFormData('seller', data)}
+                        />
+                    )}
+                    {activeTab === 2 && (
+                        <VehicleNotesTab
+                            data={formData}
+                            errors={errors}
+                            onChange={(data) => updateFormData('notes', data)}
+                        />
+                    )}
+                    {activeTab === 3 && (
+                        <VehiclePublicationsTab
+                            data={formData}
+                            errors={errors}
+                            onChange={(data) => updateFormData('publications', data)}
+                        />
+                    )}
+                </Box>
+            </DialogContent>
 
-            <Box sx={{ p: 3, minHeight: '400px' }}>
-                {activeTab === 0 && (
-                    <VehicleBasicDataTab
-                        data={formData}
-                        errors={errors}
-                        onChange={(data) => updateFormData('basic', data)}
-                    />
-                )}
-                {activeTab === 1 && (
-                    <VehicleSellerTab
-                        data={formData}
-                        errors={errors}
-                        onChange={(data) => updateFormData('seller', data)}
-                    />
-                )}
-                {activeTab === 2 && (
-                    <VehicleNotesTab
-                        data={formData}
-                        errors={errors}
-                        onChange={(data) => updateFormData('notes', data)}
-                    />
-                )}
-                {activeTab === 3 && (
-                    <VehiclePublicationsTab
-                        data={formData}
-                        errors={errors}
-                        onChange={(data) => updateFormData('publications', data)}
-                    />
-                )}
-            </Box>
-        </DialogContent>
-
-        <DialogActions sx={{ px: 3, py: 2 }}>
-            <Button
-                onClick={generateTestData}
-                variant="outlined"
-                color="secondary"
-                sx={{ mr: 1 }}
-            >
-                🎲 Datos Válidos
-            </Button>
-            <Button
-                onClick={generateInvalidTestData}
-                variant="outlined"
-                color="warning"
-                sx={{ mr: 'auto' }}
-            >
-                🔴 Datos Inválidos
-            </Button>
-            <Button
-                onClick={handleClose}
-                disabled={loading}
-                variant="outlined"
-            >
-                Cancelar
-            </Button>
-            <Button
-                onClick={handleSave}
-                disabled={loading}
-                variant="contained"
-                sx={{ ml: 2 }}
-            >
-                {loading ? 'Guardando...' : 'Guardar Vehículo'}
-            </Button>
-        </DialogActions>
-    </Dialog>
-)
+            <DialogActions sx={{ px: 3, py: 2 }}>
+                <Button
+                    onClick={generateTestData}
+                    variant="outlined"
+                    color="secondary"
+                    sx={{ mr: 1 }}
+                >
+                    🎲 Datos Válidos
+                </Button>
+                <Button
+                    onClick={generateInvalidTestData}
+                    variant="outlined"
+                    color="warning"
+                    sx={{ mr: 'auto' }}
+                >
+                    🔴 Datos Inválidos
+                </Button>
+                <Button
+                    onClick={handleClose}
+                    disabled={loading}
+                    variant="outlined"
+                >
+                    Cancelar
+                </Button>
+                <Button
+                    onClick={handleSave}
+                    disabled={loading}
+                    variant="contained"
+                    sx={{ ml: 2 }}
+                >
+                    {loading ? 'Guardando...' : 'Guardar Vehículo'}
+                </Button>
+            </DialogActions>
+        </Dialog>
+    )
 }
 
 export default AddVehicleModal

@@ -2,6 +2,7 @@
 import { Container, Stack, useMediaQuery, Button, Typography, Box } from '@mui/material';
 import { useJumboTheme } from '@jumbo/components/JumboTheme/hooks';
 import { useJumboDialog } from '@jumbo/components/JumboDialog/hooks/useJumboDialog';
+import { useSnackbar } from 'notistack';
 import { useAuth } from '../../contexts/AuthContext';
 import vehiculosService from '../../services/api/vehiculosService';
 import estadosService from '../../services/api/estadosService';
@@ -21,6 +22,7 @@ export const VehiculosApp = () => {
     const { theme } = useJumboTheme();
     const lg = useMediaQuery(theme.breakpoints.down('lg'));
     const { showDialog, showConfirmDialog } = useJumboDialog();
+    const { enqueueSnackbar } = useSnackbar();
     const { user } = useAuth();
 
     // Estados principales
@@ -324,16 +326,19 @@ export const VehiculosApp = () => {
             console.log('📥 Respuesta de la API:', response);
 
             if (response.success) {
-                // Mostrar mensaje de éxito detallado
+                // Mostrar mensaje de éxito con Snackbar verde que dura 5 segundos
                 const vehiculoCreado = response.vehiculo || response.data;
                 const mensaje = vehiculoCreado
-                    ? `El vehículo ${apiPayload.marca} ${apiPayload.modelo} ${apiPayload.version || ''} (${apiPayload.patente}) se creó exitosamente.`
-                    : 'El vehículo se creó correctamente.';
+                    ? `🎉 Vehículo ${apiPayload.marca} ${apiPayload.modelo} ${apiPayload.version || ''} (${apiPayload.patente}) creado exitosamente`
+                    : '🎉 Vehículo creado correctamente';
 
-                showDialog({
-                    title: '🎉 Vehículo Creado',
-                    content: mensaje,
-                    variant: 'success'
+                enqueueSnackbar(mensaje, {
+                    variant: 'success',
+                    autoHideDuration: 5000,
+                    anchorOrigin: {
+                        vertical: 'top',
+                        horizontal: 'right'
+                    }
                 });
 
                 // Recargar datos después de crear el vehículo
