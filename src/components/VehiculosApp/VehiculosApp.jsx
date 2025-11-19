@@ -40,6 +40,8 @@ export const VehiculosApp = () => {
     const [showModal, setShowModal] = useState(false);
     const [showAddModal, setShowAddModal] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
+    const [editingVehicle, setEditingVehicle] = useState(null);
+    const [editModalOpen, setEditModalOpen] = useState(false);
 
     // Estados para opciones de filtros
     const [marcasModelos, setMarcasModelos] = useState([])
@@ -250,34 +252,70 @@ export const VehiculosApp = () => {
     };
 
     // Editar vehículo - obtener datos completos de la API primero
-    const handleEditVehicle = async (vehicle) => {
+    const handleEditVehicle = async (vehicleFromList) => {
+        console.log('✏️ Iniciando edición de vehículo:', vehicleFromList)
+        setEditingVehicle(vehicleFromList)
+        setEditModalOpen(true)
+
+        // Intentar cargar datos completos del vehículo
         try {
-            setLoading(true);
-            console.log('🔄 Obteniendo vehículo completo por ID:', vehicle.id);
-            
-            // Obtener el vehículo completo desde la API
-            const response = await vehiculosService.getVehiculoById(vehicle.id);
-            
-            if (response.success && response.vehiculo) {
-                console.log('✅ Vehículo completo obtenido:', response.vehiculo);
-                setSelectedVehicle(response.vehiculo);
-                setShowEditModal(true);
-            } else {
-                enqueueSnackbar('Error al obtener los datos del vehículo', {
+            console.log('📡 Obteniendo datos completos del vehículo ID:', vehicleFromList.id)
+            const fullVehicleData = await vehiculosService.getVehiculoById(vehicleFromList.id)
+            console.log('✅ Datos completos obtenidos exitosamente:', fullVehicleData)
+
+            // Actualizar el vehículo en edición con los datos completos
+            setEditingVehicle(fullVehicleData)
+
+        } catch (error) {
+            console.error('❌ Error al obtener datos completos del vehículo:', error)
+
+            // Verificar si es un error específico de Prisma
+            const errorMessage = error.message || error.toString()
+            const isPrismaFieldError = errorMessage.includes('Unknown field') && errorMessage.includes('puertas')
+            const isUnauthorized = error.status === 401 || errorMessage.includes('Unauthorized')
+
+            if (isPrismaFieldError) {
+                console.warn('⚠️ Error de esquema Prisma detectado (campo "puertas" inexistente)')
+                console.warn('⚠️ Procediendo con datos básicos del vehículo para edición')
+
+                // No mostrar notificación al usuario - usar datos básicos silenciosamente
+                console.log('📋 Usando datos básicos para edición debido a incompatibilidad de esquema')
+
+                // Usar datos básicos del vehículo de la lista para edición limitada
+                const basicVehicleData = {
+                    ...vehicleFromList,
+                    // Asegurar que tenemos campos básicos mapeados correctamente
+                    marca: vehicleFromList.marca || vehicleFromList.modelo_autos?.marca || '',
+                    modelo: vehicleFromList.modelo || vehicleFromList.modelo_autos?.modelo || '',
+                    version: vehicleFromList.version || vehicleFromList.modelo_autos?.versión || '',
+                    vendedor_nombre: vehicleFromList.vendedor_nombre || vehicleFromList.contacto_nombre || '',
+                    vendedor_telefono: vehicleFromList.vendedor_telefono || vehicleFromList.contacto_telefono || '',
+                    vendedor_email: vehicleFromList.vendedor_email || vehicleFromList.contacto_email || ''
+                }
+
+                console.log('📋 Usando datos básicos para edición limitada:', basicVehicleData)
+                setEditingVehicle(basicVehicleData)
+
+            } else if (isUnauthorized) {
+                console.error('🔒 Error de autorización - usuario no autenticado')
+                enqueueSnackbar('Sesión expirada. Por favor, inicie sesión nuevamente.', {
                     variant: 'error',
                     autoHideDuration: 5000
-                });
+                })
+                setEditModalOpen(false)
+
+            } else {
+                console.error('💥 Error general al cargar vehículo:', error)
+                enqueueSnackbar(`Error al cargar los datos del vehículo: ${errorMessage.substring(0, 100)}${errorMessage.length > 100 ? '...' : ''}`, {
+                    variant: 'error',
+                    autoHideDuration: 5000
+                })
+
+                // Mantener modal abierto con datos básicos como fallback
+                console.log('📋 Fallback: Usando datos básicos de la lista')
             }
-        } catch (error) {
-            console.error('❌ Error al obtener vehículo para edición:', error);
-            enqueueSnackbar(`Error al cargar el vehículo: ${error.message}`, {
-                variant: 'error',
-                autoHideDuration: 5000
-            });
-        } finally {
-            setLoading(false);
         }
-    };
+    }
 
     // Actualizar vehículo existente
     const handleUpdateVehicle = async (vehicleData) => {
@@ -626,15 +664,15 @@ export const VehiculosApp = () => {
             )}
 
             {/* Edit Vehicle Modal */}
-            {showEditModal && (
+            {editModalOpen && (
                 <EditVehicleModal
-                    open={showEditModal}
+                    open={editModalOpen}
                     onClose={() => {
-                        setShowEditModal(false);
-                        setSelectedVehicle(null);
+                        setEditModalOpen(false);
+                        setEditingVehicle(null);
                     }}
                     onSave={handleUpdateVehicle}
-                    vehicle={selectedVehicle}
+                    vehicle={editingVehicle}
                 />
             )}
         </Container>

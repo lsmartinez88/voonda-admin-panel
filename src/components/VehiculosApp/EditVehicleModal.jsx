@@ -66,14 +66,60 @@ const EditVehicleModal = ({ open, onClose, onSave, vehicle }) => {
     // Cargar datos del vehículo cuando se abra el modal
     useEffect(() => {
         if (vehicle && open) {
-            console.log('📝 Cargando vehículo COMPLETO para edición:', vehicle)
-            console.log('📝 Campos específicos del vehículo:')
-            console.log('  - vehicle.marca:', vehicle.marca)
-            console.log('  - vehicle.modelo:', vehicle.modelo)
-            console.log('  - vehicle.version:', vehicle.version)
-            console.log('  - vehicle.estado_codigo:', vehicle.estado_codigo)
+            console.log('📝 Cargando vehículo para edición:', vehicle)
+            console.log('📝 Tipo de datos recibidos:', typeof vehicle)
+            console.log('📝 ¿Es objeto vehículo?', vehicle && typeof vehicle === 'object')
+
+            // 🚨 NUEVO: Mostrar TODOS los campos del objeto vehículo
+            console.log('🔍 TODOS LOS CAMPOS DEL VEHÍCULO:')
+            console.log('📊 Object.keys(vehicle):', Object.keys(vehicle))
+            for (const [key, value] of Object.entries(vehicle)) {
+                console.log(`  🔑 ${key}:`, value, `(tipo: ${typeof value})`)
+            }
+
+            // Verificar si tenemos datos completos o básicos
+            const isFullVehicleData = vehicle.modelo_autos || vehicle.vendedor_nombre || vehicle.vendedor_email;
+            console.log('📝 ¿Datos completos?', isFullVehicleData ? 'SÍ' : 'NO - Datos básicos de lista');
+
+            console.log('📝 Campos disponibles del vehículo:')
+            console.log('  - vehicle.id:', vehicle.id)
+            console.log('  - vehicle.marca:', `"${vehicle.marca}"`, '| tipo:', typeof vehicle.marca, '| length:', vehicle.marca?.length)
+            console.log('  - vehicle.modelo:', `"${vehicle.modelo}"`, '| tipo:', typeof vehicle.modelo, '| length:', vehicle.modelo?.length)
+            console.log('  - vehicle.version:', `"${vehicle.version}"`, '| tipo:', typeof vehicle.version, '| length:', vehicle.version?.length)
+            console.log('  - vehicle.estado_codigo:', `"${vehicle.estado_codigo}"`, '| tipo:', typeof vehicle.estado_codigo)
+            
+            // 🎯 ESTRUCTURA CORRECTA: objeto modelo anidado
+            console.log('🎯 vehicle.modelo (objeto anidado):', vehicle.modelo)
+            if (vehicle.modelo) {
+                console.log('    ✅ vehicle.modelo.marca:', `"${vehicle.modelo.marca}"`, '| tipo:', typeof vehicle.modelo.marca)
+                console.log('    ✅ vehicle.modelo.modelo:', `"${vehicle.modelo.modelo}"`, '| tipo:', typeof vehicle.modelo.modelo)
+                console.log('    ✅ vehicle.modelo.version:', `"${vehicle.modelo.version}"`, '| tipo:', typeof vehicle.modelo.version)
+            }
+            
+            // 🎯 ESTRUCTURA CORRECTA: objeto estado anidado  
+            console.log('🎯 vehicle.estado (objeto anidado):', vehicle.estado)
+            if (vehicle.estado) {
+                console.log('    ✅ vehicle.estado.codigo:', `"${vehicle.estado.codigo}"`, '| tipo:', typeof vehicle.estado.codigo)
+                console.log('    ✅ vehicle.estado.nombre:', `"${vehicle.estado.nombre}"`, '| tipo:', typeof vehicle.estado.nombre)
+            }
+            
+            // 🎯 ESTRUCTURA CORRECTA: objeto vendedor anidado
+            console.log('🎯 vehicle.vendedor (objeto anidado):', vehicle.vendedor)
+            if (vehicle.vendedor) {
+                console.log('    ✅ vehicle.vendedor.nombre:', `"${vehicle.vendedor.nombre}"`, '| tipo:', typeof vehicle.vendedor.nombre)
+                console.log('    ✅ vehicle.vendedor.apellido:', `"${vehicle.vendedor.apellido}"`, '| tipo:', typeof vehicle.vendedor.apellido)
+                console.log('    ✅ vehicle.vendedor.telefono:', `"${vehicle.vendedor.telefono}"`, '| tipo:', typeof vehicle.vendedor.telefono)
+                console.log('    ✅ vehicle.vendedor.email:', `"${vehicle.vendedor.email}"`, '| tipo:', typeof vehicle.vendedor.email)
+            }
+            
+            console.log('📝 Compatibilidad con estructura anterior:')
             console.log('  - vehicle.modelo_autos:', vehicle.modelo_autos)
-            console.log('📝 Campos específicos del vendedor:')
+            if (vehicle.modelo_autos) {
+                console.log('    - vehicle.modelo_autos.marca:', `"${vehicle.modelo_autos.marca}"`, '| tipo:', typeof vehicle.modelo_autos.marca)
+                console.log('    - vehicle.modelo_autos.modelo:', `"${vehicle.modelo_autos.modelo}"`, '| tipo:', typeof vehicle.modelo_autos.modelo)
+                console.log('    - vehicle.modelo_autos.versión:', `"${vehicle.modelo_autos.versión}"`, '| tipo:', typeof vehicle.modelo_autos.versión)
+            }
+            console.log('📝 Campos del vendedor:')
             console.log('  - vehicle.vendedor_nombre:', vehicle.vendedor_nombre)
             console.log('  - vehicle.vendedor_apellido:', vehicle.vendedor_apellido)
             console.log('  - vehicle.vendedor_telefono:', vehicle.vendedor_telefono)
@@ -81,61 +127,105 @@ const EditVehicleModal = ({ open, onClose, onSave, vehicle }) => {
             console.log('  - vehicle.contacto_nombre:', vehicle.contacto_nombre)
             console.log('  - vehicle.contacto_telefono:', vehicle.contacto_telefono)
             console.log('  - vehicle.contacto_email:', vehicle.contacto_email)
-            if (vehicle.modelo_autos) {
-                console.log('  - vehicle.modelo_autos.marca:', vehicle.modelo_autos.marca)
-                console.log('  - vehicle.modelo_autos.modelo:', vehicle.modelo_autos.modelo)
-                console.log('  - vehicle.modelo_autos.versión:', vehicle.modelo_autos.versión)
+
+            try {
+                // Función helper para extraer valores de forma segura
+                const safeExtract = (value, fallback = '') => {
+                    if (value === null || value === undefined) return fallback;
+                    if (typeof value === 'string') return value;
+                    if (typeof value === 'number') return value;
+                    return fallback;
+                };
+
+                // Mapear datos del vehículo de manera segura
+                const mappedData = {
+                    // Datos básicos - usar la estructura correcta de la API
+                    marca: safeExtract(vehicle.modelo?.marca) || 
+                           safeExtract(vehicle.marca) || 
+                           safeExtract(vehicle.modelo_autos?.marca) || 
+                           safeExtract(vehicle.modeloAuto?.marca) || 
+                           safeExtract(vehicle.marca_nombre) ||
+                           safeExtract(vehicle.brand) || '',
+                           
+                    modelo: safeExtract(vehicle.modelo?.modelo) || 
+                            safeExtract(vehicle.modelo) || 
+                            safeExtract(vehicle.modelo_autos?.modelo) || 
+                            safeExtract(vehicle.modeloAuto?.modelo) ||
+                            safeExtract(vehicle.modelo_nombre) ||
+                            safeExtract(vehicle.model) || '',
+                            
+                    version: safeExtract(vehicle.modelo?.version) || 
+                             safeExtract(vehicle.version) || 
+                             safeExtract(vehicle.modelo_autos?.versión) || 
+                             safeExtract(vehicle.modeloAuto?.versión) ||
+                             safeExtract(vehicle.version_nombre) ||
+                             safeExtract(vehicle.trim) || 
+                             safeExtract(vehicle.variant) || '',
+                             
+                    vehiculo_ano: parseInt(safeExtract(vehicle.vehiculo_ano) || safeExtract(vehicle.año) || safeExtract(vehicle.year)) || new Date().getFullYear(),
+                    patente: safeExtract(vehicle.patente) || safeExtract(vehicle.dominio) || safeExtract(vehicle.plate),
+                    kilometros: parseInt(safeExtract(vehicle.kilometros) || safeExtract(vehicle.kilometraje) || safeExtract(vehicle.mileage)) || 0,
+                    valor: parseFloat(safeExtract(vehicle.valor) || safeExtract(vehicle.precio) || safeExtract(vehicle.price)) || 0,
+                    moneda: safeExtract(vehicle.moneda) || safeExtract(vehicle.currency) || 'ARS',
+                    fecha_ingreso: vehicle.fecha_ingreso ? vehicle.fecha_ingreso.split('T')[0] : new Date().toISOString().split('T')[0],
+                    estado_codigo: safeExtract(vehicle.estado?.codigo) || 
+                                   safeExtract(vehicle.estado_codigo) || 
+                                   safeExtract(vehicle.estado) || 
+                                   safeExtract(vehicle.status),
+
+                    // Datos del vendedor - usar la estructura correcta de la API
+                    vendedor_nombre: safeExtract(vehicle.vendedor?.nombre) || 
+                                     safeExtract(vehicle.vendedor_nombre) || 
+                                     safeExtract(vehicle.contacto_nombre) || 
+                                     safeExtract(vehicle.vendedor),
+                    vendedor_apellido: safeExtract(vehicle.vendedor?.apellido) || 
+                                       safeExtract(vehicle.vendedor_apellido),
+                    vendedor_telefono: safeExtract(vehicle.vendedor?.telefono) || 
+                                       safeExtract(vehicle.vendedor_telefono) || 
+                                       safeExtract(vehicle.contacto_telefono),
+                    vendedor_email: safeExtract(vehicle.vendedor?.email) || 
+                                    safeExtract(vehicle.vendedor_email) || 
+                                    safeExtract(vehicle.contacto_email),
+                    vendedor_direccion: safeExtract(vehicle.vendedor?.direccion) || 
+                                        safeExtract(vehicle.vendedor_direccion) || 
+                                        safeExtract(vehicle.direccion),
+
+                    // Notas - mapear todos los campos de comentarios/notas
+                    pendientes_preparacion: safeExtract(vehicle.pendientes_preparacion),
+                    comentarios: safeExtract(vehicle.comentarios) || safeExtract(vehicle.descripcion) || safeExtract(vehicle.notas),
+                    notas_generales: safeExtract(vehicle.notas_generales),
+                    notas_mecánicas: safeExtract(vehicle.notas_mecánicas),
+                    notas_vendedor: safeExtract(vehicle.notas_vendedor),
+
+                    // Publicaciones - mapear desde campos booleanos y arrays
+                    publicar_ml: Boolean(vehicle.publi_mer_lib || vehicle.publicacion_ml || vehicle.publicar_ml),
+                    publicar_autoscout: Boolean(vehicle.publicar_autoscout),
+                    publicar_karvi: Boolean(vehicle.publicar_karvi),
+                    publicar_autocosmos: Boolean(vehicle.publicar_autocosmos),
+                    publicaciones: Array.isArray(vehicle.publicaciones) ? vehicle.publicaciones : []
+                }
+
+                console.log('📋 Datos mapeados exitosamente:', mappedData)
+                console.log('📋 Marca final:', mappedData.marca, '| Tipo:', typeof mappedData.marca)
+                console.log('📋 Modelo final:', mappedData.modelo, '| Tipo:', typeof mappedData.modelo)
+                console.log('📋 Versión final:', mappedData.version, '| Tipo:', typeof mappedData.version)
+                console.log('📋 Estado final:', mappedData.estado_codigo, '| Tipo:', typeof mappedData.estado_codigo)
+                console.log('📋 Vendedor final:', {
+                    nombre: mappedData.vendedor_nombre,
+                    apellido: mappedData.vendedor_apellido,
+                    telefono: mappedData.vendedor_telefono,
+                    email: mappedData.vendedor_email
+                })
+
+                setFormData(mappedData)
+                setErrors({})
+
+            } catch (mappingError) {
+                console.error('❌ Error al mapear datos del vehículo:', mappingError);
+                setErrors({
+                    general: 'Error al procesar los datos del vehículo. Algunos campos pueden no mostrarse correctamente.'
+                });
             }
-            
-            // Mapear datos del vehículo completo obtenido de la API
-            const mappedData = {
-                // Datos básicos - priorizar datos directos del vehículo
-                marca: vehicle.marca || vehicle.modelo_autos?.marca || '',
-                modelo: vehicle.modelo || vehicle.modelo_autos?.modelo || '',
-                version: vehicle.version || vehicle.modelo_autos?.versión || '',
-                vehiculo_ano: parseInt(vehicle.vehiculo_ano || vehicle.año) || new Date().getFullYear(),
-                patente: vehicle.patente || vehicle.dominio || '',
-                kilometros: parseInt(vehicle.kilometros || vehicle.kilometraje) || 0,
-                valor: parseFloat(vehicle.valor || vehicle.precio) || 0,
-                moneda: vehicle.moneda || 'ARS',
-                fecha_ingreso: vehicle.fecha_ingreso ? vehicle.fecha_ingreso.split('T')[0] : new Date().toISOString().split('T')[0],
-                estado_codigo: vehicle.estado_codigo || vehicle.estado || '',
-
-                // Datos del vendedor - usar todos los campos posibles
-                vendedor_nombre: vehicle.vendedor_nombre || vehicle.contacto_nombre || vehicle.vendedor || '',
-                vendedor_apellido: vehicle.vendedor_apellido || '',
-                vendedor_telefono: vehicle.vendedor_telefono || vehicle.contacto_telefono || '',
-                vendedor_email: vehicle.vendedor_email || vehicle.contacto_email || '',
-                vendedor_direccion: vehicle.vendedor_direccion || vehicle.direccion || '',
-
-                // Notas - mapear todos los campos de comentarios/notas
-                pendientes_preparacion: vehicle.pendientes_preparacion || '',
-                comentarios: vehicle.comentarios || vehicle.descripcion || vehicle.notas || '',
-                notas_generales: vehicle.notas_generales || '',
-                notas_mecánicas: vehicle.notas_mecánicas || '',
-                notas_vendedor: vehicle.notas_vendedor || '',
-
-                // Publicaciones - mapear desde campos booleanos y arrays
-                publicar_ml: Boolean(vehicle.publi_mer_lib || vehicle.publicacion_ml || vehicle.publicar_ml),
-                publicar_autoscout: Boolean(vehicle.publicar_autoscout),
-                publicar_karvi: Boolean(vehicle.publicar_karvi),
-                publicar_autocosmos: Boolean(vehicle.publicar_autocosmos),
-                publicaciones: Array.isArray(vehicle.publicaciones) ? vehicle.publicaciones : []
-            }
-
-            console.log('📋 Datos mapeados para edición:', mappedData)
-            console.log('📋 Marca mapeada:', mappedData.marca, '| Tipo:', typeof mappedData.marca)
-            console.log('📋 Modelo mapeado:', mappedData.modelo, '| Tipo:', typeof mappedData.modelo)
-            console.log('📋 Versión mapeada:', mappedData.version, '| Tipo:', typeof mappedData.version)
-            console.log('📋 Estado mapeado:', mappedData.estado_codigo, '| Tipo:', typeof mappedData.estado_codigo)
-            console.log('📋 Vendedor mapeado:')
-            console.log('  - vendedor_nombre:', mappedData.vendedor_nombre, '| Tipo:', typeof mappedData.vendedor_nombre)
-            console.log('  - vendedor_apellido:', mappedData.vendedor_apellido, '| Tipo:', typeof mappedData.vendedor_apellido)
-            console.log('  - vendedor_telefono:', mappedData.vendedor_telefono, '| Tipo:', typeof mappedData.vendedor_telefono)
-            console.log('  - vendedor_email:', mappedData.vendedor_email, '| Tipo:', typeof mappedData.vendedor_email)
-            
-            setFormData(mappedData)
-            setErrors({})
         }
     }, [vehicle, open])
 

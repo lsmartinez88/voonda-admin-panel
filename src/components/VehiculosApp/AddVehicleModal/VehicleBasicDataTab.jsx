@@ -27,16 +27,101 @@ const VehicleBasicDataTab = ({ data, errors, onChange }) => {
     const [loadingModelos, setLoadingModelos] = useState(false)
     const [loadingEstados, setLoadingEstados] = useState(false)
 
-    // 🔍 DEBUG: Log de datos recibidos
+        // 🔍 DEBUG: Log de datos recibidos
     useEffect(() => {
         console.log('🔍 VehicleBasicDataTab - data recibido:', data)
-        console.log('🔍 VehicleBasicDataTab - marca:', data?.marca, '| tipo:', typeof data?.marca)
-        console.log('🔍 VehicleBasicDataTab - modelo:', data?.modelo, '| tipo:', typeof data?.modelo)
-        console.log('🔍 VehicleBasicDataTab - version:', data?.version, '| tipo:', typeof data?.version)
-        console.log('🔍 VehicleBasicDataTab - estado_codigo:', data?.estado_codigo, '| tipo:', typeof data?.estado_codigo)
-    }, [data])
+        console.log('🔍 VehicleBasicDataTab - marca:', data?.marca, '| tipo:', typeof data?.marca, '| valor válido:', Boolean(data?.marca && data.marca !== ''))
+        console.log('🔍 VehicleBasicDataTab - modelo:', data?.modelo, '| tipo:', typeof data?.modelo, '| valor válido:', Boolean(data?.modelo && data.modelo !== ''))
+        console.log('🔍 VehicleBasicDataTab - version:', data?.version, '| tipo:', typeof data?.version, '| valor válido:', Boolean(data?.version && data.version !== ''))
+        console.log('🔍 VehicleBasicDataTab - estado_codigo:', data?.estado_codigo, '| tipo:', typeof data?.estado_codigo, '| valor válido:', Boolean(data?.estado_codigo && data.estado_codigo !== ''))
+        console.log('🔍 VehicleBasicDataTab - otros campos clave:', {
+            vehiculo_ano: data?.vehiculo_ano,
+            patente: data?.patente,
+            kilometros: data?.kilometros,
+            valor: data?.valor,
+            moneda: data?.moneda,
+            fecha_ingreso: data?.fecha_ingreso
+        })
 
-    // Generar años desde 1970 hasta año actual + 2
+        // 🎯 NUEVO: Debug específico para los valores de Autocomplete
+        console.log('🎯 DEBUG AUTOCOMPLETE:')
+        console.log('  - data.marca:', `"${data?.marca}"`, '| length:', data?.marca?.length)
+        console.log('  - data.modelo:', `"${data?.modelo}"`, '| length:', data?.modelo?.length)
+        console.log('  - data.version:', `"${data?.version}"`, '| length:', data?.version?.length)
+        console.log('  - marcasOptions:', marcasOptions)
+        console.log('  - modelosOptions:', modelosOptions) 
+        console.log('  - versionesOptions:', versionesOptions)
+    }, [data, marcasOptions, modelosOptions, versionesOptions])
+
+    // 🚀 NUEVO: Cargar opciones inmediatamente al recibir datos (modo edición)
+    useEffect(() => {
+        if (data.marca || data.modelo || data.version) {
+            console.log('🔄 Datos iniciales detectados - Cargando opciones para modo edición')
+            console.log('  - Marca inicial:', data.marca)
+            console.log('  - Modelo inicial:', data.modelo) 
+            console.log('  - Versión inicial:', data.version)
+            
+            // Cargar marcas si aún no están cargadas
+            if (marcasOptions.length === 0) {
+                loadMarcas()
+            }
+            
+            // Cargar modelos si hay marca
+            if (data.marca && modelosOptions.length === 0) {
+                loadModelos(data.marca)
+            }
+            
+            // Cargar versiones si hay marca y modelo
+            if (data.marca && data.modelo && versionesOptions.length === 0) {
+                loadVersiones(data.marca, data.modelo)
+            }
+        }
+    }, [data.marca, data.modelo, data.version, marcasOptions.length, modelosOptions.length, versionesOptions.length])
+
+    // 🎯 NUEVO: Efecto para verificar si los valores están en las opciones después de cargar
+    useEffect(() => {
+        if (data.marca && marcasOptions.length > 0) {
+            const marcaEncontrada = marcasOptions.includes(data.marca)
+            console.log('🔍 Verificando marca en opciones:', data.marca, 'encontrada:', marcaEncontrada)
+            if (!marcaEncontrada) {
+                console.log('⚠️ Marca no encontrada en opciones, agregándola:', data.marca)
+                setMarcasOptions(prev => {
+                    if (!prev.includes(data.marca)) {
+                        return [data.marca, ...prev]
+                    }
+                    return prev
+                })
+            }
+        }
+
+        if (data.modelo && modelosOptions.length > 0 && data.marca) {
+            const modeloEncontrado = modelosOptions.includes(data.modelo)
+            console.log('🔍 Verificando modelo en opciones:', data.modelo, 'encontrado:', modeloEncontrado)
+            if (!modeloEncontrado) {
+                console.log('⚠️ Modelo no encontrado en opciones, agregándolo:', data.modelo)
+                setModelosOptions(prev => {
+                    if (!prev.includes(data.modelo)) {
+                        return [data.modelo, ...prev]
+                    }
+                    return prev
+                })
+            }
+        }
+
+        if (data.version && versionesOptions.length > 0) {
+            const versionEncontrada = versionesOptions.includes(data.version)
+            console.log('🔍 Verificando versión en opciones:', data.version, 'encontrada:', versionEncontrada)
+            if (!versionEncontrada) {
+                console.log('⚠️ Versión no encontrada en opciones, agregándola:', data.version)
+                setVersionesOptions(prev => {
+                    if (!prev.includes(data.version)) {
+                        return [data.version, ...prev]
+                    }
+                    return prev
+                })
+            }
+        }
+    }, [data.marca, data.modelo, data.version, marcasOptions, modelosOptions, versionesOptions])    // Generar años desde 1970 hasta año actual + 2
     const currentYear = new Date().getFullYear()
     const añosOptions = []
     for (let year = currentYear + 2; year >= 1970; year--) {
@@ -57,23 +142,31 @@ const VehicleBasicDataTab = ({ data, errors, onChange }) => {
     // Cargar modelos cuando cambia la marca
     useEffect(() => {
         if (data.marca) {
+            console.log('🔄 Marca cambió, cargando modelos para:', data.marca)
             loadModelos(data.marca)
         } else {
             setModelosOptions([])
+            setVersionesOptions([])
         }
     }, [data.marca])
 
     // Cargar versiones cuando cambia el modelo
     useEffect(() => {
-        loadVersiones(data.marca, data.modelo)
+        if (data.marca && data.modelo) {
+            console.log('🔄 Modelo cambió, cargando versiones para:', data.marca, data.modelo)
+            loadVersiones(data.marca, data.modelo)
+        } else {
+            setVersionesOptions([])
+        }
     }, [data.marca, data.modelo])
 
-    // 🔄 NUEVO: Manejar carga inicial de datos en modo edición
+    // 🔄 MEJORADO: Asegurar que los valores actuales estén en las opciones
     useEffect(() => {
-        // Si hay datos de marca prellenados (modo edición), asegurarse de cargar las opciones
         if (data.marca && marcasOptions.length > 0) {
-            // Si la marca no está en las opciones, agregarla
-            if (!marcasOptions.includes(data.marca)) {
+            const marcaExists = marcasOptions.some(marca =>
+                typeof marca === 'string' ? marca === data.marca : marca.nombre === data.marca
+            )
+            if (!marcaExists) {
                 console.log('🔄 Agregando marca faltante a opciones:', data.marca)
                 setMarcasOptions(prev => [...prev, data.marca])
             }
@@ -81,18 +174,28 @@ const VehicleBasicDataTab = ({ data, errors, onChange }) => {
     }, [data.marca, marcasOptions])
 
     useEffect(() => {
-        // Si hay datos de modelo prellenados (modo edición), asegurarse de cargar las opciones  
-        if (data.modelo && data.marca) {
-            if (modelosOptions.length === 0) {
-                // Si no hay modelos cargados, cargarlos
-                loadModelos(data.marca)
-            } else if (!modelosOptions.includes(data.modelo)) {
-                // Si el modelo no está en las opciones, agregarlo
+        if (data.modelo && modelosOptions.length > 0 && data.marca) {
+            const modeloExists = modelosOptions.some(modelo =>
+                typeof modelo === 'string' ? modelo === data.modelo : modelo.nombre === data.modelo
+            )
+            if (!modeloExists) {
                 console.log('🔄 Agregando modelo faltante a opciones:', data.modelo)
                 setModelosOptions(prev => [...prev, data.modelo])
             }
         }
-    }, [data.modelo, data.marca, modelosOptions])
+    }, [data.modelo, modelosOptions, data.marca])
+
+    useEffect(() => {
+        if (data.version && versionesOptions.length > 0 && data.marca && data.modelo) {
+            const versionExists = versionesOptions.some(version =>
+                typeof version === 'string' ? version === data.version : version.nombre === data.version
+            )
+            if (!versionExists) {
+                console.log('🔄 Agregando versión faltante a opciones:', data.version)
+                setVersionesOptions(prev => [...prev, data.version])
+            }
+        }
+    }, [data.version, versionesOptions, data.marca, data.modelo])
 
     const loadEstados = async () => {
         setLoadingEstados(true)
@@ -148,11 +251,26 @@ const VehicleBasicDataTab = ({ data, errors, onChange }) => {
                 const marcas = response.marcas.map(marca =>
                     typeof marca === 'string' ? marca : marca.nombre || marca.marca
                 )
+
+                // Asegurar que la marca actual esté en las opciones (modo edición)
+                if (data.marca && !marcas.includes(data.marca)) {
+                    console.log('🔄 Incluyendo marca actual en opciones:', data.marca)
+                    marcas.unshift(data.marca) // Agregar al principio
+                }
+
                 setMarcasOptions(marcas)
+                console.log('✅ Marcas cargadas:', marcas.length, 'marcas. Marca actual:', data.marca)
             }
         } catch (error) {
             console.error('Error cargando marcas:', error)
-            setMarcasOptions(['Toyota', 'Honda', 'Ford', 'Chevrolet', 'Volkswagen', 'Nissan'])
+            const fallbackMarcas = ['Toyota', 'Honda', 'Ford', 'Chevrolet', 'Volkswagen', 'Nissan']
+
+            // Incluir marca actual en fallback también
+            if (data.marca && !fallbackMarcas.includes(data.marca)) {
+                fallbackMarcas.unshift(data.marca)
+            }
+
+            setMarcasOptions(fallbackMarcas)
         } finally {
             setLoadingMarcas(false)
         }
@@ -166,11 +284,25 @@ const VehicleBasicDataTab = ({ data, errors, onChange }) => {
                 const modelos = response.modelos.map(modelo =>
                     typeof modelo === 'string' ? modelo : modelo.modelo || modelo.nombre
                 )
+
+                // Asegurar que el modelo actual esté en las opciones (modo edición)
+                if (data.modelo && data.marca === marca && !modelos.includes(data.modelo)) {
+                    console.log('🔄 Incluyendo modelo actual en opciones:', data.modelo)
+                    modelos.unshift(data.modelo) // Agregar al principio
+                }
+
                 setModelosOptions(modelos)
+                console.log('✅ Modelos cargados para', marca, ':', modelos.length, 'modelos. Modelo actual:', data.modelo)
             }
         } catch (error) {
             console.error('Error cargando modelos:', error)
-            setModelosOptions([])
+            // Si hay un modelo actual y coincide la marca, incluirlo en las opciones vacías
+            const fallbackModelos = []
+            if (data.modelo && data.marca === marca) {
+                fallbackModelos.push(data.modelo)
+                console.log('🔄 Usando modelo actual como fallback:', data.modelo)
+            }
+            setModelosOptions(fallbackModelos)
         } finally {
             setLoadingModelos(false)
         }
@@ -185,7 +317,15 @@ const VehicleBasicDataTab = ({ data, errors, onChange }) => {
             'XE', 'XEI', 'XLI', 'GLI', 'TDI', 'TSI', 'GTI', 'Hybrid',
             'Electric', 'Diesel', 'Turbo', 'AWD', '4WD', '2WD'
         ]
+
+        // Asegurar que la versión actual esté en las opciones (modo edición)
+        if (data.version && !versionesGenericas.includes(data.version)) {
+            console.log('🔄 Incluyendo versión actual en opciones:', data.version)
+            versionesGenericas.unshift(data.version) // Agregar al principio
+        }
+
         setVersionesOptions(versionesGenericas)
+        console.log('✅ Versiones cargadas:', versionesGenericas.length, 'versiones. Versión actual:', data.version)
     }
 
     const handleFieldChange = (field, value) => {
@@ -221,18 +361,25 @@ const VehicleBasicDataTab = ({ data, errors, onChange }) => {
                 <Grid item xs={12} md={4}>
                     <Autocomplete
                         options={marcasOptions}
-                        value={data.marca || ''}
+                        value={data.marca || null}
                         onChange={(event, newValue) => {
-                            console.log('🔄 Marca cambiada:', newValue)
+                            console.log('🔄 Marca seleccionada desde lista:', newValue)
                             handleFieldChange('marca', newValue || '')
                         }}
-                        inputValue={data.marca || ''}
-                        onInputChange={(event, newInputValue) => {
-                            console.log('🔄 Input marca cambiado:', newInputValue)
-                            handleFieldChange('marca', newInputValue || '')
-                        }}
                         freeSolo
+                        selectOnFocus
+                        clearOnBlur
+                        handleHomeEndKeys
                         loading={loadingMarcas}
+                        getOptionLabel={(option) => {
+                            return typeof option === 'string' ? option : (option?.nombre || option?.marca || '')
+                        }}
+                        isOptionEqualToValue={(option, value) => {
+                            if (!option || !value) return false
+                            const optionStr = typeof option === 'string' ? option : (option?.nombre || option?.marca || '')
+                            const valueStr = typeof value === 'string' ? value : (value?.nombre || value?.marca || '')
+                            return optionStr === valueStr
+                        }}
                         renderInput={(params) => (
                             <TextField
                                 {...params}
@@ -249,24 +396,32 @@ const VehicleBasicDataTab = ({ data, errors, onChange }) => {
                 <Grid item xs={12} md={4}>
                     <Autocomplete
                         options={modelosOptions}
-                        value={data.modelo || ''}
+                        value={data.modelo || null}
                         onChange={(event, newValue) => {
-                            console.log('🔄 Modelo cambiado:', newValue)
+                            console.log('🔄 Modelo seleccionado desde lista:', newValue)
                             handleFieldChange('modelo', newValue || '')
                         }}
-                        inputValue={data.modelo || ''}
-                        onInputChange={(event, newInputValue) => {
-                            console.log('🔄 Input modelo cambiado:', newInputValue)
-                            handleFieldChange('modelo', newInputValue || '')
-                        }}
                         freeSolo
+                        selectOnFocus
+                        clearOnBlur
+                        handleHomeEndKeys
                         loading={loadingModelos}
+                        disabled={!data.marca}
+                        getOptionLabel={(option) => {
+                            return typeof option === 'string' ? option : (option?.modelo || option?.nombre || '')
+                        }}
+                        isOptionEqualToValue={(option, value) => {
+                            if (!option || !value) return false
+                            const optionStr = typeof option === 'string' ? option : (option?.modelo || option?.nombre || '')
+                            const valueStr = typeof value === 'string' ? value : (value?.modelo || value?.nombre || '')
+                            return optionStr === valueStr
+                        }}
                         renderInput={(params) => (
                             <TextField
                                 {...params}
                                 label="Modelo *"
                                 error={!!errors.modelo}
-                                helperText={errors.modelo || 'Puedes seleccionar un modelo existente o escribir uno nuevo'}
+                                helperText={errors.modelo || (!data.marca ? 'Selecciona primero una marca' : 'Puedes seleccionar un modelo existente o escribir uno nuevo')}
                                 placeholder="Ej: Corolla, Civic, Focus, o tu modelo nuevo..."
                             />
                         )}
@@ -277,24 +432,31 @@ const VehicleBasicDataTab = ({ data, errors, onChange }) => {
                 <Grid item xs={12} md={4}>
                     <Autocomplete
                         options={versionesOptions}
-                        value={data.version || ''}
+                        value={data.version || null}
                         onChange={(event, newValue) => {
-                            console.log('🔄 Versión cambiada:', newValue)
+                            console.log('🔄 Versión seleccionada desde lista:', newValue)
                             handleFieldChange('version', newValue || '')
                         }}
-                        inputValue={data.version || ''}
-                        onInputChange={(event, newInputValue) => {
-                            console.log('🔄 Input versión cambiado:', newInputValue)
-                            handleFieldChange('version', newInputValue || '')
-                        }}
                         freeSolo
+                        selectOnFocus
+                        clearOnBlur
+                        handleHomeEndKeys
+                        getOptionLabel={(option) => {
+                            return typeof option === 'string' ? option : (option?.version || option?.nombre || '')
+                        }}
+                        isOptionEqualToValue={(option, value) => {
+                            if (!option || !value) return false
+                            const optionStr = typeof option === 'string' ? option : (option?.version || option?.nombre || '')
+                            const valueStr = typeof value === 'string' ? value : (value?.version || value?.nombre || '')
+                            return optionStr === valueStr
+                        }}
                         renderInput={(params) => (
                             <TextField
                                 {...params}
-                                label="Versión *"
+                                label="Versión"
                                 error={!!errors.version}
-                                helperText={errors.version || 'La versión es requerida. Puedes seleccionar una sugerida o escribir una nueva'}
-                                placeholder="Ej: XEI, LX, SE, o tu versión nueva..."
+                                helperText={errors.version || 'Puedes seleccionar una versión existente o escribir una nueva'}
+                                placeholder="Ej: Base, LX, Sport, o tu versión..."
                             />
                         )}
                     />

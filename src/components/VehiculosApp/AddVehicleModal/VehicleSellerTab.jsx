@@ -1,4 +1,4 @@
-﻿import React from 'react'
+﻿import React, { useEffect } from 'react'
 import {
     Grid,
     TextField,
@@ -7,6 +7,22 @@ import {
 } from '@mui/material'
 
 const VehicleSellerTab = ({ data, errors, onChange }) => {
+    // 📊 DEBUG: Log de datos del vendedor recibidos
+    useEffect(() => {
+        console.log('👤 VehicleSellerTab - data del vendedor recibido:', {
+            vendedor_nombre: data?.vendedor_nombre,
+            vendedor_apellido: data?.vendedor_apellido,
+            vendedor_telefono: data?.vendedor_telefono,
+            vendedor_email: data?.vendedor_email,
+            vendedor_direccion: data?.vendedor_direccion
+        })
+        console.log('👤 Tipos de datos del vendedor:')
+        console.log('  - vendedor_nombre:', typeof data?.vendedor_nombre, '| valor:', data?.vendedor_nombre, '| válido:', Boolean(data?.vendedor_nombre))
+        console.log('  - vendedor_apellido:', typeof data?.vendedor_apellido, '| valor:', data?.vendedor_apellido, '| válido:', Boolean(data?.vendedor_apellido))
+        console.log('  - vendedor_telefono:', typeof data?.vendedor_telefono, '| valor:', data?.vendedor_telefono, '| válido:', Boolean(data?.vendedor_telefono))
+        console.log('  - vendedor_email:', typeof data?.vendedor_email, '| valor:', data?.vendedor_email, '| válido:', Boolean(data?.vendedor_email))
+        console.log('  - vendedor_direccion:', typeof data?.vendedor_direccion, '| valor:', data?.vendedor_direccion, '| válido:', Boolean(data?.vendedor_direccion))
+    }, [data])
 
     // 🔍 DEBUG: Log de datos del vendedor recibidos
     React.useEffect(() => {
