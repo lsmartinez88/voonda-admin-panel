@@ -27,6 +27,15 @@ const VehicleBasicDataTab = ({ data, errors, onChange }) => {
     const [loadingModelos, setLoadingModelos] = useState(false)
     const [loadingEstados, setLoadingEstados] = useState(false)
 
+    // 🔍 DEBUG: Log de datos recibidos
+    useEffect(() => {
+        console.log('🔍 VehicleBasicDataTab - data recibido:', data)
+        console.log('🔍 VehicleBasicDataTab - marca:', data?.marca, '| tipo:', typeof data?.marca)
+        console.log('🔍 VehicleBasicDataTab - modelo:', data?.modelo, '| tipo:', typeof data?.modelo)
+        console.log('🔍 VehicleBasicDataTab - version:', data?.version, '| tipo:', typeof data?.version)
+        console.log('🔍 VehicleBasicDataTab - estado_codigo:', data?.estado_codigo, '| tipo:', typeof data?.estado_codigo)
+    }, [data])
+
     // Generar años desde 1970 hasta año actual + 2
     const currentYear = new Date().getFullYear()
     const añosOptions = []
@@ -214,13 +223,13 @@ const VehicleBasicDataTab = ({ data, errors, onChange }) => {
                         options={marcasOptions}
                         value={data.marca || ''}
                         onChange={(event, newValue) => {
+                            console.log('🔄 Marca cambiada:', newValue)
                             handleFieldChange('marca', newValue || '')
                         }}
-                        onInputChange={(event, newInputValue, reason) => {
-                            // Solo actualizar en 'input', no en 'reset' o 'clear'
-                            if (reason === 'input') {
-                                handleFieldChange('marca', newInputValue || '')
-                            }
+                        inputValue={data.marca || ''}
+                        onInputChange={(event, newInputValue) => {
+                            console.log('🔄 Input marca cambiado:', newInputValue)
+                            handleFieldChange('marca', newInputValue || '')
                         }}
                         freeSolo
                         loading={loadingMarcas}
@@ -242,17 +251,16 @@ const VehicleBasicDataTab = ({ data, errors, onChange }) => {
                         options={modelosOptions}
                         value={data.modelo || ''}
                         onChange={(event, newValue) => {
+                            console.log('🔄 Modelo cambiado:', newValue)
                             handleFieldChange('modelo', newValue || '')
                         }}
-                        onInputChange={(event, newInputValue, reason) => {
-                            // Solo actualizar en 'input', no en 'reset' o 'clear'
-                            if (reason === 'input') {
-                                handleFieldChange('modelo', newInputValue || '')
-                            }
+                        inputValue={data.modelo || ''}
+                        onInputChange={(event, newInputValue) => {
+                            console.log('🔄 Input modelo cambiado:', newInputValue)
+                            handleFieldChange('modelo', newInputValue || '')
                         }}
                         freeSolo
                         loading={loadingModelos}
-                        disabled={!data.marca} // Deshabilitar hasta que se seleccione marca
                         renderInput={(params) => (
                             <TextField
                                 {...params}
@@ -271,13 +279,13 @@ const VehicleBasicDataTab = ({ data, errors, onChange }) => {
                         options={versionesOptions}
                         value={data.version || ''}
                         onChange={(event, newValue) => {
+                            console.log('🔄 Versión cambiada:', newValue)
                             handleFieldChange('version', newValue || '')
                         }}
-                        onInputChange={(event, newInputValue, reason) => {
-                            // Solo actualizar en 'input', no en 'reset' o 'clear'
-                            if (reason === 'input') {
-                                handleFieldChange('version', newInputValue || '')
-                            }
+                        inputValue={data.version || ''}
+                        onInputChange={(event, newInputValue) => {
+                            console.log('🔄 Input versión cambiado:', newInputValue)
+                            handleFieldChange('version', newInputValue || '')
                         }}
                         freeSolo
                         renderInput={(params) => (

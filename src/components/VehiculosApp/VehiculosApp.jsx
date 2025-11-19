@@ -249,10 +249,34 @@ export const VehiculosApp = () => {
         }
     };
 
-    // Editar vehículo
-    const handleEditVehicle = (vehicle) => {
-        setSelectedVehicle(vehicle);
-        setShowEditModal(true);
+    // Editar vehículo - obtener datos completos de la API primero
+    const handleEditVehicle = async (vehicle) => {
+        try {
+            setLoading(true);
+            console.log('🔄 Obteniendo vehículo completo por ID:', vehicle.id);
+            
+            // Obtener el vehículo completo desde la API
+            const response = await vehiculosService.getVehiculoById(vehicle.id);
+            
+            if (response.success && response.vehiculo) {
+                console.log('✅ Vehículo completo obtenido:', response.vehiculo);
+                setSelectedVehicle(response.vehiculo);
+                setShowEditModal(true);
+            } else {
+                enqueueSnackbar('Error al obtener los datos del vehículo', {
+                    variant: 'error',
+                    autoHideDuration: 5000
+                });
+            }
+        } catch (error) {
+            console.error('❌ Error al obtener vehículo para edición:', error);
+            enqueueSnackbar(`Error al cargar el vehículo: ${error.message}`, {
+                variant: 'error',
+                autoHideDuration: 5000
+            });
+        } finally {
+            setLoading(false);
+        }
     };
 
     // Actualizar vehículo existente

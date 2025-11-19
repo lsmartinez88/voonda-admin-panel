@@ -8,6 +8,15 @@ import {
 
 const VehicleSellerTab = ({ data, errors, onChange }) => {
 
+    // 🔍 DEBUG: Log de datos del vendedor recibidos
+    React.useEffect(() => {
+        console.log('👤 VehicleSellerTab - data del vendedor recibido:', data)
+        console.log('👤 VehicleSellerTab - vendedor_nombre:', data?.vendedor_nombre, '| tipo:', typeof data?.vendedor_nombre)
+        console.log('👤 VehicleSellerTab - vendedor_apellido:', data?.vendedor_apellido, '| tipo:', typeof data?.vendedor_apellido)
+        console.log('👤 VehicleSellerTab - vendedor_telefono:', data?.vendedor_telefono, '| tipo:', typeof data?.vendedor_telefono)
+        console.log('👤 VehicleSellerTab - vendedor_email:', data?.vendedor_email, '| tipo:', typeof data?.vendedor_email)
+    }, [data])
+
     const handleFieldChange = (field, value) => {
         onChange({
             [field]: value

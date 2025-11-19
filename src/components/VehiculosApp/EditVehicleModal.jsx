@@ -66,62 +66,78 @@ const EditVehicleModal = ({ open, onClose, onSave, vehicle }) => {
     // Cargar datos del vehículo cuando se abra el modal
     useEffect(() => {
         if (vehicle && open) {
-            console.log('📝 Cargando vehículo para edición:', vehicle)
+            console.log('📝 Cargando vehículo COMPLETO para edición:', vehicle)
             console.log('📝 Campos específicos del vehículo:')
             console.log('  - vehicle.marca:', vehicle.marca)
             console.log('  - vehicle.modelo:', vehicle.modelo)
             console.log('  - vehicle.version:', vehicle.version)
             console.log('  - vehicle.estado_codigo:', vehicle.estado_codigo)
             console.log('  - vehicle.modelo_autos:', vehicle.modelo_autos)
+            console.log('📝 Campos específicos del vendedor:')
+            console.log('  - vehicle.vendedor_nombre:', vehicle.vendedor_nombre)
+            console.log('  - vehicle.vendedor_apellido:', vehicle.vendedor_apellido)
+            console.log('  - vehicle.vendedor_telefono:', vehicle.vendedor_telefono)
+            console.log('  - vehicle.vendedor_email:', vehicle.vendedor_email)
+            console.log('  - vehicle.contacto_nombre:', vehicle.contacto_nombre)
+            console.log('  - vehicle.contacto_telefono:', vehicle.contacto_telefono)
+            console.log('  - vehicle.contacto_email:', vehicle.contacto_email)
             if (vehicle.modelo_autos) {
                 console.log('  - vehicle.modelo_autos.marca:', vehicle.modelo_autos.marca)
                 console.log('  - vehicle.modelo_autos.modelo:', vehicle.modelo_autos.modelo)
                 console.log('  - vehicle.modelo_autos.versión:', vehicle.modelo_autos.versión)
             }
-
-            // Mapear datos del vehículo existente al formato del formulario
+            
+            // Mapear datos del vehículo completo obtenido de la API
             const mappedData = {
-                // Datos básicos
-                marca: vehicle.modelo_autos?.marca || vehicle.marca || '',
-                modelo: vehicle.modelo_autos?.modelo || vehicle.modelo || '',
-                version: vehicle.modelo_autos?.versión || vehicle.version || '',
-                vehiculo_ano: vehicle.vehiculo_ano || vehicle.año || new Date().getFullYear(),
+                // Datos básicos - priorizar datos directos del vehículo
+                marca: vehicle.marca || vehicle.modelo_autos?.marca || '',
+                modelo: vehicle.modelo || vehicle.modelo_autos?.modelo || '',
+                version: vehicle.version || vehicle.modelo_autos?.versión || '',
+                vehiculo_ano: parseInt(vehicle.vehiculo_ano || vehicle.año) || new Date().getFullYear(),
                 patente: vehicle.patente || vehicle.dominio || '',
-                kilometros: vehicle.kilometros || vehicle.kilometraje || 0,
-                valor: vehicle.valor || vehicle.precio || '',
+                kilometros: parseInt(vehicle.kilometros || vehicle.kilometraje) || 0,
+                valor: parseFloat(vehicle.valor || vehicle.precio) || 0,
                 moneda: vehicle.moneda || 'ARS',
                 fecha_ingreso: vehicle.fecha_ingreso ? vehicle.fecha_ingreso.split('T')[0] : new Date().toISOString().split('T')[0],
                 estado_codigo: vehicle.estado_codigo || vehicle.estado || '',
 
-                // Datos del vendedor (intentar extraer de campos existentes)
-                vendedor_nombre: vehicle.vendedor_nombre || vehicle.contacto_nombre || '',
+                // Datos del vendedor - usar todos los campos posibles
+                vendedor_nombre: vehicle.vendedor_nombre || vehicle.contacto_nombre || vehicle.vendedor || '',
                 vendedor_apellido: vehicle.vendedor_apellido || '',
                 vendedor_telefono: vehicle.vendedor_telefono || vehicle.contacto_telefono || '',
                 vendedor_email: vehicle.vendedor_email || vehicle.contacto_email || '',
-                vendedor_direccion: vehicle.vendedor_direccion || '',
+                vendedor_direccion: vehicle.vendedor_direccion || vehicle.direccion || '',
 
-                // Notas
+                // Notas - mapear todos los campos de comentarios/notas
                 pendientes_preparacion: vehicle.pendientes_preparacion || '',
-                comentarios: vehicle.comentarios || vehicle.descripcion || '',
+                comentarios: vehicle.comentarios || vehicle.descripcion || vehicle.notas || '',
                 notas_generales: vehicle.notas_generales || '',
                 notas_mecánicas: vehicle.notas_mecánicas || '',
                 notas_vendedor: vehicle.notas_vendedor || '',
 
-                // Publicaciones (mapear desde campos booleanos existentes si existen)
-                publicar_ml: vehicle.publi_mer_lib || vehicle.publicacion_ml || false,
-                publicar_autoscout: vehicle.publicar_autoscout || false,
-                publicar_karvi: vehicle.publicar_karvi || false,
-                publicar_autocosmos: vehicle.publicar_autocosmos || false,
-                publicaciones: vehicle.publicaciones || []
+                // Publicaciones - mapear desde campos booleanos y arrays
+                publicar_ml: Boolean(vehicle.publi_mer_lib || vehicle.publicacion_ml || vehicle.publicar_ml),
+                publicar_autoscout: Boolean(vehicle.publicar_autoscout),
+                publicar_karvi: Boolean(vehicle.publicar_karvi),
+                publicar_autocosmos: Boolean(vehicle.publicar_autocosmos),
+                publicaciones: Array.isArray(vehicle.publicaciones) ? vehicle.publicaciones : []
             }
 
             console.log('📋 Datos mapeados para edición:', mappedData)
+            console.log('📋 Marca mapeada:', mappedData.marca, '| Tipo:', typeof mappedData.marca)
+            console.log('📋 Modelo mapeado:', mappedData.modelo, '| Tipo:', typeof mappedData.modelo)
+            console.log('📋 Versión mapeada:', mappedData.version, '| Tipo:', typeof mappedData.version)
+            console.log('📋 Estado mapeado:', mappedData.estado_codigo, '| Tipo:', typeof mappedData.estado_codigo)
+            console.log('📋 Vendedor mapeado:')
+            console.log('  - vendedor_nombre:', mappedData.vendedor_nombre, '| Tipo:', typeof mappedData.vendedor_nombre)
+            console.log('  - vendedor_apellido:', mappedData.vendedor_apellido, '| Tipo:', typeof mappedData.vendedor_apellido)
+            console.log('  - vendedor_telefono:', mappedData.vendedor_telefono, '| Tipo:', typeof mappedData.vendedor_telefono)
+            console.log('  - vendedor_email:', mappedData.vendedor_email, '| Tipo:', typeof mappedData.vendedor_email)
+            
             setFormData(mappedData)
             setErrors({})
         }
-    }, [vehicle, open])
-
-    const handleTabChange = (event, newValue) => {
+    }, [vehicle, open])    const handleTabChange = (event, newValue) => {
         setActiveTab(newValue)
     }
 
