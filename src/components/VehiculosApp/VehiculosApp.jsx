@@ -12,6 +12,7 @@ import { VehiclesList } from './VehiclesList';
 import { VehiclesFilters } from './VehiclesFilters';
 import { VehicleModal } from './VehicleModal';
 import AddVehicleModal from './AddVehicleModal';
+import EditVehicleModal from './EditVehicleModal';
 import { VehiclesPagination } from './VehiclesPagination';
 
 // Icons
@@ -38,6 +39,7 @@ export const VehiculosApp = () => {
     const [selectedVehicle, setSelectedVehicle] = useState(null);
     const [showModal, setShowModal] = useState(false);
     const [showAddModal, setShowAddModal] = useState(false);
+    const [showEditModal, setShowEditModal] = useState(false);
 
     // Estados para opciones de filtros
     const [marcasModelos, setMarcasModelos] = useState([])
@@ -250,7 +252,101 @@ export const VehiculosApp = () => {
     // Editar vehículo
     const handleEditVehicle = (vehicle) => {
         setSelectedVehicle(vehicle);
-        setShowModal(true);
+        setShowEditModal(true);
+    };
+
+    // Actualizar vehículo existente
+    const handleUpdateVehicle = async (vehicleData) => {
+        try {
+            setLoading(true);
+
+            console.log('✏️ Datos recibidos del modal de edición:', vehicleData);
+
+            // Obtener la empresa del usuario logueado
+            const empresaUsuario = user?.empresa;
+            if (!empresaUsuario) {
+                showDialog({
+                    title: 'Error',
+                    content: 'No se pudo obtener la información de la empresa del usuario. Verifique que esté correctamente autenticado.',
+                    variant: 'error'
+                });
+                setLoading(false);
+                return;
+            }
+
+            // Estructurar datos para actualización
+            const apiPayload = {
+                // ID del vehículo para actualizar
+                id: vehicleData.id,
+                
+                // Datos del vehículo
+                marca: vehicleData.marca,
+                modelo: vehicleData.modelo,
+                version: vehicleData.version || '',
+                vehiculo_ano: vehicleData.vehiculo_ano,
+                patente: vehicleData.patente,
+                kilometros: vehicleData.kilometros || 0,
+                valor: vehicleData.valor,
+                moneda: vehicleData.moneda || 'ARS',
+                fecha_ingreso: vehicleData.fecha_ingreso,
+                estado_codigo: vehicleData.estado_codigo,
+
+                // Datos de la empresa
+                empresa_id: empresaUsuario.id,
+
+                // Datos del vendedor
+                vendedor_nombre: vehicleData.vendedor_nombre,
+                vendedor_apellido: vehicleData.vendedor_apellido,
+                vendedor_telefono: vehicleData.vendedor_telefono,
+                vendedor_email: vehicleData.vendedor_email,
+
+                // Notas
+                pendientes_preparacion: vehicleData.pendientes_preparacion || '',
+                comentarios: vehicleData.comentarios || '',
+
+                // Publicaciones procesadas
+                publicaciones: vehicleData.publicaciones || []
+            };
+
+            console.log('📤 Datos estructurados para actualización:', apiPayload);
+
+            // Llamada a la API para actualizar
+            const response = await vehiculosService.updateVehiculo(vehicleData.id, apiPayload);
+
+            console.log('📥 Respuesta de la API de actualización:', response);
+
+            if (response.success) {
+                // Mostrar mensaje de éxito con Snackbar verde
+                const mensaje = `✏️ Vehículo ${apiPayload.marca} ${apiPayload.modelo} ${apiPayload.version || ''} (${apiPayload.patente}) actualizado exitosamente`;
+
+                enqueueSnackbar(mensaje, {
+                    variant: 'success',
+                    autoHideDuration: 5000,
+                    anchorOrigin: {
+                        vertical: 'top',
+                        horizontal: 'right'
+                    }
+                });
+
+                // Recargar datos después de actualizar el vehículo
+                await fetchVehiculos();
+
+                // Cerrar el modal automáticamente
+                setShowEditModal(false);
+                setSelectedVehicle(null);
+            } else {
+                throw new Error(response.message || 'Error al actualizar el vehículo');
+            }
+
+        } catch (error) {
+            console.error('❌ Error al actualizar vehículo:', error);
+            console.error('❌ Stack trace completo:', error.stack);
+
+            // Re-lanzar el error para que EditVehicleModal lo maneje
+            throw error;
+        } finally {
+            setLoading(false);
+        }
     };
 
     // Crear nuevo vehículo
@@ -502,6 +598,19 @@ export const VehiculosApp = () => {
                     open={showAddModal}
                     onClose={() => setShowAddModal(false)}
                     onSave={handleCreateVehicle}
+                />
+            )}
+
+            {/* Edit Vehicle Modal */}
+            {showEditModal && (
+                <EditVehicleModal
+                    open={showEditModal}
+                    onClose={() => {
+                        setShowEditModal(false);
+                        setSelectedVehicle(null);
+                    }}
+                    onSave={handleUpdateVehicle}
+                    vehicle={selectedVehicle}
                 />
             )}
         </Container>
