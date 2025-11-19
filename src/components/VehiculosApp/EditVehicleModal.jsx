@@ -67,6 +67,17 @@ const EditVehicleModal = ({ open, onClose, onSave, vehicle }) => {
     useEffect(() => {
         if (vehicle && open) {
             console.log('📝 Cargando vehículo para edición:', vehicle)
+            console.log('📝 Campos específicos del vehículo:')
+            console.log('  - vehicle.marca:', vehicle.marca)
+            console.log('  - vehicle.modelo:', vehicle.modelo)
+            console.log('  - vehicle.version:', vehicle.version)
+            console.log('  - vehicle.estado_codigo:', vehicle.estado_codigo)
+            console.log('  - vehicle.modelo_autos:', vehicle.modelo_autos)
+            if (vehicle.modelo_autos) {
+                console.log('  - vehicle.modelo_autos.marca:', vehicle.modelo_autos.marca)
+                console.log('  - vehicle.modelo_autos.modelo:', vehicle.modelo_autos.modelo)
+                console.log('  - vehicle.modelo_autos.versión:', vehicle.modelo_autos.versión)
+            }
 
             // Mapear datos del vehículo existente al formato del formulario
             const mappedData = {

@@ -59,6 +59,32 @@ const VehicleBasicDataTab = ({ data, errors, onChange }) => {
         loadVersiones(data.marca, data.modelo)
     }, [data.marca, data.modelo])
 
+    // 🔄 NUEVO: Manejar carga inicial de datos en modo edición
+    useEffect(() => {
+        // Si hay datos de marca prellenados (modo edición), asegurarse de cargar las opciones
+        if (data.marca && marcasOptions.length > 0) {
+            // Si la marca no está en las opciones, agregarla
+            if (!marcasOptions.includes(data.marca)) {
+                console.log('🔄 Agregando marca faltante a opciones:', data.marca)
+                setMarcasOptions(prev => [...prev, data.marca])
+            }
+        }
+    }, [data.marca, marcasOptions])
+
+    useEffect(() => {
+        // Si hay datos de modelo prellenados (modo edición), asegurarse de cargar las opciones  
+        if (data.modelo && data.marca) {
+            if (modelosOptions.length === 0) {
+                // Si no hay modelos cargados, cargarlos
+                loadModelos(data.marca)
+            } else if (!modelosOptions.includes(data.modelo)) {
+                // Si el modelo no está en las opciones, agregarlo
+                console.log('🔄 Agregando modelo faltante a opciones:', data.modelo)
+                setModelosOptions(prev => [...prev, data.modelo])
+            }
+        }
+    }, [data.modelo, data.marca, modelosOptions])
+
     const loadEstados = async () => {
         setLoadingEstados(true)
         console.log('🔄 Cargando estados desde API...')
@@ -73,13 +99,15 @@ const VehicleBasicDataTab = ({ data, errors, onChange }) => {
                 console.log('✅ Estados encontrados en response.estados:', response.estados.length, 'estados')
                 setEstadosOptions(response.estados)
 
-                // Establecer DISPONIBLE como valor por defecto si no hay estado seleccionado
+                // Establecer DISPONIBLE como valor por defecto SOLO si no hay estado seleccionado Y no hay datos prellenados
                 if (!data.estado_codigo) {
                     const estadoDisponible = response.estados.find(e => e.codigo === 'DISPONIBLE')
                     if (estadoDisponible) {
-                        console.log('🎯 Estableciendo DISPONIBLE como estado por defecto')
+                        console.log('🎯 Estableciendo DISPONIBLE como estado por defecto (modo creación)')
                         handleFieldChange('estado_codigo', 'DISPONIBLE')
                     }
+                } else {
+                    console.log('🔄 Estado ya prellenado en modo edición:', data.estado_codigo)
                 }
             } else {
                 console.warn('⚠️ Respuesta de estados no válida:', response)
@@ -188,8 +216,11 @@ const VehicleBasicDataTab = ({ data, errors, onChange }) => {
                         onChange={(event, newValue) => {
                             handleFieldChange('marca', newValue || '')
                         }}
-                        onInputChange={(event, newInputValue) => {
-                            handleFieldChange('marca', newInputValue || '')
+                        onInputChange={(event, newInputValue, reason) => {
+                            // Solo actualizar en 'input', no en 'reset' o 'clear'
+                            if (reason === 'input') {
+                                handleFieldChange('marca', newInputValue || '')
+                            }
                         }}
                         freeSolo
                         loading={loadingMarcas}
@@ -213,11 +244,15 @@ const VehicleBasicDataTab = ({ data, errors, onChange }) => {
                         onChange={(event, newValue) => {
                             handleFieldChange('modelo', newValue || '')
                         }}
-                        onInputChange={(event, newInputValue) => {
-                            handleFieldChange('modelo', newInputValue || '')
+                        onInputChange={(event, newInputValue, reason) => {
+                            // Solo actualizar en 'input', no en 'reset' o 'clear'
+                            if (reason === 'input') {
+                                handleFieldChange('modelo', newInputValue || '')
+                            }
                         }}
                         freeSolo
                         loading={loadingModelos}
+                        disabled={!data.marca} // Deshabilitar hasta que se seleccione marca
                         renderInput={(params) => (
                             <TextField
                                 {...params}
@@ -238,8 +273,11 @@ const VehicleBasicDataTab = ({ data, errors, onChange }) => {
                         onChange={(event, newValue) => {
                             handleFieldChange('version', newValue || '')
                         }}
-                        onInputChange={(event, newInputValue) => {
-                            handleFieldChange('version', newInputValue || '')
+                        onInputChange={(event, newInputValue, reason) => {
+                            // Solo actualizar en 'input', no en 'reset' o 'clear'
+                            if (reason === 'input') {
+                                handleFieldChange('version', newInputValue || '')
+                            }
                         }}
                         freeSolo
                         renderInput={(params) => (
