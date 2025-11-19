@@ -4,6 +4,7 @@ import { useJumboTheme } from '@jumbo/components/JumboTheme/hooks';
 import { useJumboDialog } from '@jumbo/components/JumboDialog/hooks/useJumboDialog';
 import { useAuth } from '../../contexts/AuthContext';
 import vehiculosService from '../../services/api/vehiculosService';
+import estadosService from '../../services/api/estadosService';
 
 // Components
 import { VehiclesList } from './VehiclesList';
@@ -146,7 +147,7 @@ export const VehiculosApp = () => {
         if (!marca || !marcasModelos.length) {
             return []
         }
-        
+
         const marcaData = marcasModelos.find(m => m.marca === marca)
         return marcaData ? marcaData.modelos : []
     }
@@ -254,38 +255,109 @@ export const VehiculosApp = () => {
     const handleCreateVehicle = async (vehicleData) => {
         try {
             setLoading(true);
-            
-            console.log('🚗 Creando vehículo con datos:', vehicleData);
-            
-            // Llamada real a la API
-            const response = await vehiculosService.createVehiculo(vehicleData);
-            
-            if (response.success) {
+
+            console.log('🚗 Datos recibidos del modal:', vehicleData);
+            console.log('🎯 Estado específico recibido:', vehicleData.estado_codigo);
+            console.log('🎯 Tipo del estado:', typeof vehicleData.estado_codigo);
+
+            // Obtener la empresa del usuario logueado
+            const empresaUsuario = user?.empresa;
+            if (!empresaUsuario) {
                 showDialog({
-                    title: 'Éxito',
-                    content: 'Vehículo creado correctamente',
+                    title: 'Error',
+                    content: 'No se pudo obtener la información de la empresa del usuario. Verifique que esté correctamente autenticado.',
+                    variant: 'error'
+                });
+                setLoading(false);
+                return;
+            }
+
+            // Verificar que venga el estado desde el formulario
+            if (!vehicleData.estado_codigo) {
+                showDialog({
+                    title: 'Error',
+                    content: 'El estado del vehículo es requerido. Por favor selecciona un estado.',
+                    variant: 'error'
+                });
+                setLoading(false);
+                return;
+            }
+
+            console.log('📋 Estado del vehículo validado:', vehicleData.estado_codigo)
+
+            // Estructurar datos según lo que espera la API del backend
+            const apiPayload = {
+                // Datos del vehículo
+                marca: vehicleData.marca,
+                modelo: vehicleData.modelo,
+                version: vehicleData.version || '',
+                vehiculo_ano: vehicleData.vehiculo_ano,
+                patente: vehicleData.patente,
+                kilometros: vehicleData.kilometros || 0,
+                valor: vehicleData.valor,
+                moneda: vehicleData.moneda || 'ARS',
+                fecha_ingreso: vehicleData.fecha_ingreso,
+                estado_codigo: vehicleData.estado_codigo, // Usar el estado seleccionado en el formulario
+
+                // Datos de la empresa (ID directo)
+                empresa_id: empresaUsuario.id,
+
+                // Datos del vendedor
+                vendedor_nombre: vehicleData.vendedor_nombre,
+                vendedor_apellido: vehicleData.vendedor_apellido,
+                vendedor_telefono: vehicleData.vendedor_telefono,
+                vendedor_email: vehicleData.vendedor_email,
+
+                // Notas
+                pendientes_preparacion: vehicleData.pendientes_preparacion || '',
+                comentarios: vehicleData.comentarios || '',
+
+                // Publicaciones procesadas
+                publicaciones: vehicleData.publicaciones || []
+            };
+
+            console.log('📤 Datos estructurados para API:', apiPayload);
+
+            // Llamada real a la API
+            const response = await vehiculosService.createVehiculo(apiPayload);
+
+            console.log('📥 Respuesta de la API:', response);
+
+            if (response.success) {
+                // Mostrar mensaje de éxito detallado
+                const vehiculoCreado = response.vehiculo || response.data;
+                const mensaje = vehiculoCreado
+                    ? `El vehículo ${apiPayload.marca} ${apiPayload.modelo} ${apiPayload.version || ''} (${apiPayload.patente}) se creó exitosamente.`
+                    : 'El vehículo se creó correctamente.';
+
+                showDialog({
+                    title: '🎉 Vehículo Creado',
+                    content: mensaje,
                     variant: 'success'
                 });
-                
+
                 // Recargar datos después de crear el vehículo
                 await fetchVehiculos();
+
+                // Cerrar el modal automáticamente
+                setShowAddModal(false);
             } else {
                 throw new Error(response.message || 'Error al crear el vehículo');
             }
-            
+
         } catch (error) {
             console.error('❌ Error al crear vehículo:', error);
-            showDialog({
-                title: 'Error',
-                content: `Error al crear el vehículo: ${error.message}`,
-                variant: 'error'
-            });
+            console.error('❌ Stack trace completo:', error.stack);
+
+            // NO cerrar el modal automáticamente en caso de error
+            // El error se mostrará en el componente AddVehicleModal
+
+            // Re-lanzar el error para que AddVehicleModal lo maneje
+            throw error;
         } finally {
             setLoading(false);
         }
-    };
-
-    // Abrir modal de agregar vehículo
+    };    // Abrir modal de agregar vehículo
     const handleAddVehicle = () => {
         setShowAddModal(true);
     };

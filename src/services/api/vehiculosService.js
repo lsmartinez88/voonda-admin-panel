@@ -1,4 +1,5 @@
-﻿import apiClient from "./apiClient"
+﻿import apiClient, { makeApiRequest } from "./apiClient"
+import estadosService from "./estadosService"
 
 /**
  * Clase que maneja todas las operaciones CRUD de vehículos
@@ -215,9 +216,28 @@ class VehiculosService {
         }
 
         try {
-            console.log("� Creando nuevo vehículo:", vehiculoData)
+            console.log("🚗 Creando nuevo vehículo:", vehiculoData)
+            console.log("🎯 Estado específico en vehiculosService:", vehiculoData.estado_codigo)
+
+            // Verificación adicional del estado antes de enviar
+            if (vehiculoData.estado_codigo) {
+                console.log("🔍 Verificando validez del estado:", vehiculoData.estado_codigo)
+                const estadoValido = await estadosService.isValidEstadoCodigo(vehiculoData.estado_codigo)
+                console.log("✅ ¿Estado válido?", estadoValido)
+                if (!estadoValido) {
+                    console.warn(`⚠️ Estado ${vehiculoData.estado_codigo} no válido, obteniendo estado por defecto`)
+                    vehiculoData.estado_codigo = await estadosService.getEstadoDefault()
+                    console.log(`✅ Estado corregido a: ${vehiculoData.estado_codigo}`)
+                }
+            }
+
+            console.log("📤 Payload final a enviar:", vehiculoData)
+            console.log("📤 Payload JSON stringificado:", JSON.stringify(vehiculoData, null, 2))
+            console.log("📤 URL del endpoint:", "/api/vehiculos")
 
             const response = await apiClient.post("/api/vehiculos", vehiculoData)
+
+            console.log("📥 Respuesta del backend:", response)
 
             return {
                 success: true,
@@ -226,10 +246,15 @@ class VehiculosService {
             }
         } catch (error) {
             console.error("❌ Error al crear vehículo:", error)
+            console.error("❌ Error response status:", error.response?.status)
+            console.error("❌ Error response data:", error.response?.data)
+            console.error("❌ Error response headers:", error.response?.headers)
+            console.error("❌ Error message:", error.message)
 
             if (error.response?.status === 400) {
                 const details = error.response?.data?.details || []
                 const errorMessage = details.length > 0 ? details.map((d) => d.message).join(", ") : error.response?.data?.message
+                console.error("❌ Detalles del error 400:", errorMessage)
                 throw new Error(errorMessage || "Datos del vehículo inválidos")
             }
 
@@ -699,8 +724,18 @@ class VehiculosService {
         const currentYear = new Date().getFullYear()
 
         // Validaciones requeridas según la API
-        if (!vehiculoData.modelo_id) {
+        // Nota: Enviamos nombres de marca y modelo, no IDs
+        if (!vehiculoData.marca) {
+            errors.push("La marca es requerida")
+        }
+
+        if (!vehiculoData.modelo) {
             errors.push("El modelo es requerido")
+        }
+
+        // Validación de empresa (requerida por el backend)
+        if (!vehiculoData.empresa_id) {
+            errors.push("La empresa es requerida")
         }
 
         if (!vehiculoData.vehiculo_ano || vehiculoData.vehiculo_ano < 1950 || vehiculoData.vehiculo_ano > currentYear + 1) {

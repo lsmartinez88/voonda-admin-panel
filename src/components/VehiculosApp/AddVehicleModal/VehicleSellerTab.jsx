@@ -22,7 +22,7 @@ const VehicleSellerTab = ({ data, errors, onChange }) => {
     const formatPhoneNumber = (value) => {
         // Eliminar todos los caracteres no numéricos excepto +
         const cleaned = value.replace(/[^\d+]/g, '')
-        
+
         // Si empieza con +54, formatear como teléfono argentino
         if (cleaned.startsWith('+54')) {
             const numbers = cleaned.slice(3)
@@ -31,7 +31,7 @@ const VehicleSellerTab = ({ data, errors, onChange }) => {
             if (numbers.length <= 8) return `+54 ${numbers.slice(0, 2)} ${numbers.slice(2, 4)} ${numbers.slice(4)}`
             return `+54 ${numbers.slice(0, 2)} ${numbers.slice(2, 4)} ${numbers.slice(4, 8)}-${numbers.slice(8, 12)}`
         }
-        
+
         return cleaned
     }
 
@@ -52,9 +52,9 @@ const VehicleSellerTab = ({ data, errors, onChange }) => {
                         error={!!errors.vendedor_nombre}
                         helperText={errors.vendedor_nombre}
                         placeholder="Ej: Juan"
-                        inputProps={{ 
+                        inputProps={{
                             maxLength: 50,
-                            minLength: 2 
+                            minLength: 2
                         }}
                     />
                 </Grid>
@@ -69,9 +69,9 @@ const VehicleSellerTab = ({ data, errors, onChange }) => {
                         error={!!errors.vendedor_apellido}
                         helperText={errors.vendedor_apellido}
                         placeholder="Ej: Pérez"
-                        inputProps={{ 
+                        inputProps={{
                             maxLength: 50,
-                            minLength: 2 
+                            minLength: 2
                         }}
                     />
                 </Grid>
@@ -89,9 +89,9 @@ const VehicleSellerTab = ({ data, errors, onChange }) => {
                         error={!!errors.vendedor_telefono}
                         helperText={errors.vendedor_telefono || 'Formato: +54 9 11 1234-5678'}
                         placeholder="+54 9 11 1234-5678"
-                        inputProps={{ 
+                        inputProps={{
                             maxLength: 20,
-                            minLength: 8 
+                            minLength: 8
                         }}
                     />
                 </Grid>
@@ -107,7 +107,7 @@ const VehicleSellerTab = ({ data, errors, onChange }) => {
                         error={!!errors.vendedor_email}
                         helperText={errors.vendedor_email}
                         placeholder="juan.perez@email.com"
-                        inputProps={{ 
+                        inputProps={{
                             maxLength: 100
                         }}
                     />

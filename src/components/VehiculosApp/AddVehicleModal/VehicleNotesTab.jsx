@@ -32,7 +32,7 @@ const VehicleNotesTab = ({ data, errors, onChange }) => {
                         onChange={(e) => handleFieldChange('pendientes_preparacion', e.target.value)}
                         error={!!errors.pendientes_preparacion}
                         helperText={
-                            errors.pendientes_preparacion || 
+                            errors.pendientes_preparacion ||
                             `${(data.pendientes_preparacion || '').length}/2000 caracteres`
                         }
                         placeholder="Describe las tareas pendientes para preparar el vehículo para la venta...
@@ -44,7 +44,7 @@ Ejemplos:
 - Limpieza profunda interior y exterior
 - Verificación de documentación
 - Cambio de cubiertas"
-                        inputProps={{ 
+                        inputProps={{
                             maxLength: 2000
                         }}
                         sx={{
@@ -67,7 +67,7 @@ Ejemplos:
                         onChange={(e) => handleFieldChange('comentarios', e.target.value)}
                         error={!!errors.comentarios}
                         helperText={
-                            errors.comentarios || 
+                            errors.comentarios ||
                             `${(data.comentarios || '').length}/2000 caracteres`
                         }
                         placeholder="Agrega cualquier comentario adicional sobre el vehículo...
@@ -79,7 +79,7 @@ Ejemplos:
 - Información del propietario anterior
 - Observaciones sobre el estado general
 - Precio negociable / condiciones de financiamiento"
-                        inputProps={{ 
+                        inputProps={{
                             maxLength: 2000
                         }}
                         sx={{

@@ -28,7 +28,7 @@ import {
 } from '@mui/icons-material'
 
 const VehiclePublicationsTab = ({ data, errors, onChange }) => {
-    
+
     const plataformaOptions = [
         { value: 'web', label: 'Web', icon: <WebIcon sx={{ fontSize: 16 }} /> },
         { value: 'facebook', label: 'Facebook', icon: <FacebookIcon sx={{ fontSize: 16 }} /> },
@@ -92,11 +92,11 @@ const VehiclePublicationsTab = ({ data, errors, onChange }) => {
             </Box>
 
             {(!data.publicaciones || data.publicaciones.length === 0) && (
-                <Box 
-                    sx={{ 
-                        p: 4, 
-                        textAlign: 'center', 
-                        backgroundColor: 'grey.50', 
+                <Box
+                    sx={{
+                        p: 4,
+                        textAlign: 'center',
+                        backgroundColor: 'grey.50',
                         borderRadius: 2,
                         border: '2px dashed',
                         borderColor: 'grey.300'
@@ -122,15 +122,15 @@ const VehiclePublicationsTab = ({ data, errors, onChange }) => {
                             <CardContent>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <Chip 
-                                            label={`Publicación #${index + 1}`} 
-                                            size="small" 
-                                            color="primary" 
+                                        <Chip
+                                            label={`Publicación #${index + 1}`}
+                                            size="small"
+                                            color="primary"
                                             variant="outlined"
                                         />
-                                        <Chip 
-                                            label={getPlataformaDisplay(publicacion)} 
-                                            size="small" 
+                                        <Chip
+                                            label={getPlataformaDisplay(publicacion)}
+                                            size="small"
                                             color={publicacion.activo ? 'success' : 'default'}
                                         />
                                     </Box>
