@@ -26,102 +26,44 @@ const VehicleBasicDataTab = ({ data, errors, onChange }) => {
     const [loadingMarcas, setLoadingMarcas] = useState(false)
     const [loadingModelos, setLoadingModelos] = useState(false)
     const [loadingEstados, setLoadingEstados] = useState(false)
+    
+    // 🔧 ESTADO LOCAL para campos que se resetean
+    const [localVersion, setLocalVersion] = useState('')
 
-        // 🔍 DEBUG: Log de datos recibidos
+    // 🔍 DEBUG: Log de datos recibidos (solo cuando cambian los datos)
     useEffect(() => {
-        console.log('🔍 VehicleBasicDataTab - data recibido:', data)
-        console.log('🔍 VehicleBasicDataTab - marca:', data?.marca, '| tipo:', typeof data?.marca, '| valor válido:', Boolean(data?.marca && data.marca !== ''))
-        console.log('🔍 VehicleBasicDataTab - modelo:', data?.modelo, '| tipo:', typeof data?.modelo, '| valor válido:', Boolean(data?.modelo && data.modelo !== ''))
-        console.log('🔍 VehicleBasicDataTab - version:', data?.version, '| tipo:', typeof data?.version, '| valor válido:', Boolean(data?.version && data.version !== ''))
-        console.log('🔍 VehicleBasicDataTab - estado_codigo:', data?.estado_codigo, '| tipo:', typeof data?.estado_codigo, '| valor válido:', Boolean(data?.estado_codigo && data.estado_codigo !== ''))
-        console.log('🔍 VehicleBasicDataTab - otros campos clave:', {
+        console.log('🔍 VehicleBasicDataTab - data recibido:', {
+            marca: data?.marca,
+            modelo: data?.modelo,
+            version: data?.version,
+            estado_codigo: data?.estado_codigo,
             vehiculo_ano: data?.vehiculo_ano,
             patente: data?.patente,
-            kilometros: data?.kilometros,
-            valor: data?.valor,
-            moneda: data?.moneda,
-            fecha_ingreso: data?.fecha_ingreso
+            valor: data?.valor
         })
+    }, [data])
 
-        // 🎯 NUEVO: Debug específico para los valores de Autocomplete
-        console.log('🎯 DEBUG AUTOCOMPLETE:')
-        console.log('  - data.marca:', `"${data?.marca}"`, '| length:', data?.marca?.length)
-        console.log('  - data.modelo:', `"${data?.modelo}"`, '| length:', data?.modelo?.length)
-        console.log('  - data.version:', `"${data?.version}"`, '| length:', data?.version?.length)
-        console.log('  - marcasOptions:', marcasOptions)
-        console.log('  - modelosOptions:', modelosOptions) 
-        console.log('  - versionesOptions:', versionesOptions)
-    }, [data, marcasOptions, modelosOptions, versionesOptions])
-
-    // 🚀 NUEVO: Cargar opciones inmediatamente al recibir datos (modo edición)
+    // 🔄 Cargar opciones cuando se monta el componente
     useEffect(() => {
-        if (data.marca || data.modelo || data.version) {
-            console.log('🔄 Datos iniciales detectados - Cargando opciones para modo edición')
-            console.log('  - Marca inicial:', data.marca)
-            console.log('  - Modelo inicial:', data.modelo) 
-            console.log('  - Versión inicial:', data.version)
-            
-            // Cargar marcas si aún no están cargadas
-            if (marcasOptions.length === 0) {
-                loadMarcas()
-            }
-            
-            // Cargar modelos si hay marca
-            if (data.marca && modelosOptions.length === 0) {
-                loadModelos(data.marca)
-            }
-            
-            // Cargar versiones si hay marca y modelo
-            if (data.marca && data.modelo && versionesOptions.length === 0) {
-                loadVersiones(data.marca, data.modelo)
-            }
-        }
-    }, [data.marca, data.modelo, data.version, marcasOptions.length, modelosOptions.length, versionesOptions.length])
+        loadMarcas()
+        loadEstados()
+    }, [])
 
-    // 🎯 NUEVO: Efecto para verificar si los valores están en las opciones después de cargar
+    // 🎯 Cargar modelos cuando cambia la marca
     useEffect(() => {
         if (data.marca && marcasOptions.length > 0) {
-            const marcaEncontrada = marcasOptions.includes(data.marca)
-            console.log('🔍 Verificando marca en opciones:', data.marca, 'encontrada:', marcaEncontrada)
-            if (!marcaEncontrada) {
-                console.log('⚠️ Marca no encontrada en opciones, agregándola:', data.marca)
-                setMarcasOptions(prev => {
-                    if (!prev.includes(data.marca)) {
-                        return [data.marca, ...prev]
-                    }
-                    return prev
-                })
-            }
+            loadModelos(data.marca)
         }
+    }, [data.marca, marcasOptions.length])
 
-        if (data.modelo && modelosOptions.length > 0 && data.marca) {
-            const modeloEncontrado = modelosOptions.includes(data.modelo)
-            console.log('🔍 Verificando modelo en opciones:', data.modelo, 'encontrado:', modeloEncontrado)
-            if (!modeloEncontrado) {
-                console.log('⚠️ Modelo no encontrado en opciones, agregándolo:', data.modelo)
-                setModelosOptions(prev => {
-                    if (!prev.includes(data.modelo)) {
-                        return [data.modelo, ...prev]
-                    }
-                    return prev
-                })
-            }
+    // 🎯 Cargar versiones cuando cambia el modelo
+    useEffect(() => {
+        if (data.marca && data.modelo) {
+            loadVersiones(data.marca, data.modelo)
         }
+    }, [data.marca, data.modelo])
 
-        if (data.version && versionesOptions.length > 0) {
-            const versionEncontrada = versionesOptions.includes(data.version)
-            console.log('🔍 Verificando versión en opciones:', data.version, 'encontrada:', versionEncontrada)
-            if (!versionEncontrada) {
-                console.log('⚠️ Versión no encontrada en opciones, agregándola:', data.version)
-                setVersionesOptions(prev => {
-                    if (!prev.includes(data.version)) {
-                        return [data.version, ...prev]
-                    }
-                    return prev
-                })
-            }
-        }
-    }, [data.marca, data.modelo, data.version, marcasOptions, modelosOptions, versionesOptions])    // Generar años desde 1970 hasta año actual + 2
+    // Generar años desde 1970 hasta año actual + 2
     const currentYear = new Date().getFullYear()
     const añosOptions = []
     for (let year = currentYear + 2; year >= 1970; year--) {
@@ -133,69 +75,9 @@ const VehicleBasicDataTab = ({ data, errors, onChange }) => {
         { value: 'USD', label: 'USD - Dólar Estadounidense' }
     ]
 
-    // Cargar marcas al inicializar
-    useEffect(() => {
-        loadMarcas()
-        loadEstados()
-    }, [])
 
-    // Cargar modelos cuando cambia la marca
-    useEffect(() => {
-        if (data.marca) {
-            console.log('🔄 Marca cambió, cargando modelos para:', data.marca)
-            loadModelos(data.marca)
-        } else {
-            setModelosOptions([])
-            setVersionesOptions([])
-        }
-    }, [data.marca])
 
-    // Cargar versiones cuando cambia el modelo
-    useEffect(() => {
-        if (data.marca && data.modelo) {
-            console.log('🔄 Modelo cambió, cargando versiones para:', data.marca, data.modelo)
-            loadVersiones(data.marca, data.modelo)
-        } else {
-            setVersionesOptions([])
-        }
-    }, [data.marca, data.modelo])
 
-    // 🔄 MEJORADO: Asegurar que los valores actuales estén en las opciones
-    useEffect(() => {
-        if (data.marca && marcasOptions.length > 0) {
-            const marcaExists = marcasOptions.some(marca =>
-                typeof marca === 'string' ? marca === data.marca : marca.nombre === data.marca
-            )
-            if (!marcaExists) {
-                console.log('🔄 Agregando marca faltante a opciones:', data.marca)
-                setMarcasOptions(prev => [...prev, data.marca])
-            }
-        }
-    }, [data.marca, marcasOptions])
-
-    useEffect(() => {
-        if (data.modelo && modelosOptions.length > 0 && data.marca) {
-            const modeloExists = modelosOptions.some(modelo =>
-                typeof modelo === 'string' ? modelo === data.modelo : modelo.nombre === data.modelo
-            )
-            if (!modeloExists) {
-                console.log('🔄 Agregando modelo faltante a opciones:', data.modelo)
-                setModelosOptions(prev => [...prev, data.modelo])
-            }
-        }
-    }, [data.modelo, modelosOptions, data.marca])
-
-    useEffect(() => {
-        if (data.version && versionesOptions.length > 0 && data.marca && data.modelo) {
-            const versionExists = versionesOptions.some(version =>
-                typeof version === 'string' ? version === data.version : version.nombre === data.version
-            )
-            if (!versionExists) {
-                console.log('🔄 Agregando versión faltante a opciones:', data.version)
-                setVersionesOptions(prev => [...prev, data.version])
-            }
-        }
-    }, [data.version, versionesOptions, data.marca, data.modelo])
 
     const loadEstados = async () => {
         setLoadingEstados(true)
@@ -211,16 +93,8 @@ const VehicleBasicDataTab = ({ data, errors, onChange }) => {
                 console.log('✅ Estados encontrados en response.estados:', response.estados.length, 'estados')
                 setEstadosOptions(response.estados)
 
-                // Establecer DISPONIBLE como valor por defecto SOLO si no hay estado seleccionado Y no hay datos prellenados
-                if (!data.estado_codigo) {
-                    const estadoDisponible = response.estados.find(e => e.codigo === 'DISPONIBLE')
-                    if (estadoDisponible) {
-                        console.log('🎯 Estableciendo DISPONIBLE como estado por defecto (modo creación)')
-                        handleFieldChange('estado_codigo', 'DISPONIBLE')
-                    }
-                } else {
-                    console.log('🔄 Estado ya prellenado en modo edición:', data.estado_codigo)
-                }
+                // NO establecer estado automáticamente en modo edición
+                console.log('✅ Estados cargados, esperando selección manual del usuario')
             } else {
                 console.warn('⚠️ Respuesta de estados no válida:', response)
             }
@@ -235,9 +109,7 @@ const VehicleBasicDataTab = ({ data, errors, onChange }) => {
             }]
             console.log('🔄 Usando estados de fallback:', fallbackEstados)
             setEstadosOptions(fallbackEstados)
-            if (!data.estado_codigo) {
-                handleFieldChange('estado_codigo', 'DISPONIBLE')
-            }
+            console.log('✅ Estados fallback cargados, esperando selección manual')
         } finally {
             setLoadingEstados(false)
         }
@@ -252,24 +124,13 @@ const VehicleBasicDataTab = ({ data, errors, onChange }) => {
                     typeof marca === 'string' ? marca : marca.nombre || marca.marca
                 )
 
-                // Asegurar que la marca actual esté en las opciones (modo edición)
-                if (data.marca && !marcas.includes(data.marca)) {
-                    console.log('🔄 Incluyendo marca actual en opciones:', data.marca)
-                    marcas.unshift(data.marca) // Agregar al principio
-                }
-
+                // Las opciones se cargarán completas y luego se incluirá la marca actual si es necesario
                 setMarcasOptions(marcas)
-                console.log('✅ Marcas cargadas:', marcas.length, 'marcas. Marca actual:', data.marca)
+                console.log('✅ Marcas cargadas:', marcas.length, 'marcas')
             }
         } catch (error) {
             console.error('Error cargando marcas:', error)
             const fallbackMarcas = ['Toyota', 'Honda', 'Ford', 'Chevrolet', 'Volkswagen', 'Nissan']
-
-            // Incluir marca actual en fallback también
-            if (data.marca && !fallbackMarcas.includes(data.marca)) {
-                fallbackMarcas.unshift(data.marca)
-            }
-
             setMarcasOptions(fallbackMarcas)
         } finally {
             setLoadingMarcas(false)
@@ -285,24 +146,13 @@ const VehicleBasicDataTab = ({ data, errors, onChange }) => {
                     typeof modelo === 'string' ? modelo : modelo.modelo || modelo.nombre
                 )
 
-                // Asegurar que el modelo actual esté en las opciones (modo edición)
-                if (data.modelo && data.marca === marca && !modelos.includes(data.modelo)) {
-                    console.log('🔄 Incluyendo modelo actual en opciones:', data.modelo)
-                    modelos.unshift(data.modelo) // Agregar al principio
-                }
-
+                // Las opciones se cargarán y luego el Autocomplete mostrará el valor actual
                 setModelosOptions(modelos)
-                console.log('✅ Modelos cargados para', marca, ':', modelos.length, 'modelos. Modelo actual:', data.modelo)
+                console.log('✅ Modelos cargados para', marca, ':', modelos.length, 'modelos')
             }
         } catch (error) {
             console.error('Error cargando modelos:', error)
-            // Si hay un modelo actual y coincide la marca, incluirlo en las opciones vacías
-            const fallbackModelos = []
-            if (data.modelo && data.marca === marca) {
-                fallbackModelos.push(data.modelo)
-                console.log('🔄 Usando modelo actual como fallback:', data.modelo)
-            }
-            setModelosOptions(fallbackModelos)
+            setModelosOptions([]) // Opciones vacías en caso de error
         } finally {
             setLoadingModelos(false)
         }
@@ -318,21 +168,50 @@ const VehicleBasicDataTab = ({ data, errors, onChange }) => {
             'Electric', 'Diesel', 'Turbo', 'AWD', '4WD', '2WD'
         ]
 
-        // Asegurar que la versión actual esté en las opciones (modo edición)
-        if (data.version && !versionesGenericas.includes(data.version)) {
-            console.log('🔄 Incluyendo versión actual en opciones:', data.version)
-            versionesGenericas.unshift(data.version) // Agregar al principio
-        }
-
+        // Las versiones genéricas siempre estarán disponibles
         setVersionesOptions(versionesGenericas)
-        console.log('✅ Versiones cargadas:', versionesGenericas.length, 'versiones. Versión actual:', data.version)
+        console.log('✅ Versiones cargadas:', versionesGenericas.length, 'versiones')
     }
 
     const handleFieldChange = (field, value) => {
         console.log(`🔄 Campo cambiado: ${field} = ${value}`)
+
+        // Validación específica de patente
+        if (field === 'patente' && value) {
+            const patenteValidada = validatePatente(value)
+            console.log(`🔍 Validación de patente: ${value} -> válida: ${patenteValidada.isValid}`, patenteValidada.error || '')
+        }
+
         onChange({
             [field]: value
         })
+    }
+
+    // Función para validar formato de patente argentina
+    const validatePatente = (patente) => {
+        if (!patente || patente.trim() === '') {
+            return { isValid: false, error: 'Patente es requerida' }
+        }
+
+        const patenteClean = patente.trim().toUpperCase().replace(/[\s-]/g, '') // Remover espacios y guiones
+
+        // Formato viejo: ABC123 (3 letras + 3 números)
+        const formatoViejo = /^[A-Z]{3}[0-9]{3}$/
+
+        // Formato nuevo: AB123CD (2 letras + 3 números + 2 letras)  
+        const formatoNuevo = /^[A-Z]{2}[0-9]{3}[A-Z]{2}$/
+
+        // Formato mercosur: AB123CD (similar al nuevo)
+        const formatoMercosur = /^[A-Z]{2}[0-9]{3}[A-Z]{2}$/
+
+        if (formatoViejo.test(patenteClean) || formatoNuevo.test(patenteClean) || formatoMercosur.test(patenteClean)) {
+            return { isValid: true }
+        }
+
+        return {
+            isValid: false,
+            error: 'Formato inválido. Use ABC123 (viejo) o AB123CD (nuevo)'
+        }
     }
 
     const handleDateChange = (event) => {
@@ -491,8 +370,8 @@ const VehicleBasicDataTab = ({ data, errors, onChange }) => {
                         value={data.patente || ''}
                         onChange={(e) => handleFieldChange('patente', e.target.value.toUpperCase())}
                         error={!!errors.patente}
-                        helperText={errors.patente}
-                        placeholder="ABC123"
+                        helperText={errors.patente || 'Formato: ABC123 o AB123CD'}
+                        placeholder="ABC123 o AB123CD"
                         inputProps={{ maxLength: 15 }}
                     />
                 </Grid>

@@ -341,7 +341,7 @@ export const VehiculosApp = () => {
                 // ID del vehículo para actualizar
                 id: vehicleData.id,
 
-                // Datos del vehículo
+                // Datos del vehículo (para crear/actualizar modelo si es necesario)
                 marca: vehicleData.marca,
                 modelo: vehicleData.modelo,
                 version: vehicleData.version || '',
@@ -361,16 +361,40 @@ export const VehiculosApp = () => {
                 vendedor_apellido: vehicleData.vendedor_apellido,
                 vendedor_telefono: vehicleData.vendedor_telefono,
                 vendedor_email: vehicleData.vendedor_email,
+                vendedor_direccion: vehicleData.vendedor_direccion,
 
-                // Notas
+                // Notas y observaciones
                 pendientes_preparacion: vehicleData.pendientes_preparacion || '',
                 comentarios: vehicleData.comentarios || '',
+                notas_generales: vehicleData.notas_generales || '',
+                notas_mecánicas: vehicleData.notas_mecánicas || '',
+                notas_vendedor: vehicleData.notas_vendedor || '',
 
                 // Publicaciones procesadas
                 publicaciones: vehicleData.publicaciones || []
             };
 
             console.log('📤 Datos estructurados para actualización:', apiPayload);
+            console.log('🔍 Campos críticos:');
+            console.log('  - ID:', apiPayload.id);
+            console.log('  - Marca:', apiPayload.marca);
+            console.log('  - Modelo:', apiPayload.modelo);
+            console.log('  - Versión:', apiPayload.version);
+            console.log('  - Estado:', apiPayload.estado_codigo);
+            console.log('  - 🚨 PATENTE DEBUG:', {
+                valor: apiPayload.patente,
+                tipo: typeof apiPayload.patente,
+                longitud: apiPayload.patente?.length,
+                esValido: apiPayload.patente && apiPayload.patente.trim().length > 0,
+                caracteresEspeciales: apiPayload.patente ? /[^A-Z0-9\s]/g.test(apiPayload.patente) : false,
+                regex: apiPayload.patente ? apiPayload.patente.replace(/[^A-Z0-9]/g, '') : null
+            });
+            console.log('  - Vendedor:', {
+                nombre: apiPayload.vendedor_nombre,
+                apellido: apiPayload.vendedor_apellido,
+                telefono: apiPayload.vendedor_telefono,
+                email: apiPayload.vendedor_email
+            });
 
             // Llamada a la API para actualizar
             const response = await vehiculosService.updateVehiculo(vehicleData.id, apiPayload);
@@ -394,8 +418,8 @@ export const VehiculosApp = () => {
                 await fetchVehiculos();
 
                 // Cerrar el modal automáticamente
-                setShowEditModal(false);
-                setSelectedVehicle(null);
+                setEditModalOpen(false);
+                setEditingVehicle(null);
             } else {
                 throw new Error(response.message || 'Error al actualizar el vehículo');
             }
