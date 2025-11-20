@@ -5,6 +5,7 @@ import {
     Typography,
     Box
 } from '@mui/material'
+import ArrayStringField from '../ArrayStringField'
 
 const VehicleNotesTab = ({ data, errors, onChange }) => {
 
@@ -23,36 +24,16 @@ const VehicleNotesTab = ({ data, errors, onChange }) => {
             <Grid container spacing={3}>
                 {/* Pendientes de Preparación */}
                 <Grid item xs={12}>
-                    <TextField
-                        fullWidth
-                        multiline
-                        rows={6}
+                    <ArrayStringField
                         label="Pendientes de Preparación"
-                        value={data.pendientes_preparacion || ''}
-                        onChange={(e) => handleFieldChange('pendientes_preparacion', e.target.value)}
-                        error={!!errors.pendientes_preparacion}
+                        value={data.pendientes_preparacion || []}
+                        onChange={(newArray) => handleFieldChange('pendientes_preparacion', newArray)}
+                        placeholder="Ej: Revisión mecánica completa, Cambio de aceite y filtros..."
                         helperText={
                             errors.pendientes_preparacion ||
-                            `${(data.pendientes_preparacion || '').length}/2000 caracteres`
+                            "Agregue las tareas pendientes para preparar el vehículo. Cada elemento será una tarea específica."
                         }
-                        placeholder="Describe las tareas pendientes para preparar el vehículo para la venta...
-
-Ejemplos:
-- Revisión mecánica completa
-- Cambio de aceite y filtros
-- Reparación de rayones en carrocería
-- Limpieza profunda interior y exterior
-- Verificación de documentación
-- Cambio de cubiertas"
-                        inputProps={{
-                            maxLength: 2000
-                        }}
-                        sx={{
-                            '& .MuiInputBase-input': {
-                                fontSize: '0.95rem',
-                                lineHeight: 1.5
-                            }
-                        }}
+                        error={!!errors.pendientes_preparacion}
                     />
                 </Grid>
 

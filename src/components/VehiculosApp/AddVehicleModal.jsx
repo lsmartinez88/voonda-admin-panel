@@ -42,7 +42,7 @@ const AddVehicleModal = ({ open, onClose, onSave }) => {
         vendedor_email: '',
 
         // Notas y comentarios
-        pendientes_preparacion: '',
+        pendientes_preparacion: [], // ✅ Array de strings
         comentarios: '',
 
         // Publicaciones
@@ -102,7 +102,7 @@ const AddVehicleModal = ({ open, onClose, onSave }) => {
             vendedor_apellido: apellido,
             vendedor_telefono: telefono,
             vendedor_email: email,
-            pendientes_preparacion: Math.random() > 0.7 ? 'Revisar documentación y realizar service completo' : '',
+            pendientes_preparacion: Math.random() > 0.7 ? ['Revisar documentación', 'Realizar service completo'] : [],
             comentarios: Math.random() > 0.6 ? `Vehículo en excelente estado. ${Math.random() > 0.5 ? 'Un solo dueño.' : 'Service al día.'}` : '',
             publicaciones: []
         }
@@ -132,7 +132,7 @@ const AddVehicleModal = ({ open, onClose, onSave }) => {
             vendedor_telefono: '123', // ❌ TELÉFONO MUY CORTO
             vendedor_email: 'email-invalido', // ❌ EMAIL SIN FORMATO VÁLIDO
 
-            pendientes_preparacion: '',
+            pendientes_preparacion: [], // ✅ Array vacío para datos inválidos
             comentarios: 'Datos para probar validación de errores',
             publicaciones: []
         }
@@ -309,7 +309,7 @@ const AddVehicleModal = ({ open, onClose, onSave }) => {
                     vendedor_apellido: '',
                     vendedor_telefono: '',
                     vendedor_email: '',
-                    pendientes_preparacion: '',
+                    pendientes_preparacion: [], // ✅ Reset como array
                     comentarios: '',
                     publicaciones: []
                 })

@@ -322,7 +322,13 @@ export const VehiculosApp = () => {
         try {
             setLoading(true);
 
-            console.log('✏️ Datos recibidos del modal de edición:', vehicleData);
+            console.log('✏️ Actualizando vehículo ID:', vehicleData.id);
+            console.log('🚗 Datos principales:', {
+                marca: apiPayload.marca,
+                modelo: apiPayload.modelo,
+                patente: apiPayload.patente,
+                pendientes_count: Array.isArray(vehicleData.pendientes_preparacion) ? vehicleData.pendientes_preparacion.length : 0
+            });
 
             // Obtener la empresa del usuario logueado
             const empresaUsuario = user?.empresa;
@@ -363,8 +369,10 @@ export const VehiculosApp = () => {
                 vendedor_email: vehicleData.vendedor_email,
                 vendedor_direccion: vehicleData.vendedor_direccion,
 
-                // Notas y observaciones
-                pendientes_preparacion: vehicleData.pendientes_preparacion || '',
+                // Notas y observaciones - convertir array a string para backend
+                pendientes_preparacion: Array.isArray(vehicleData.pendientes_preparacion)
+                    ? vehicleData.pendientes_preparacion.filter(item => item && item.trim()).join('\n')
+                    : (vehicleData.pendientes_preparacion || ''),
                 comentarios: vehicleData.comentarios || '',
                 notas_generales: vehicleData.notas_generales || '',
                 notas_mecánicas: vehicleData.notas_mecánicas || '',
@@ -374,32 +382,12 @@ export const VehiculosApp = () => {
                 publicaciones: vehicleData.publicaciones || []
             };
 
-            console.log('📤 Datos estructurados para actualización:', apiPayload);
-            console.log('🔍 Campos críticos:');
-            console.log('  - ID:', apiPayload.id);
-            console.log('  - Marca:', apiPayload.marca);
-            console.log('  - Modelo:', apiPayload.modelo);
-            console.log('  - Versión:', apiPayload.version);
-            console.log('  - Estado:', apiPayload.estado_codigo);
-            console.log('  - 🚨 PATENTE DEBUG:', {
-                valor: apiPayload.patente,
-                tipo: typeof apiPayload.patente,
-                longitud: apiPayload.patente?.length,
-                esValido: apiPayload.patente && apiPayload.patente.trim().length > 0,
-                caracteresEspeciales: apiPayload.patente ? /[^A-Z0-9\s]/g.test(apiPayload.patente) : false,
-                regex: apiPayload.patente ? apiPayload.patente.replace(/[^A-Z0-9]/g, '') : null
-            });
-            console.log('  - Vendedor:', {
-                nombre: apiPayload.vendedor_nombre,
-                apellido: apiPayload.vendedor_apellido,
-                telefono: apiPayload.vendedor_telefono,
-                email: apiPayload.vendedor_email
-            });
+
 
             // Llamada a la API para actualizar
             const response = await vehiculosService.updateVehiculo(vehicleData.id, apiPayload);
 
-            console.log('📥 Respuesta de la API de actualización:', response);
+            console.log('✅ Vehículo actualizado exitosamente');
 
             if (response.success) {
                 // Mostrar mensaje de éxito con Snackbar verde
@@ -440,9 +428,12 @@ export const VehiculosApp = () => {
         try {
             setLoading(true);
 
-            console.log('🚗 Datos recibidos del modal:', vehicleData);
-            console.log('🎯 Estado específico recibido:', vehicleData.estado_codigo);
-            console.log('🎯 Tipo del estado:', typeof vehicleData.estado_codigo);
+            console.log('🚗 Creando vehículo:', {
+                marca: apiPayload.marca,
+                modelo: apiPayload.modelo,
+                patente: apiPayload.patente,
+                pendientes_count: Array.isArray(vehicleData.pendientes_preparacion) ? vehicleData.pendientes_preparacion.length : 0
+            })
 
             // Obtener la empresa del usuario logueado
             const empresaUsuario = user?.empresa;
@@ -492,23 +483,26 @@ export const VehiculosApp = () => {
                 vendedor_telefono: vehicleData.vendedor_telefono,
                 vendedor_email: vehicleData.vendedor_email,
 
-                // Notas
-                pendientes_preparacion: vehicleData.pendientes_preparacion || '',
+                // Notas - convertir array a string para backend
+                pendientes_preparacion: Array.isArray(vehicleData.pendientes_preparacion)
+                    ? vehicleData.pendientes_preparacion.filter(item => item && item.trim()).join('\n')
+                    : (vehicleData.pendientes_preparacion || ''),
                 comentarios: vehicleData.comentarios || '',
 
                 // Publicaciones procesadas
                 publicaciones: vehicleData.publicaciones || []
             };
 
+
+
             console.log('📤 Datos estructurados para API:', apiPayload);
 
             // Llamada real a la API
             const response = await vehiculosService.createVehiculo(apiPayload);
 
-            console.log('📥 Respuesta de la API:', response);
+            console.log('✅ Vehículo creado exitosamente');
 
             if (response.success) {
-                // Mostrar mensaje de éxito con Snackbar verde que dura 5 segundos
                 const vehiculoCreado = response.vehiculo || response.data;
                 const mensaje = vehiculoCreado
                     ? `🎉 Vehículo ${apiPayload.marca} ${apiPayload.modelo} ${apiPayload.version || ''} (${apiPayload.patente}) creado exitosamente`

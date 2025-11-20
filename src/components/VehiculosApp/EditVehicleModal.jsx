@@ -48,7 +48,7 @@ const EditVehicleModal = ({ open, onClose, onSave, vehicle }) => {
         vendedor_direccion: '',
 
         // Notas
-        pendientes_preparacion: '',
+        pendientes_preparacion: [], // ✅ Array de strings
         comentarios: '',
         notas_generales: '',
         notas_mecánicas: '',
@@ -69,31 +69,28 @@ const EditVehicleModal = ({ open, onClose, onSave, vehicle }) => {
     // useEffect para cargar datos del vehículo (solo una vez al abrir)
     useEffect(() => {
         if (vehicle && open && !isInitialized) {
-            console.log('📝 Inicializando vehículo para edición (primera vez):', vehicle)
-            console.log('📝 Tipo de datos recibidos:', typeof vehicle)
-            console.log('📝 ¿Es objeto vehículo?', vehicle && typeof vehicle === 'object')
-
             // 🔒 VALIDACIÓN: Verificar que el vehículo no sea null/undefined
             if (!vehicle || typeof vehicle !== 'object') {
                 console.error('❌ ERROR: Vehicle es null, undefined o no es un objeto:', vehicle)
                 return
             }
 
-            // 🚨 NUEVO: Mostrar TODOS los campos del objeto vehículo
-            console.log('🔍 TODOS LOS CAMPOS DEL VEHÍCULO:')
-            console.log('📊 Object.keys(vehicle):', Object.keys(vehicle))
-
             // 🔧 CORRECCIÓN: Extraer el vehículo real de la respuesta de la API
             let vehicleToProcess = vehicle
 
             // Si viene en formato de respuesta de API, extraer el vehículo
             if (vehicle.success && vehicle.vehiculo) {
-                console.log('🔧 Detectada respuesta de API, extrayendo vehicle.vehiculo')
                 vehicleToProcess = vehicle.vehiculo
             } else if (vehicle.data) {
-                console.log('🔧 Detectada estructura con data, extrayendo vehicle.data')
                 vehicleToProcess = vehicle.data
             }
+
+            console.log('📝 Inicializando edición vehículo:', {
+                id: vehicleToProcess.id,
+                marca: vehicleToProcess.marca,
+                modelo: vehicleToProcess.modelo,
+                patente: vehicleToProcess.patente
+            })
 
             // 🔒 VALIDACIÓN: Verificar que el vehículo procesado no sea null
             if (!vehicleToProcess || typeof vehicleToProcess !== 'object') {
@@ -104,50 +101,7 @@ const EditVehicleModal = ({ open, onClose, onSave, vehicle }) => {
             // Guardar en el estado para uso posterior
             setActualVehicle(vehicleToProcess)
 
-            console.log('✅ Vehículo final a procesar:', vehicleToProcess)
-            console.log('📊 Object.keys(vehicleToProcess):', Object.keys(vehicleToProcess))
 
-            // Verificar si tenemos datos completos o básicos
-            const isFullVehicleData = vehicleToProcess.modelo_autos || vehicleToProcess.vendedor_nombre || vehicleToProcess.vendedor_email;
-            console.log('📝 ¿Datos completos?', isFullVehicleData ? 'SÍ' : 'NO - Datos básicos de lista');
-
-            console.log('📝 Campos disponibles del vehículo:')
-            console.log('  - vehicleToProcess.id:', vehicleToProcess.id)
-            console.log('  - vehicleToProcess.marca:', `"${vehicleToProcess.marca}"`, '| tipo:', typeof vehicleToProcess.marca, '| length:', vehicleToProcess.marca?.length)
-            console.log('  - vehicleToProcess.modelo:', `"${vehicleToProcess.modelo}"`, '| tipo:', typeof vehicleToProcess.modelo, '| length:', vehicleToProcess.modelo?.length)
-            console.log('  - vehicleToProcess.version:', `"${vehicleToProcess.version}"`, '| tipo:', typeof vehicleToProcess.version, '| length:', vehicleToProcess.version?.length)
-            console.log('  - vehicleToProcess.estado_codigo:', `"${vehicleToProcess.estado_codigo}"`, '| tipo:', typeof vehicleToProcess.estado_codigo)
-
-            // 🎯 ESTRUCTURA CORRECTA: objeto modelo anidado
-            console.log('🎯 actualVehicle?.modelo (objeto anidado):', actualVehicle?.modelo)
-            if (actualVehicle?.modelo) {
-                console.log('    ✅ actualVehicle.modelo.marca:', `"${actualVehicle.modelo.marca}"`, '| tipo:', typeof actualVehicle.modelo.marca)
-                console.log('    ✅ actualVehicle.modelo.modelo:', `"${actualVehicle.modelo.modelo}"`, '| tipo:', typeof actualVehicle.modelo.modelo)
-                console.log('    ✅ actualVehicle.modelo.version:', `"${actualVehicle.modelo.version}"`, '| tipo:', typeof actualVehicle.modelo.version)
-            }
-
-            // 🎯 ESTRUCTURA CORRECTA: objeto estado anidado  
-            console.log('🎯 actualVehicle?.estado (objeto anidado):', actualVehicle?.estado)
-            if (actualVehicle?.estado) {
-                console.log('    ✅ actualVehicle.estado.codigo:', `"${actualVehicle.estado.codigo}"`, '| tipo:', typeof actualVehicle.estado.codigo)
-                console.log('    ✅ actualVehicle.estado.nombre:', `"${actualVehicle.estado.nombre}"`, '| tipo:', typeof actualVehicle.estado.nombre)
-            }
-
-            // 🎯 ESTRUCTURA CORRECTA: objeto vendedor anidado
-            console.log('🎯 actualVehicle?.vendedor (objeto anidado):', actualVehicle?.vendedor)
-            if (actualVehicle?.vendedor) {
-                console.log('    ✅ actualVehicle.vendedor.nombre:', `"${actualVehicle.vendedor.nombre}"`, '| tipo:', typeof actualVehicle.vendedor.nombre)
-                console.log('    ✅ actualVehicle.vendedor.apellido:', `"${actualVehicle.vendedor.apellido}"`, '| tipo:', typeof actualVehicle.vendedor.apellido)
-                console.log('    ✅ actualVehicle.vendedor.telefono:', `"${actualVehicle.vendedor.telefono}"`, '| tipo:', typeof actualVehicle.vendedor.telefono)
-                console.log('    ✅ actualVehicle.vendedor.email:', `"${actualVehicle.vendedor.email}"`, '| tipo:', typeof actualVehicle.vendedor.email)
-            }
-
-            console.log('📝 Compatibilidad con estructura anterior:')
-            console.log('  - actualVehicle?.modelo_autos:', actualVehicle?.modelo_autos)
-            console.log('  - actualVehicle?.vendedor_nombre:', actualVehicle?.vendedor_nombre)
-            console.log('  - actualVehicle?.vendedor_apellido:', actualVehicle?.vendedor_apellido)
-            console.log('  - actualVehicle?.vendedor_telefono:', actualVehicle?.vendedor_telefono)
-            console.log('  - actualVehicle?.vendedor_email:', actualVehicle?.vendedor_email)
 
             try {
                 // Función helper para extraer valores de forma segura
@@ -212,13 +166,31 @@ const EditVehicleModal = ({ open, onClose, onSave, vehicle }) => {
                         safeExtract(actualVehicle.direccion) || '',
 
                     // Notas - mapear todos los campos de comentarios/notas
-                    pendientes_preparacion: safeExtract(actualVehicle.pendientes_preparacion) || '',
+                    pendientes_preparacion: (() => {
+                        // El campo puede venir como array o string desde el backend
+                        const pendientes = actualVehicle.pendientes_preparacion ||
+                            actualVehicle.pendientes ||
+                            actualVehicle.notas_preparacion ||
+                            actualVehicle.preparacion_pendiente ||
+                            actualVehicle.pendiente_preparacion ||
+                            actualVehicle.pendientes_de_preparacion ||
+                            actualVehicle.notas_pendientes ||
+                            actualVehicle.preparacion ||
+                            actualVehicle.pendientes_prep ||
+                            actualVehicle.prep_pendientes;
+
+                        console.log('📝 Pendientes procesados:', processedItems.length, 'elementos');
+                        if (processedItems.length > 0) {
+                            console.log('  - Items:', processedItems);
+                        }
+                        return [];
+                    })(),
                     comentarios: safeExtract(actualVehicle.comentarios) || safeExtract(actualVehicle.descripcion) || safeExtract(actualVehicle.notas) || '',
                     notas_generales: safeExtract(actualVehicle.notas_generales) || '',
                     notas_mecánicas: safeExtract(actualVehicle.notas_mecánicas) || '',
                     notas_vendedor: safeExtract(actualVehicle.notas_vendedor) || '',
 
-                    // Publicaciones - mapear desde campos booleanos y arrays
+                    // 🔍 DEBUG: Log de publicaciones recibidas
                     publicar_ml: Boolean(actualVehicle.publi_mer_lib || actualVehicle.publicacion_ml || actualVehicle.publicar_ml),
                     publicar_autoscout: Boolean(actualVehicle.publicar_autoscout),
                     publicar_karvi: Boolean(actualVehicle.publicar_karvi),
@@ -226,16 +198,13 @@ const EditVehicleModal = ({ open, onClose, onSave, vehicle }) => {
                     publicaciones: Array.isArray(actualVehicle.publicaciones) ? actualVehicle.publicaciones : []
                 }
 
-                console.log('📋 Datos mapeados exitosamente:', mappedData)
-                console.log('📋 Marca final:', mappedData.marca, '| Tipo:', typeof mappedData.marca)
-                console.log('📋 Modelo final:', mappedData.modelo, '| Tipo:', typeof mappedData.modelo)
-                console.log('📋 Versión final:', mappedData.version, '| Tipo:', typeof mappedData.version)
-                console.log('📋 Estado final:', mappedData.estado_codigo, '| Tipo:', typeof mappedData.estado_codigo)
-                console.log('📋 Vendedor final:', {
-                    nombre: mappedData.vendedor_nombre,
-                    apellido: mappedData.vendedor_apellido,
-                    telefono: mappedData.vendedor_telefono,
-                    email: mappedData.vendedor_email
+                console.log('📋 Vehículo mapeado:', {
+                    id: vehicleToProcess.id,
+                    marca: mappedData.marca,
+                    modelo: mappedData.modelo,
+                    version: mappedData.version,
+                    estado: mappedData.estado_codigo,
+                    pendientes_count: mappedData.pendientes_preparacion?.length || 0
                 })
 
                 setFormData(mappedData)
@@ -288,7 +257,8 @@ const EditVehicleModal = ({ open, onClose, onSave, vehicle }) => {
         // Validaciones básicas
         if (!formData.marca?.trim()) newErrors.marca = 'Marca es requerida'
         if (!formData.modelo?.trim()) newErrors.modelo = 'Modelo es requerido'
-        if (!formData.version?.trim()) newErrors.version = 'Versión es requerida'
+        // Versión es opcional - si se proporciona, debe ser válida
+        // if (!formData.version?.trim()) newErrors.version = 'Versión es requerida' // ❌ REMOVIDO - es opcional
         if (!formData.vehiculo_ano || formData.vehiculo_ano < 1970 || formData.vehiculo_ano > 2026) {
             newErrors.vehiculo_ano = 'Año debe estar entre 1970 y 2026'
         }
@@ -361,40 +331,44 @@ const EditVehicleModal = ({ open, onClose, onSave, vehicle }) => {
                     throw new Error('No se pudo determinar el ID del vehículo para la actualización')
                 }
 
-                // 🚫 EXCLUSIONES: Preparar datos excluyendo campos específicos
-                const { pendientes_preparacion, publicaciones, ...dataWithoutExcludedFields } = formData
+                // ✅ INCLUIR TODO: No excluir ningún campo específico
+                console.log('✅ Todos los campos se incluirán en la actualización:')
+                console.log('  - pendientes_preparacion (array):', Array.isArray(formData.pendientes_preparacion) ? formData.pendientes_preparacion.length : 0, 'elementos')
+                console.log('  - Tipo de pendientes_preparacion:', typeof formData.pendientes_preparacion)
+                console.log('  - Contenido pendientes_preparacion:', formData.pendientes_preparacion)
+                console.log('  - publicaciones:', formData.publicaciones?.length || 0, 'publicaciones')
 
-                console.log('🚫 Campos excluidos de la actualización:')
-                console.log('  - pendientes_preparacion:', pendientes_preparacion)
-                console.log('  - publicaciones (cantidad):', publicaciones?.length || 0)
+                // 🔧 PROCESAMIENTO: pendientes_preparacion convertir array a string para backend
+                const processedPendientes = Array.isArray(formData.pendientes_preparacion)
+                    ? formData.pendientes_preparacion.filter(item =>
+                        item &&
+                        typeof item === 'string' &&
+                        item.trim().length > 0
+                    ).join('\n')
+                    : (formData.pendientes_preparacion || '')
 
-                // 🔧 DEBUG VERSIÓN: Ver valor exacto antes de validar
-                console.log('🔍 DEBUG VERSION - formData.version:')
-                console.log('  - Valor:', `"${formData.version}"`)
-                console.log('  - Tipo:', typeof formData.version)
-                console.log('  - Length:', formData.version?.length)
-                console.log('  - Trim result:', formData.version ? `"${formData.version.trim()}"` : 'N/A')
-                console.log('  - Is empty after trim:', !formData.version || formData.version.trim() === '')
+                console.log('💾 Guardando vehículo ID:', vehicleId);
+                console.log('📋 Pendientes procesados:', Array.isArray(formData.pendientes_preparacion) ? formData.pendientes_preparacion.length : 0, 'elementos');
 
                 // 🔧 VERSIÓN: Incluir solo si tiene valor válido
                 const dataToSave = {
-                    ...dataWithoutExcludedFields,
-                    id: vehicleId // Usar el ID verificado
+                    ...formData, // ✅ Incluir todos los campos base
+                    pendientes_preparacion: processedPendientes, // ✅ Convertido a string para backend
+                    publicaciones: processedPublications, // ✅ Publicaciones procesadas
+                    id: vehicleId // ✅ ID verificado
                 }
 
-                // Solo incluir versión si tiene un valor válido (no vacío, no null, no undefined)
-                if (formData.version && formData.version.trim() !== '') {
-                    dataToSave.version = formData.version.trim()
-                    console.log('✅ Versión incluida en actualización:', dataToSave.version)
+                // Remover version si está vacía
+                if (!formData.version || formData.version.trim() === '') {
+                    delete dataToSave.version
                 } else {
-                    console.log('🚫 Versión excluida (vacía o inválida):', formData.version)
+                    dataToSave.version = formData.version.trim()
                 }
 
-                console.log('📤 Enviando datos de actualización al padre (sin campos excluidos):', dataToSave)
+                console.log('📤 Enviando actualización...');
 
-                await onSave(dataToSave)
-
-                console.log('✅ onSave ejecutado correctamente')
+                await onSave(dataToSave);
+                console.log('✅ Vehículo actualizado exitosamente');
 
                 // Cerrar modal tras éxito
                 setActiveTab(0)
