@@ -26,7 +26,7 @@ const VehicleBasicDataTab = ({ data, errors, onChange }) => {
     const [loadingMarcas, setLoadingMarcas] = useState(false)
     const [loadingModelos, setLoadingModelos] = useState(false)
     const [loadingEstados, setLoadingEstados] = useState(false)
-    
+
     // 🔧 ESTADO LOCAL para campos que se resetean
     const [localVersion, setLocalVersion] = useState('')
 
@@ -42,6 +42,14 @@ const VehicleBasicDataTab = ({ data, errors, onChange }) => {
             valor: data?.valor
         })
     }, [data])
+
+    // 🔧 SINCRONIZACIÓN: Inicializar estado local solo una vez con datos iniciales
+    useEffect(() => {
+        if (data?.version && localVersion === '') {
+            console.log('🔄 Inicializando localVersion con valor inicial:', data.version)
+            setLocalVersion(data.version)
+        }
+    }, [data?.version, localVersion])
 
     // 🔄 Cargar opciones cuando se monta el componente
     useEffect(() => {
@@ -311,14 +319,21 @@ const VehicleBasicDataTab = ({ data, errors, onChange }) => {
                 <Grid item xs={12} md={4}>
                     <Autocomplete
                         options={versionesOptions}
-                        value={data.version || null}
+                        value={localVersion || null}
                         onChange={(event, newValue) => {
-                            console.log('🔄 Versión seleccionada desde lista:', newValue)
-                            handleFieldChange('version', newValue || '')
+                            const versionValue = newValue || ''
+                            console.log('🔄 Versión seleccionada desde lista:', versionValue)
+                            setLocalVersion(versionValue) // Actualizar estado local
+                            handleFieldChange('version', versionValue) // Notificar al padre
+                        }}
+                        onInputChange={(event, newInputValue) => {
+                            console.log('🔄 Versión escrita manualmente:', newInputValue)
+                            setLocalVersion(newInputValue) // Actualizar estado local mientras escribe
+                            handleFieldChange('version', newInputValue) // Notificar al padre
                         }}
                         freeSolo
                         selectOnFocus
-                        clearOnBlur
+                        clearOnBlur={false} // ⚡ NO limpiar al perder foco
                         handleHomeEndKeys
                         getOptionLabel={(option) => {
                             return typeof option === 'string' ? option : (option?.version || option?.nombre || '')
