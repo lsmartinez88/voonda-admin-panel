@@ -104,19 +104,35 @@ export const VehiclesList = ({
                     <FormControl size="small" sx={{ minWidth: 180 }}>
                         <InputLabel>Ordenar por</InputLabel>
                         <Select
-                            value={`${filters?.orderBy || 'created_at'}_${filters?.order || 'desc'}`}
+                            value={(() => {
+                                const orderBy = filters?.orderBy || 'created_at'
+                                const order = filters?.order || 'desc'
+                                const combinedValue = `${orderBy}_${order}`
+
+                                // Validar que el valor existe en las opciones disponibles
+                                const validValues = [
+                                    'created_at_desc', 'created_at_asc',
+                                    'valor_asc', 'valor_desc',
+                                    'ano_desc', 'ano_asc',
+                                    'kilometros_asc', 'kilometros_desc'
+                                ]
+
+                                return validValues.includes(combinedValue) ? combinedValue : 'created_at_desc'
+                            })()}
                             label="Ordenar por"
                             onChange={(e) => {
                                 const [orderBy, order] = e.target.value.split('_')
-                                onFiltersChange({ ...filters, orderBy, order })
+                                if (orderBy && order) {
+                                    onFiltersChange({ ...filters, orderBy, order })
+                                }
                             }}
                         >
                             <MenuItem value="created_at_desc">Más recientes</MenuItem>
                             <MenuItem value="created_at_asc">Más antiguos</MenuItem>
                             <MenuItem value="valor_asc">Precio menor</MenuItem>
                             <MenuItem value="valor_desc">Precio mayor</MenuItem>
-                            <MenuItem value="vehiculo_ano_desc">Año más nuevo</MenuItem>
-                            <MenuItem value="vehiculo_ano_asc">Año más viejo</MenuItem>
+                            <MenuItem value="ano_desc">Año más nuevo</MenuItem>
+                            <MenuItem value="ano_asc">Año más viejo</MenuItem>
                             <MenuItem value="kilometros_asc">Menos kilómetros</MenuItem>
                             <MenuItem value="kilometros_desc">Más kilómetros</MenuItem>
                         </Select>

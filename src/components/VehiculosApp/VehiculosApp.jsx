@@ -54,7 +54,7 @@ export const VehiculosApp = () => {
         modelo: '',
         año: '',
         estado: '',
-        sortBy: 'fecha_ingreso',
+        orderBy: 'created_at',
         order: 'desc',
         page: 1,
         limit: 12
@@ -65,7 +65,8 @@ export const VehiculosApp = () => {
         try {
             setLoading(true);
 
-            console.log('🔍 Buscando vehículos con opciones:', filters);
+            console.log('🔍 Buscando vehículos con filtros:', filters);
+            console.log('📋 Ordenamiento actual:', { orderBy: filters.orderBy, order: filters.order });
 
             const response = await vehiculosService.getVehiculos(filters);
 
@@ -323,12 +324,6 @@ export const VehiculosApp = () => {
             setLoading(true);
 
             console.log('✏️ Actualizando vehículo ID:', vehicleData.id);
-            console.log('🚗 Datos principales:', {
-                marca: apiPayload.marca,
-                modelo: apiPayload.modelo,
-                patente: apiPayload.patente,
-                pendientes_count: Array.isArray(vehicleData.pendientes_preparacion) ? vehicleData.pendientes_preparacion.length : 0
-            });
 
             // Obtener la empresa del usuario logueado
             const empresaUsuario = user?.empresa;
@@ -382,7 +377,13 @@ export const VehiculosApp = () => {
                 publicaciones: vehicleData.publicaciones || []
             };
 
-
+            console.log('🚗 Datos principales a actualizar:', {
+                id: apiPayload.id,
+                marca: apiPayload.marca,
+                modelo: apiPayload.modelo,
+                patente: apiPayload.patente,
+                pendientes_count: Array.isArray(vehicleData.pendientes_preparacion) ? vehicleData.pendientes_preparacion.length : 0
+            });
 
             // Llamada a la API para actualizar
             const response = await vehiculosService.updateVehiculo(vehicleData.id, apiPayload);

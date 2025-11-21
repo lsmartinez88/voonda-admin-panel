@@ -101,6 +101,33 @@ class VehiculosService {
                             params.append("search", value)
                             console.log("🔍 Búsqueda enviada:", value)
                             break
+                        case "orderBy":
+                            // Mapear campos de ordenamiento según la documentación
+                            const orderByMapping = {
+                                fecha_ingreso: "created_at",
+                                created: "created_at",
+                                created_at: "created_at",
+                                ano: "ano",
+                                vehiculo: "ano",
+                                vehiculo_ano: "ano",
+                                valor: "valor",
+                                kilometros: "kilometros"
+                            }
+                            const mappedOrderBy = orderByMapping[value] || value
+
+                            // Validar que el campo mapeado sea uno de los permitidos
+                            const validOrderByFields = ["created_at", "ano", "valor", "kilometros"]
+                            const finalOrderBy = validOrderByFields.includes(mappedOrderBy) ? mappedOrderBy : "created_at"
+
+                            params.append("orderBy", finalOrderBy)
+                            console.log("📋 OrderBy mapeado:", value, "->", finalOrderBy)
+                            break
+                        case "order":
+                            // Validar que sea 'asc' o 'desc'
+                            const validOrder = ["asc", "desc"].includes(value?.toLowerCase()) ? value.toLowerCase() : "desc"
+                            params.append("order", validOrder)
+                            console.log("📋 Order enviado:", validOrder)
+                            break
                         case "año":
                             // Mapear a 'ano' según la documentación de la API
                             params.append("ano", value)
@@ -661,8 +688,14 @@ class VehiculosService {
             // Intento 2: Extraer años desde vehículos existentes
             try {
                 console.log("📅 Extrayendo años desde vehículos existentes")
-                const vehiculosResponse = await apiClient.get("/api/vehiculos?limit=200")
-                const vehiculos = vehiculosResponse.vehiculos || vehiculosResponse.data || []
+                // Usar los mismos parámetros que funcionan en getVehiculos
+                const vehiculosResponse = await this.getVehiculos({
+                    limit: 200,
+                    orderBy: "created_at",
+                    order: "desc",
+                    page: 1
+                })
+                const vehiculos = vehiculosResponse.vehiculos || []
 
                 const añosSet = new Set()
                 vehiculos.forEach((vehiculo) => {

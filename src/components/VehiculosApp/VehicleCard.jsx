@@ -4,6 +4,9 @@ import { Box, Typography, IconButton, Chip, Avatar, Menu, MenuItem, ListItemIcon
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
+import CommentIcon from '@mui/icons-material/Comment'
+import NoteIcon from '@mui/icons-material/Note'
+import BuildIcon from '@mui/icons-material/Build'
 
 // Función para obtener avatar de marca
 const getBrandLogo = (marca) => {
@@ -397,14 +400,177 @@ const VehicleCard = ({ vehiculo, onEdit, onDelete }) => {
                 )}
             </Box>
 
-            {/* Footer */}
-            <Box sx={{ pt: 2, borderTop: 1, borderColor: 'divider' }}>
-                <Typography variant='caption' color='text.secondary' sx={{ display: 'block', mb: 0.5 }}>
-                    ID: {vehiculo.id}
-                </Typography>
-                <Typography variant='caption' color='text.secondary' sx={{ display: 'block' }}>
-                    Voonda Admin
-                </Typography>
+            {/* Footer con iconos informativos */}
+            <Box sx={{
+                pt: 2,
+                borderTop: 1,
+                borderColor: 'divider',
+                display: 'flex',
+                justifyContent: 'flex-start', // Alineados a la izquierda
+                gap: 1
+            }}>
+                {/* Icono de Comentarios - Siempre visible */}
+                <Tooltip
+                    title={
+                        <Box sx={{ maxWidth: 300, p: 1 }}>
+                            <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                                Comentarios Adicionales
+                            </Typography>
+                            <Typography variant="body2">
+                                {(vehiculo.comentarios || vehiculo.descripcion)
+                                    ? (vehiculo.comentarios || vehiculo.descripcion)
+                                    : 'Sin comentarios'
+                                }
+                            </Typography>
+                        </Box>
+                    }
+                    arrow
+                    placement="top"
+                >
+                    <IconButton
+                        size="small"
+                        sx={{
+                            color: (vehiculo.comentarios || vehiculo.descripcion) 
+                                ? '#5DADE2' // Azul más fuerte cuando tiene datos
+                                : '#D1D5DB', // Gris más suave cuando no tiene datos
+                            '&:hover': { 
+                                color: (vehiculo.comentarios || vehiculo.descripcion)
+                                    ? '#3498DB' // Azul más intenso en hover
+                                    : '#9CA3AF'
+                            }
+                        }}
+                    >
+                        <CommentIcon fontSize="small" />
+                    </IconButton>
+                </Tooltip>
+
+                {/* Icono de Pendientes de Preparación - Siempre visible */}
+                <Tooltip
+                    title={
+                        <Box sx={{ maxWidth: 300, p: 1 }}>
+                            <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                                Pendientes de Preparación
+                            </Typography>
+                            {(() => {
+                                const pendientes = vehiculo.pendientes_preparacion;
+
+                                if (!pendientes) {
+                                    return <Typography variant="body2">Sin pendientes de preparación</Typography>;
+                                }
+
+                                if (Array.isArray(pendientes)) {
+                                    return pendientes.length > 0 ? (
+                                        <Box>
+                                            {pendientes.map((item, index) => (
+                                                <Typography key={index} variant="body2" sx={{ mb: 0.5 }}>
+                                                    • {item}
+                                                </Typography>
+                                            ))}
+                                        </Box>
+                                    ) : (
+                                        <Typography variant="body2">Sin pendientes de preparación</Typography>
+                                    );
+                                }
+
+                                if (typeof pendientes === 'string' && pendientes.trim()) {
+                                    // Dividir por diferentes separadores comunes y también por puntos
+                                    const items = pendientes.split(/[,;\n•-]/).filter(item => item.trim()).map(item => item.trim());
+                                    return items.length > 1 ? (
+                                        <Box>
+                                            {items.map((item, index) => (
+                                                <Typography key={index} variant="body2" sx={{ mb: 0.5 }}>
+                                                    • {item}
+                                                </Typography>
+                                            ))}
+                                        </Box>
+                                    ) : (
+                                        <Typography variant="body2">• {pendientes.trim()}</Typography>
+                                    );
+                                }
+
+                                return <Typography variant="body2">Sin pendientes de preparación</Typography>;
+                            })()}
+                        </Box>
+                    }
+                    arrow
+                    placement="top"
+                >
+                    <IconButton
+                        size="small"
+                        sx={{
+                            color: (() => {
+                                const pendientes = vehiculo.pendientes_preparacion;
+                                const hasPendientes = pendientes && (
+                                    (Array.isArray(pendientes) && pendientes.length > 0) ||
+                                    (typeof pendientes === 'string' && pendientes.trim())
+                                );
+                                return hasPendientes ? '#5DADE2' : '#D1D5DB'; // Azul más fuerte o gris suave
+                            })(),
+                            '&:hover': {
+                                color: (() => {
+                                    const pendientes = vehiculo.pendientes_preparacion;
+                                    const hasPendientes = pendientes && (
+                                        (Array.isArray(pendientes) && pendientes.length > 0) ||
+                                        (typeof pendientes === 'string' && pendientes.trim())
+                                    );
+                                    return hasPendientes ? '#3498DB' : '#9CA3AF';
+                                })()
+                            }
+                        }}
+                    >
+                        <BuildIcon fontSize="small" />
+                    </IconButton>
+                </Tooltip>
+
+                {/* Icono de Notas Generales - Siempre visible */}
+                <Tooltip
+                    title={
+                        <Box sx={{ maxWidth: 300, p: 1 }}>
+                            <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                                Notas del Vehículo
+                            </Typography>
+                            {vehiculo.notas_generales ? (
+                                <Box sx={{ mb: 1 }}>
+                                    <Typography variant="caption" color="text.secondary">Generales:</Typography>
+                                    <Typography variant="body2">{vehiculo.notas_generales}</Typography>
+                                </Box>
+                            ) : null}
+                            {vehiculo.notas_mecánicas ? (
+                                <Box sx={{ mb: 1 }}>
+                                    <Typography variant="caption" color="text.secondary">Mecánicas:</Typography>
+                                    <Typography variant="body2">{vehiculo.notas_mecánicas}</Typography>
+                                </Box>
+                            ) : null}
+                            {vehiculo.notas_vendedor ? (
+                                <Box>
+                                    <Typography variant="caption" color="text.secondary">Del Vendedor:</Typography>
+                                    <Typography variant="body2">{vehiculo.notas_vendedor}</Typography>
+                                </Box>
+                            ) : null}
+                            {!vehiculo.notas_generales && !vehiculo.notas_mecánicas && !vehiculo.notas_vendedor && (
+                                <Typography variant="body2">Sin notas adicionales</Typography>
+                            )}
+                        </Box>
+                    }
+                    arrow
+                    placement="top"
+                >
+                    <IconButton
+                        size="small"
+                        sx={{
+                            color: (vehiculo.notas_generales || vehiculo.notas_mecánicas || vehiculo.notas_vendedor)
+                                ? '#5DADE2' // Azul más fuerte cuando tiene datos
+                                : '#D1D5DB', // Gris más suave cuando no tiene datos
+                            '&:hover': { 
+                                color: (vehiculo.notas_generales || vehiculo.notas_mecánicas || vehiculo.notas_vendedor)
+                                    ? '#3498DB' // Azul más intenso en hover
+                                    : '#9CA3AF'
+                            }
+                        }}
+                    >
+                        <NoteIcon fontSize="small" />
+                    </IconButton>
+                </Tooltip>
             </Box>
         </JumboCard>
     )

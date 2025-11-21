@@ -98,11 +98,6 @@ const EditVehicleModal = ({ open, onClose, onSave, vehicle }) => {
                 return
             }
 
-            // Guardar en el estado para uso posterior
-            setActualVehicle(vehicleToProcess)
-
-
-
             try {
                 // Función helper para extraer valores de forma segura
                 const safeExtract = (value, fallback = '') => {
@@ -115,87 +110,111 @@ const EditVehicleModal = ({ open, onClose, onSave, vehicle }) => {
                 // Mapear datos del vehículo de manera segura
                 const mappedData = {
                     // Datos básicos - usar la estructura correcta de la API
-                    marca: safeExtract(actualVehicle.modelo?.marca) ||
-                        safeExtract(actualVehicle.marca) ||
-                        safeExtract(actualVehicle.modelo_autos?.marca) ||
-                        safeExtract(actualVehicle.modeloAuto?.marca) ||
-                        safeExtract(actualVehicle.marca_nombre) ||
-                        safeExtract(actualVehicle.brand) || '',
+                    marca: safeExtract(vehicleToProcess.modelo?.marca) ||
+                        safeExtract(vehicleToProcess.marca) ||
+                        safeExtract(vehicleToProcess.modelo_autos?.marca) ||
+                        safeExtract(vehicleToProcess.modeloAuto?.marca) ||
+                        safeExtract(vehicleToProcess.marca_nombre) ||
+                        safeExtract(vehicleToProcess.brand) || '',
 
-                    modelo: safeExtract(actualVehicle.modelo?.modelo) ||
-                        safeExtract(actualVehicle.modelo) ||
-                        safeExtract(actualVehicle.modelo_autos?.modelo) ||
-                        safeExtract(actualVehicle.modeloAuto?.modelo) ||
-                        safeExtract(actualVehicle.modelo_nombre) ||
-                        safeExtract(actualVehicle.model) || '',
+                    modelo: safeExtract(vehicleToProcess.modelo?.modelo) ||
+                        safeExtract(vehicleToProcess.modelo) ||
+                        safeExtract(vehicleToProcess.modelo_autos?.modelo) ||
+                        safeExtract(vehicleToProcess.modeloAuto?.modelo) ||
+                        safeExtract(vehicleToProcess.modelo_nombre) ||
+                        safeExtract(vehicleToProcess.model) || '',
 
-                    version: safeExtract(actualVehicle.modelo?.version) ||
-                        safeExtract(actualVehicle.version) ||
-                        safeExtract(actualVehicle.modelo_autos?.versión) ||
-                        safeExtract(actualVehicle.modeloAuto?.versión) ||
-                        safeExtract(actualVehicle.version_nombre) ||
-                        safeExtract(actualVehicle.trim) ||
-                        safeExtract(actualVehicle.variant) || '',
+                    version: safeExtract(vehicleToProcess.modelo?.version) ||
+                        safeExtract(vehicleToProcess.version) ||
+                        safeExtract(vehicleToProcess.modelo_autos?.versión) ||
+                        safeExtract(vehicleToProcess.modeloAuto?.versión) ||
+                        safeExtract(vehicleToProcess.version_nombre) ||
+                        safeExtract(vehicleToProcess.trim) ||
+                        safeExtract(vehicleToProcess.variant) || '',
 
-                    vehiculo_ano: parseInt(safeExtract(actualVehicle.vehiculo_ano) || safeExtract(actualVehicle.año) || safeExtract(actualVehicle.year)) || new Date().getFullYear(),
-                    patente: safeExtract(actualVehicle.patente) || safeExtract(actualVehicle.dominio) || safeExtract(actualVehicle.plate) || '',
-                    kilometros: parseInt(safeExtract(actualVehicle.kilometros) || safeExtract(actualVehicle.kilometraje) || safeExtract(actualVehicle.mileage)) || 0,
-                    valor: parseFloat(safeExtract(actualVehicle.valor) || safeExtract(actualVehicle.precio) || safeExtract(actualVehicle.price)) || 0,
-                    moneda: safeExtract(actualVehicle.moneda) || safeExtract(actualVehicle.currency) || 'ARS',
-                    fecha_ingreso: actualVehicle.fecha_ingreso ? actualVehicle.fecha_ingreso.split('T')[0] : new Date().toISOString().split('T')[0],
-                    estado_codigo: safeExtract(actualVehicle.estado?.codigo) ||
-                        safeExtract(actualVehicle.estado_codigo) ||
-                        safeExtract(actualVehicle.estado) ||
-                        safeExtract(actualVehicle.status) || '',
+                    vehiculo_ano: parseInt(safeExtract(vehicleToProcess.vehiculo_ano) || safeExtract(vehicleToProcess.año) || safeExtract(vehicleToProcess.year)) || new Date().getFullYear(),
+                    patente: safeExtract(vehicleToProcess.patente) || safeExtract(vehicleToProcess.dominio) || safeExtract(vehicleToProcess.plate) || '',
+                    kilometros: parseInt(safeExtract(vehicleToProcess.kilometros) || safeExtract(vehicleToProcess.kilometraje) || safeExtract(vehicleToProcess.mileage)) || 0,
+                    valor: parseFloat(safeExtract(vehicleToProcess.valor) || safeExtract(vehicleToProcess.precio) || safeExtract(vehicleToProcess.price)) || 0,
+                    moneda: safeExtract(vehicleToProcess.moneda) || safeExtract(vehicleToProcess.currency) || 'ARS',
+                    fecha_ingreso: vehicleToProcess.fecha_ingreso ? vehicleToProcess.fecha_ingreso.split('T')[0] : new Date().toISOString().split('T')[0],
+                    estado_codigo: safeExtract(vehicleToProcess.estado?.codigo) ||
+                        safeExtract(vehicleToProcess.estado_codigo) ||
+                        safeExtract(vehicleToProcess.estado) ||
+                        safeExtract(vehicleToProcess.status) || '',
 
                     // Datos del vendedor - usar la estructura correcta de la API
-                    vendedor_nombre: safeExtract(actualVehicle.vendedor?.nombre) ||
-                        safeExtract(actualVehicle.vendedor_nombre) ||
-                        safeExtract(actualVehicle.contacto_nombre) ||
-                        safeExtract(actualVehicle.vendedor) || '',
-                    vendedor_apellido: safeExtract(actualVehicle.vendedor?.apellido) ||
-                        safeExtract(actualVehicle.vendedor_apellido) || '',
-                    vendedor_telefono: safeExtract(actualVehicle.vendedor?.telefono) ||
-                        safeExtract(actualVehicle.vendedor_telefono) ||
-                        safeExtract(actualVehicle.contacto_telefono) || '',
-                    vendedor_email: safeExtract(actualVehicle.vendedor?.email) ||
-                        safeExtract(actualVehicle.vendedor_email) ||
-                        safeExtract(actualVehicle.contacto_email) || '',
-                    vendedor_direccion: safeExtract(actualVehicle.vendedor?.direccion) ||
-                        safeExtract(actualVehicle.vendedor_direccion) ||
-                        safeExtract(actualVehicle.direccion) || '',
+                    vendedor_nombre: safeExtract(vehicleToProcess.vendedor?.nombre) ||
+                        safeExtract(vehicleToProcess.vendedor_nombre) ||
+                        safeExtract(vehicleToProcess.contacto_nombre) ||
+                        safeExtract(vehicleToProcess.vendedor) || '',
+                    vendedor_apellido: safeExtract(vehicleToProcess.vendedor?.apellido) ||
+                        safeExtract(vehicleToProcess.vendedor_apellido) || '',
+                    vendedor_telefono: safeExtract(vehicleToProcess.vendedor?.telefono) ||
+                        safeExtract(vehicleToProcess.vendedor_telefono) ||
+                        safeExtract(vehicleToProcess.contacto_telefono) || '',
+                    vendedor_email: safeExtract(vehicleToProcess.vendedor?.email) ||
+                        safeExtract(vehicleToProcess.vendedor_email) ||
+                        safeExtract(vehicleToProcess.contacto_email) || '',
+                    vendedor_direccion: safeExtract(vehicleToProcess.vendedor?.direccion) ||
+                        safeExtract(vehicleToProcess.vendedor_direccion) ||
+                        safeExtract(vehicleToProcess.direccion) || '',
 
                     // Notas - mapear todos los campos de comentarios/notas
                     pendientes_preparacion: (() => {
                         // El campo puede venir como array o string desde el backend
-                        const pendientes = actualVehicle.pendientes_preparacion ||
-                            actualVehicle.pendientes ||
-                            actualVehicle.notas_preparacion ||
-                            actualVehicle.preparacion_pendiente ||
-                            actualVehicle.pendiente_preparacion ||
-                            actualVehicle.pendientes_de_preparacion ||
-                            actualVehicle.notas_pendientes ||
-                            actualVehicle.preparacion ||
-                            actualVehicle.pendientes_prep ||
-                            actualVehicle.prep_pendientes;
+                        const pendientes = vehicleToProcess.pendientes_preparacion ||
+                            vehicleToProcess.pendientes ||
+                            vehicleToProcess.notas_preparacion ||
+                            vehicleToProcess.preparacion_pendiente ||
+                            vehicleToProcess.pendiente_preparacion ||
+                            vehicleToProcess.pendientes_de_preparacion ||
+                            vehicleToProcess.notas_pendientes ||
+                            vehicleToProcess.preparacion ||
+                            vehicleToProcess.pendientes_prep ||
+                            vehicleToProcess.prep_pendientes;
 
-                        console.log('📝 Pendientes procesados:', processedItems.length, 'elementos');
-                        if (processedItems.length > 0) {
-                            console.log('  - Items:', processedItems);
+                        console.log('🔍 PENDIENTES RAW desde backend:', pendientes);
+
+                        // Si es un array, revisar si contiene strings con \n
+                        if (Array.isArray(pendientes)) {
+                            // Procesar cada elemento del array para dividir por \n si es necesario
+                            const processedItems = [];
+                            pendientes.forEach(item => {
+                                if (typeof item === 'string' && item.includes('\n')) {
+                                    // Dividir el string por \n y agregar cada línea como elemento separado
+                                    const splitItems = item.split('\n')
+                                        .map(subItem => subItem.trim())
+                                        .filter(subItem => subItem.length > 0);
+                                    processedItems.push(...splitItems);
+                                } else if (typeof item === 'string' && item.trim()) {
+                                    processedItems.push(item.trim());
+                                }
+                            });
+                            console.log('🔄 Array procesado:', processedItems);
+                            return processedItems;
+                        } else if (typeof pendientes === 'string' && pendientes.trim()) {
+                            // Si viene como string, dividir por \n
+                            const splitItems = pendientes.split('\n')
+                                .map(item => item.trim())
+                                .filter(item => item.length > 0);
+                            console.log('🔄 String dividido:', splitItems);
+                            return splitItems;
                         }
+                        console.log('🔄 Devolviendo array vacío');
                         return [];
                     })(),
-                    comentarios: safeExtract(actualVehicle.comentarios) || safeExtract(actualVehicle.descripcion) || safeExtract(actualVehicle.notas) || '',
-                    notas_generales: safeExtract(actualVehicle.notas_generales) || '',
-                    notas_mecánicas: safeExtract(actualVehicle.notas_mecánicas) || '',
-                    notas_vendedor: safeExtract(actualVehicle.notas_vendedor) || '',
+                    comentarios: safeExtract(vehicleToProcess.comentarios) || safeExtract(vehicleToProcess.descripcion) || safeExtract(vehicleToProcess.notas) || '',
+                    notas_generales: safeExtract(vehicleToProcess.notas_generales) || '',
+                    notas_mecánicas: safeExtract(vehicleToProcess.notas_mecánicas) || '',
+                    notas_vendedor: safeExtract(vehicleToProcess.notas_vendedor) || '',
 
-                    // 🔍 DEBUG: Log de publicaciones recibidas
-                    publicar_ml: Boolean(actualVehicle.publi_mer_lib || actualVehicle.publicacion_ml || actualVehicle.publicar_ml),
-                    publicar_autoscout: Boolean(actualVehicle.publicar_autoscout),
-                    publicar_karvi: Boolean(actualVehicle.publicar_karvi),
-                    publicar_autocosmos: Boolean(actualVehicle.publicar_autocosmos),
-                    publicaciones: Array.isArray(actualVehicle.publicaciones) ? actualVehicle.publicaciones : []
+                    // Publicaciones
+                    publicar_ml: Boolean(vehicleToProcess.publi_mer_lib || vehicleToProcess.publicacion_ml || vehicleToProcess.publicar_ml),
+                    publicar_autoscout: Boolean(vehicleToProcess.publicar_autoscout),
+                    publicar_karvi: Boolean(vehicleToProcess.publicar_karvi),
+                    publicar_autocosmos: Boolean(vehicleToProcess.publicar_autocosmos),
+                    publicaciones: Array.isArray(vehicleToProcess.publicaciones) ? vehicleToProcess.publicaciones : []
                 }
 
                 console.log('📋 Vehículo mapeado:', {
@@ -207,6 +226,8 @@ const EditVehicleModal = ({ open, onClose, onSave, vehicle }) => {
                     pendientes_count: mappedData.pendientes_preparacion?.length || 0
                 })
 
+                // Guardar el vehículo procesado para uso posterior
+                setActualVehicle(vehicleToProcess)
                 setFormData(mappedData)
                 setErrors({})
                 setIsInitialized(true) // Marcar como inicializado para evitar resets
