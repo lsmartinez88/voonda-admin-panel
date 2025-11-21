@@ -188,9 +188,19 @@ export const VehiclesFilters = ({
 
             {/* Filtros desktop */}
             <Box sx={{ display: { xs: 'none', lg: 'block' } }}>
-                <Typography variant='h6' sx={{ mb: 2, fontWeight: 600 }}>
-                    Filtros de Búsqueda
-                </Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Typography variant='h6' sx={{ fontWeight: 600 }}>
+                        Filtros de Búsqueda
+                    </Typography>
+                    <Button
+                        variant="outlined"
+                        onClick={handleClearFilters}
+                        disabled={loading}
+                        size="small"
+                    >
+                        Limpiar Filtros
+                    </Button>
+                </Box>
 
                 <Grid container spacing={3} sx={{ mb: 3 }}>
                     <Grid size={{ xs: 12, md: 2.4 }}>
@@ -285,21 +295,11 @@ export const VehiclesFilters = ({
                     </Grid>
                 </Grid>
 
-                <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
-                    <Button
-                        variant="outlined"
-                        onClick={handleClearFilters}
-                        disabled={loading}
-                        size="small"
-                    >
-                        Limpiar Filtros
-                    </Button>
-                    {(filters.marca || filters.modelo || filters.año || filters.estado || filters.search) && (
-                        <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'center' }}>
-                            Filtros activos: {[filters.marca, filters.modelo, filters.año, filters.estado, filters.search].filter(Boolean).length}
-                        </Typography>
-                    )}
-                </Stack>
+                {(filters.marca || filters.modelo || filters.año || filters.estado || filters.search) && (
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block' }}>
+                        Filtros activos: {[filters.marca, filters.modelo, filters.año, filters.estado, filters.search].filter(Boolean).length}
+                    </Typography>
+                )}
             </Box>
         </JumboCard>
     )
