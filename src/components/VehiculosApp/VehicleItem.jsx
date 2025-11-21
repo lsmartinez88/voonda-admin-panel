@@ -17,6 +17,9 @@ import {
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
+import CommentIcon from '@mui/icons-material/Comment'
+import NoteIcon from '@mui/icons-material/Note'
+import BuildIcon from '@mui/icons-material/Build'
 
 const formatPrice = (price, moneda) => {
     if (!price) return 'Consultar precio'
@@ -145,27 +148,27 @@ const VehicleItem = ({ vehiculo, onEdit, onDelete }) => {
     const estadoColor = getEstadoColor(vehiculo.estado)
 
     return (
-        <TableRow>
-            {/* Vehículo - Primera columna: Marca y modelo en negrita arriba, año versión abajo, badge de estado */}
+        <TableRow sx={{ height: 80 }}> {/* Altura fija para doble línea */}
+            {/* Columna 1: Marca/Modelo arriba, Año/Versión/Estado abajo */}
             <TableCell sx={{ pl: 3 }}>
-                <Stack spacing={1}>
-                    {/* Marca y modelo en negrita */}
+                <Stack spacing={0.5}>
+                    {/* Línea 1: Marca y modelo */}
                     <Typography variant='subtitle1' sx={{ fontWeight: 600, mb: 0 }}>
                         {vehiculo?.modelo?.marca || 'Sin marca'} {vehiculo?.modelo?.modelo || 'Sin modelo'}
                     </Typography>
-                    {/* Año - versión con badge de estado */}
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    {/* Línea 2: Año, versión y estado */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                         <Typography variant='body2' color='text.secondary'>
                             {vehiculo?.modelo?.modelo_ano || vehiculo?.vehiculo_ano || 'N/A'} - {vehiculo?.modelo?.version || 'Sin versión'}
                         </Typography>
                         <Chip
                             label={getEstadoLabel(vehiculo.estado)}
                             size='small'
-                            variant='outlined'
                             sx={{
-                                borderColor: estadoColor,
-                                color: estadoColor,
+                                backgroundColor: estadoColor,
+                                color: 'white',
                                 '& .MuiChip-label': {
+                                    color: 'white',
                                     fontWeight: 500,
                                     fontSize: '0.7rem'
                                 }
@@ -175,41 +178,41 @@ const VehicleItem = ({ vehiculo, onEdit, onDelete }) => {
                 </Stack>
             </TableCell>
 
-            {/* Precio - mismo formato que en la card */}
+            {/* Columna 2: Precio arriba, Kilometraje abajo */}
             <TableCell>
-                <Typography
-                    variant='subtitle1'
-                    sx={{
-                        fontWeight: 600,
-                        color: vehiculo.moneda?.toUpperCase() === 'USD' ? '#2e7d32' : 'primary.main'
-                    }}
-                >
-                    {formatPrice(vehiculo.valor, vehiculo.moneda)}
-                </Typography>
+                <Stack spacing={0.5}>
+                    {/* Línea 1: Precio */}
+                    <Typography
+                        variant='subtitle1'
+                        sx={{
+                            fontWeight: 600,
+                            color: vehiculo.moneda?.toUpperCase() === 'USD' ? '#2e7d32' : 'primary.main'
+                        }}
+                    >
+                        {formatPrice(vehiculo.valor, vehiculo.moneda)}
+                    </Typography>
+                    {/* Línea 2: Kilometraje */}
+                    <Typography variant='body2' color='text.secondary'>
+                        {vehiculo.kilometros ? `${vehiculo.kilometros.toLocaleString('de-DE')} km` : 'Sin datos'}
+                    </Typography>
+                </Stack>
             </TableCell>
 
-            {/* Kilometraje */}
+            {/* Columna 3: Fecha de ingreso arriba, Patente abajo */}
             <TableCell>
-                <Typography variant='body2'>
-                    {vehiculo.kilometros ? `${vehiculo.kilometros.toLocaleString('de-DE')} km` : '-'}
-                </Typography>
+                <Stack spacing={0.5}>
+                    {/* Línea 1: Fecha ingreso */}
+                    <Typography variant='body2'>
+                        {vehiculo.created_at ? new Date(vehiculo.created_at).toLocaleDateString('es-AR') : 'Sin fecha'}
+                    </Typography>
+                    {/* Línea 2: Patente */}
+                    <Typography variant='body2' color='text.secondary' sx={{ fontFamily: 'monospace' }}>
+                        {vehiculo.patente || 'Sin patente'}
+                    </Typography>
+                </Stack>
             </TableCell>
 
-            {/* Patente */}
-            <TableCell>
-                <Typography variant='body2'>
-                    {vehiculo.patente || '-'}
-                </Typography>
-            </TableCell>
-
-            {/* Fecha Ingreso */}
-            <TableCell>
-                <Typography variant='body2'>
-                    {vehiculo.created_at ? new Date(vehiculo.created_at).toLocaleDateString('es-AR') : '-'}
-                </Typography>
-            </TableCell>
-
-            {/* Vendedor */}
+            {/* Columna 4: Vendedor con tooltip */}
             <TableCell>
                 {vehiculo.vendedor ? (
                     <Tooltip
@@ -248,13 +251,181 @@ const VehicleItem = ({ vehiculo, onEdit, onDelete }) => {
                     </Tooltip>
                 ) : (
                     <Typography variant='body2' color='text.secondary'>
-                        -
+                        Sin asignar
                     </Typography>
                 )}
             </TableCell>
 
-            {/* Acciones - mismo icono y opciones que en las cards */}
-            <TableCell align="right" sx={{ pr: 3 }}>
+            {/* Columna 5: Iconos de información (como en VehicleCard) */}
+            <TableCell align="center">
+                <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
+                    {/* Icono de Comentarios */}
+                    <Tooltip
+                        title={
+                            <Box sx={{ maxWidth: 300, p: 1 }}>
+                                <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                                    Comentarios Adicionales
+                                </Typography>
+                                <Typography variant="body2">
+                                    {(vehiculo.comentarios || vehiculo.descripcion)
+                                        ? (vehiculo.comentarios || vehiculo.descripcion)
+                                        : 'Sin comentarios'
+                                    }
+                                </Typography>
+                            </Box>
+                        }
+                        arrow
+                        placement="top"
+                    >
+                        <IconButton
+                            size="small"
+                            sx={{
+                                color: (vehiculo.comentarios || vehiculo.descripcion)
+                                    ? '#5DADE2' // Azul más fuerte cuando tiene datos
+                                    : '#D1D5DB', // Gris suave cuando no tiene datos
+                                '&:hover': {
+                                    color: (vehiculo.comentarios || vehiculo.descripcion)
+                                        ? '#3498DB' // Azul más intenso en hover
+                                        : '#9CA3AF'
+                                }
+                            }}
+                        >
+                            <CommentIcon fontSize="small" />
+                        </IconButton>
+                    </Tooltip>
+
+                    {/* Icono de Pendientes de Preparación */}
+                    <Tooltip
+                        title={
+                            <Box sx={{ maxWidth: 300, p: 1 }}>
+                                <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                                    Pendientes de Preparación
+                                </Typography>
+                                {(() => {
+                                    const pendientes = vehiculo.pendientes_preparacion;
+
+                                    if (!pendientes) {
+                                        return <Typography variant="body2">Sin pendientes de preparación</Typography>;
+                                    }
+
+                                    if (Array.isArray(pendientes)) {
+                                        return pendientes.length > 0 ? (
+                                            <Box>
+                                                {pendientes.map((item, index) => (
+                                                    <Typography key={index} variant="body2" sx={{ mb: 0.5 }}>
+                                                        • {item}
+                                                    </Typography>
+                                                ))}
+                                            </Box>
+                                        ) : (
+                                            <Typography variant="body2">Sin pendientes de preparación</Typography>
+                                        );
+                                    }
+
+                                    if (typeof pendientes === 'string' && pendientes.trim()) {
+                                        // Dividir por diferentes separadores comunes y también por puntos
+                                        const items = pendientes.split(/[,;\n•-]/).filter(item => item.trim()).map(item => item.trim());
+                                        return items.length > 1 ? (
+                                            <Box>
+                                                {items.map((item, index) => (
+                                                    <Typography key={index} variant="body2" sx={{ mb: 0.5 }}>
+                                                        • {item}
+                                                    </Typography>
+                                                ))}
+                                            </Box>
+                                        ) : (
+                                            <Typography variant="body2">• {pendientes.trim()}</Typography>
+                                        );
+                                    }
+
+                                    return <Typography variant="body2">Sin pendientes de preparación</Typography>;
+                                })()}
+                            </Box>
+                        }
+                        arrow
+                        placement="top"
+                    >
+                        <IconButton
+                            size="small"
+                            sx={{
+                                color: (() => {
+                                    const pendientes = vehiculo.pendientes_preparacion;
+                                    const hasPendientes = pendientes && (
+                                        (Array.isArray(pendientes) && pendientes.length > 0) ||
+                                        (typeof pendientes === 'string' && pendientes.trim())
+                                    );
+                                    return hasPendientes ? '#5DADE2' : '#D1D5DB'; // Azul más fuerte o gris suave
+                                })(),
+                                '&:hover': {
+                                    color: (() => {
+                                        const pendientes = vehiculo.pendientes_preparacion;
+                                        const hasPendientes = pendientes && (
+                                            (Array.isArray(pendientes) && pendientes.length > 0) ||
+                                            (typeof pendientes === 'string' && pendientes.trim())
+                                        );
+                                        return hasPendientes ? '#3498DB' : '#9CA3AF';
+                                    })()
+                                }
+                            }}
+                        >
+                            <BuildIcon fontSize="small" />
+                        </IconButton>
+                    </Tooltip>
+
+                    {/* Icono de Notas Generales */}
+                    <Tooltip
+                        title={
+                            <Box sx={{ maxWidth: 300, p: 1 }}>
+                                <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                                    Notas del Vehículo
+                                </Typography>
+                                {vehiculo.notas_generales ? (
+                                    <Box sx={{ mb: 1 }}>
+                                        <Typography variant="caption" color="text.secondary">Generales:</Typography>
+                                        <Typography variant="body2">{vehiculo.notas_generales}</Typography>
+                                    </Box>
+                                ) : null}
+                                {vehiculo.notas_mecánicas ? (
+                                    <Box sx={{ mb: 1 }}>
+                                        <Typography variant="caption" color="text.secondary">Mecánicas:</Typography>
+                                        <Typography variant="body2">{vehiculo.notas_mecánicas}</Typography>
+                                    </Box>
+                                ) : null}
+                                {vehiculo.notas_vendedor ? (
+                                    <Box>
+                                        <Typography variant="caption" color="text.secondary">Del Vendedor:</Typography>
+                                        <Typography variant="body2">{vehiculo.notas_vendedor}</Typography>
+                                    </Box>
+                                ) : null}
+                                {!vehiculo.notas_generales && !vehiculo.notas_mecánicas && !vehiculo.notas_vendedor && (
+                                    <Typography variant="body2">Sin notas adicionales</Typography>
+                                )}
+                            </Box>
+                        }
+                        arrow
+                        placement="top"
+                    >
+                        <IconButton
+                            size="small"
+                            sx={{
+                                color: (vehiculo.notas_generales || vehiculo.notas_mecánicas || vehiculo.notas_vendedor)
+                                    ? '#5DADE2' // Azul más fuerte cuando tiene datos
+                                    : '#D1D5DB', // Gris suave cuando no tiene datos
+                                '&:hover': {
+                                    color: (vehiculo.notas_generales || vehiculo.notas_mecánicas || vehiculo.notas_vendedor)
+                                        ? '#3498DB' // Azul más intenso en hover
+                                        : '#9CA3AF'
+                                }
+                            }}
+                        >
+                            <NoteIcon fontSize="small" />
+                        </IconButton>
+                    </Tooltip>
+                </Box>
+            </TableCell>
+
+            {/* Columna 6: Acciones (sin header) */}
+            <TableCell align="center" sx={{ pr: 3 }}>
                 <IconButton
                     size='small'
                     onClick={handleMenuClick}

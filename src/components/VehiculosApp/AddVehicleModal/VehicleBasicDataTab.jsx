@@ -358,23 +358,28 @@ const VehicleBasicDataTab = ({ data, errors, onChange }) => {
 
                 {/* Año */}
                 <Grid item xs={12} md={3}>
-                    <FormControl fullWidth error={!!errors.vehiculo_ano}>
-                        <InputLabel>Año *</InputLabel>
-                        <Select
-                            value={data.vehiculo_ano || currentYear}
-                            onChange={(e) => handleFieldChange('vehiculo_ano', e.target.value)}
-                            label="Año *"
-                        >
-                            {añosOptions.map(año => (
-                                <MenuItem key={año} value={año}>
-                                    {año}
-                                </MenuItem>
-                            ))}
-                        </Select>
-                        {errors.vehiculo_ano && (
-                            <FormHelperText>{errors.vehiculo_ano}</FormHelperText>
-                        )}
-                    </FormControl>
+                    <TextField
+                        fullWidth
+                        label="Año *"
+                        value={data.vehiculo_ano || currentYear}
+                        onChange={(e) => {
+                            const value = e.target.value
+                            // Solo permitir números
+                            if (value === '' || /^\d+$/.test(value)) {
+                                const numValue = value === '' ? '' : parseInt(value)
+                                handleFieldChange('vehiculo_ano', numValue)
+                            }
+                        }}
+                        error={!!errors.vehiculo_ano}
+                        helperText={errors.vehiculo_ano || 'Ingresa el año del vehículo (ej: 2020)'}
+                        placeholder="2020"
+                        inputProps={{
+                            inputMode: 'numeric',
+                            pattern: '[0-9]*',
+                            min: 1970,
+                            max: new Date().getFullYear() + 1
+                        }}
+                    />
                 </Grid>
 
                 {/* Patente */}

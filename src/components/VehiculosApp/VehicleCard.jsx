@@ -430,10 +430,10 @@ const VehicleCard = ({ vehiculo, onEdit, onDelete }) => {
                     <IconButton
                         size="small"
                         sx={{
-                            color: (vehiculo.comentarios || vehiculo.descripcion) 
+                            color: (vehiculo.comentarios || vehiculo.descripcion)
                                 ? '#5DADE2' // Azul más fuerte cuando tiene datos
                                 : '#D1D5DB', // Gris más suave cuando no tiene datos
-                            '&:hover': { 
+                            '&:hover': {
                                 color: (vehiculo.comentarios || vehiculo.descripcion)
                                     ? '#3498DB' // Azul más intenso en hover
                                     : '#9CA3AF'
@@ -561,7 +561,7 @@ const VehicleCard = ({ vehiculo, onEdit, onDelete }) => {
                             color: (vehiculo.notas_generales || vehiculo.notas_mecánicas || vehiculo.notas_vendedor)
                                 ? '#5DADE2' // Azul más fuerte cuando tiene datos
                                 : '#D1D5DB', // Gris más suave cuando no tiene datos
-                            '&:hover': { 
+                            '&:hover': {
                                 color: (vehiculo.notas_generales || vehiculo.notas_mecánicas || vehiculo.notas_vendedor)
                                     ? '#3498DB' // Azul más intenso en hover
                                     : '#9CA3AF'

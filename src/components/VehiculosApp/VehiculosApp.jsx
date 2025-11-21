@@ -324,6 +324,7 @@ export const VehiculosApp = () => {
             setLoading(true);
 
             console.log('✏️ Actualizando vehículo ID:', vehicleData.id);
+            console.log('📋 Pendientes originales:', vehicleData.pendientes_preparacion);
 
             // Obtener la empresa del usuario logueado
             const empresaUsuario = user?.empresa;
@@ -364,10 +365,12 @@ export const VehiculosApp = () => {
                 vendedor_email: vehicleData.vendedor_email,
                 vendedor_direccion: vehicleData.vendedor_direccion,
 
-                // Notas y observaciones - convertir array a string para backend
+                // Notas y observaciones - mantener array para backend
                 pendientes_preparacion: Array.isArray(vehicleData.pendientes_preparacion)
-                    ? vehicleData.pendientes_preparacion.filter(item => item && item.trim()).join('\n')
-                    : (vehicleData.pendientes_preparacion || ''),
+                    ? vehicleData.pendientes_preparacion.filter(item => item && item.trim())
+                    : (vehicleData.pendientes_preparacion && typeof vehicleData.pendientes_preparacion === 'string'
+                        ? vehicleData.pendientes_preparacion.split('\n').filter(item => item.trim())
+                        : []),
                 comentarios: vehicleData.comentarios || '',
                 notas_generales: vehicleData.notas_generales || '',
                 notas_mecánicas: vehicleData.notas_mecánicas || '',
@@ -382,8 +385,9 @@ export const VehiculosApp = () => {
                 marca: apiPayload.marca,
                 modelo: apiPayload.modelo,
                 patente: apiPayload.patente,
-                pendientes_count: Array.isArray(vehicleData.pendientes_preparacion) ? vehicleData.pendientes_preparacion.length : 0
+                pendientes_count: Array.isArray(apiPayload.pendientes_preparacion) ? apiPayload.pendientes_preparacion.length : 0
             });
+            console.log('📋 Pendientes procesados (final):', apiPayload.pendientes_preparacion);
 
             // Llamada a la API para actualizar
             const response = await vehiculosService.updateVehiculo(vehicleData.id, apiPayload);

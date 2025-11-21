@@ -23,13 +23,12 @@ export const VehicleTable = ({ vehiculos, onEdit, onDelete }) => {
                             },
                         }}
                     >
-                        <TableCell>Vehículo</TableCell>
-                        <TableCell width={150}>Precio</TableCell>
-                        <TableCell width={120}>Kilometraje</TableCell>
-                        <TableCell width={150}>Patente</TableCell>
-                        <TableCell width={120}>Fecha Ingreso</TableCell>
-                        <TableCell width={120}>Vendedor</TableCell>
-                        <TableCell width={100} align="right">Acciones</TableCell>
+                        <TableCell width={220}>Vehículo</TableCell>
+                        <TableCell width={160}>Precio</TableCell>
+                        <TableCell width={140}>Fecha/Patente</TableCell>
+                        <TableCell width={140}>Vendedor</TableCell>
+                        <TableCell width={120} align="center">Info</TableCell>
+                        <TableCell width={80} />{/* Sin header para acciones */}
                     </TableRow>
                 </TableHead>
                 <TableBody>

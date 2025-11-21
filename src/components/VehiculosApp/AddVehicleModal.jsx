@@ -165,8 +165,8 @@ const AddVehicleModal = ({ open, onClose, onSave }) => {
         if (!formData.marca?.trim()) newErrors.marca = 'Marca es requerida'
         if (!formData.modelo?.trim()) newErrors.modelo = 'Modelo es requerido'
         if (!formData.version?.trim()) newErrors.version = 'Versión es requerida'
-        if (!formData.vehiculo_ano || formData.vehiculo_ano < 1970 || formData.vehiculo_ano > 2026) {
-            newErrors.vehiculo_ano = 'Año debe estar entre 1970 y 2026'
+        if (!formData.vehiculo_ano || formData.vehiculo_ano < 1970 || formData.vehiculo_ano > new Date().getFullYear() + 1) {
+            newErrors.vehiculo_ano = `Año debe estar entre 1970 y ${new Date().getFullYear() + 1}`
         }
         if (!formData.patente?.trim()) newErrors.patente = 'Patente es requerida'
         if (formData.patente && formData.patente.length > 15) {

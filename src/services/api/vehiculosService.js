@@ -650,89 +650,31 @@ class VehiculosService {
     }
 
     /**
-     * Obtener años únicos disponibles para filtros (usando fallback directo)
+     * Obtener años únicos disponibles para filtros (generación local)
      * @returns {Promise<Object>} Lista de años
      */
     async getAños() {
         try {
-            // Intento 1: Probar endpoint estándar de años (si existe)
-            console.log("🚗 Intentando obtener años desde API")
+            console.log("📅 Generando años localmente (30 años hacia atrás)")
 
-            // Primero intentamos con un timeout corto para evitar esperar mucho
-            const controller = new AbortController()
-            const timeoutId = setTimeout(() => controller.abort(), 1000) // 1 segundo timeout
-
-            try {
-                const response = await apiClient.get("/api/vehiculos/filtros/años", {
-                    signal: controller.signal
-                })
-                clearTimeout(timeoutId)
-
-                if (response?.años || response?.data) {
-                    return {
-                        success: true,
-                        años: response.años || response.data || [],
-                        message: response.message || "Años obtenidos exitosamente"
-                    }
-                }
-            } catch (apiError) {
-                clearTimeout(timeoutId)
-                // Si es 404 o timeout, usar fallback silenciosamente
-                if (apiError.response?.status === 404 || apiError.name === "AbortError") {
-                    console.log("📅 Endpoint de años no disponible, usando generación local")
-                } else {
-                    console.warn("⚠️ Error en endpoint de años, usando fallback:", apiError.message)
-                }
-            }
-
-            // Intento 2: Extraer años desde vehículos existentes
-            try {
-                console.log("📅 Extrayendo años desde vehículos existentes")
-                // Usar los mismos parámetros que funcionan en getVehiculos
-                const vehiculosResponse = await this.getVehiculos({
-                    limit: 200,
-                    orderBy: "created_at",
-                    order: "desc",
-                    page: 1
-                })
-                const vehiculos = vehiculosResponse.vehiculos || []
-
-                const añosSet = new Set()
-                vehiculos.forEach((vehiculo) => {
-                    if (vehiculo?.vehiculo_ano) {
-                        añosSet.add(vehiculo.vehiculo_ano)
-                    }
-                })
-
-                if (añosSet.size > 0) {
-                    const años = Array.from(añosSet).sort((a, b) => b - a) // Ordenar descendente
-                    return {
-                        success: true,
-                        años: años,
-                        message: "Años extraídos desde vehículos existentes"
-                    }
-                }
-            } catch (extractError) {
-                console.warn("⚠️ Error extrayendo años desde vehículos:", extractError.message)
-            }
-
-            // Fallback final: generar rango de años estático
-            console.log("📅 Generando rango de años estático")
+            // Generar rango de años: año actual - 30 años
             const currentYear = new Date().getFullYear()
             const años = []
             for (let year = currentYear; year >= currentYear - 30; year--) {
                 años.push(year)
             }
 
+            console.log("✅ Años generados:", años.length, "años desde", currentYear, "hasta", currentYear - 30)
+
             return {
                 success: true,
                 años: años,
-                message: "Años generados localmente"
+                message: `Años generados localmente (${currentYear} - ${currentYear - 30})`
             }
         } catch (error) {
-            console.error("❌ Error crítico en getAños:", error)
+            console.error("❌ Error generando años:", error)
 
-            // Último recurso: años básicos
+            // Fallback mínimo
             const currentYear = new Date().getFullYear()
             const añosBasicos = []
             for (let year = currentYear; year >= currentYear - 20; year--) {
@@ -742,7 +684,7 @@ class VehiculosService {
             return {
                 success: true,
                 años: añosBasicos,
-                message: "Años básicos generados como último recurso"
+                message: "Años básicos generados como fallback"
             }
         }
     }

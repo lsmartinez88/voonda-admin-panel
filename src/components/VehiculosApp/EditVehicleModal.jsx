@@ -280,8 +280,8 @@ const EditVehicleModal = ({ open, onClose, onSave, vehicle }) => {
         if (!formData.modelo?.trim()) newErrors.modelo = 'Modelo es requerido'
         // Versión es opcional - si se proporciona, debe ser válida
         // if (!formData.version?.trim()) newErrors.version = 'Versión es requerida' // ❌ REMOVIDO - es opcional
-        if (!formData.vehiculo_ano || formData.vehiculo_ano < 1970 || formData.vehiculo_ano > 2026) {
-            newErrors.vehiculo_ano = 'Año debe estar entre 1970 y 2026'
+        if (!formData.vehiculo_ano || formData.vehiculo_ano < 1970 || formData.vehiculo_ano > new Date().getFullYear() + 1) {
+            newErrors.vehiculo_ano = `Año debe estar entre 1970 y ${new Date().getFullYear() + 1}`
         }
         if (!formData.patente?.trim()) newErrors.patente = 'Patente es requerida'
         if (formData.patente && formData.patente.length > 15) {
@@ -359,22 +359,24 @@ const EditVehicleModal = ({ open, onClose, onSave, vehicle }) => {
                 console.log('  - Contenido pendientes_preparacion:', formData.pendientes_preparacion)
                 console.log('  - publicaciones:', formData.publicaciones?.length || 0, 'publicaciones')
 
-                // 🔧 PROCESAMIENTO: pendientes_preparacion convertir array a string para backend
+                // 🔧 PROCESAMIENTO: pendientes_preparacion mantener como array para backend
                 const processedPendientes = Array.isArray(formData.pendientes_preparacion)
                     ? formData.pendientes_preparacion.filter(item =>
                         item &&
                         typeof item === 'string' &&
                         item.trim().length > 0
-                    ).join('\n')
-                    : (formData.pendientes_preparacion || '')
+                    ).map(item => item.trim()) // Limpiar espacios
+                    : (formData.pendientes_preparacion && typeof formData.pendientes_preparacion === 'string'
+                        ? formData.pendientes_preparacion.split('\n').filter(item => item.trim()).map(item => item.trim())
+                        : [])
 
                 console.log('💾 Guardando vehículo ID:', vehicleId);
-                console.log('📋 Pendientes procesados:', Array.isArray(formData.pendientes_preparacion) ? formData.pendientes_preparacion.length : 0, 'elementos');
+                console.log('📋 Pendientes procesados (array):', processedPendientes.length, 'elementos:', processedPendientes);
 
                 // 🔧 VERSIÓN: Incluir solo si tiene valor válido
                 const dataToSave = {
                     ...formData, // ✅ Incluir todos los campos base
-                    pendientes_preparacion: processedPendientes, // ✅ Convertido a string para backend
+                    pendientes_preparacion: processedPendientes, // ✅ Array de strings para backend
                     publicaciones: processedPublications, // ✅ Publicaciones procesadas
                     id: vehicleId // ✅ ID verificado
                 }
