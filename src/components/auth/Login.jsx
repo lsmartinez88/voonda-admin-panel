@@ -125,17 +125,17 @@ const Login = () => {
                 >
                     {/* Logo/Título */}
                     <Box sx={{ textAlign: 'center', mb: 4 }}>
-                        <Typography
-                            variant="h4"
-                            component="h1"
-                            sx={{
-                                fontWeight: 'bold',
-                                color: 'primary.main',
-                                mb: 1
+                        <img
+                            src="/assets/images/voonda-logo.png"
+                            alt="Voonda"
+                            width={110}
+                            height={35}
+                            style={{
+                                maxWidth: '200px',
+                                height: 'auto',
+                                marginBottom: '16px'
                             }}
-                        >
-                            Voonda
-                        </Typography>
+                        />
                         <Typography variant="body2" color="text.secondary">
                             Panel de Administración
                         </Typography>

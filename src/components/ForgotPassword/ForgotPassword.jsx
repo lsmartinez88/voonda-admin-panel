@@ -1,20 +1,20 @@
 import { ASSET_IMAGES } from "@/utilities/constants/paths";
-import { getAssetPath } from "@/utilities/helpers";
 import { Div, Link } from "@jumbo/shared";
 import { JumboForm, JumboInput } from "@jumbo/vendors/react-hook-form";
-import { Facebook, Google, Twitter } from "@mui/icons-material";
 import { LoadingButton } from "@mui/lab";
 import {
     Card,
     CardContent,
     CardMedia,
-    IconButton,
     Stack,
     Typography,
     alpha,
 } from "@mui/material";
+import { useTranslation } from "react-i18next";
 
 export const ForgotPassword = () => {
+    const { t } = useTranslation();
+
     return (
         <Div
             sx={{
@@ -29,7 +29,7 @@ export const ForgotPassword = () => {
         >
             <Div sx={{ mb: 3, display: "inline-flex" }}>
                 <Link to="/" underline="none" sx={{ display: "inline-flex" }}>
-                    <img src={`${ASSET_IMAGES}/logo.png`} alt="Jumbo React" />
+                    <img src={`${ASSET_IMAGES}/voonda-logo.png`} alt="Voonda" width={150} />
                 </Link>
             </Div>
             <Card sx={{ maxWidth: "100%", width: 360, mb: 4 }}>
@@ -38,7 +38,7 @@ export const ForgotPassword = () => {
                         component="img"
                         alt="green iguana"
                         height="200"
-                        image={getAssetPath(`${ASSET_IMAGES}/colin-watts.jpg`)}
+                        image={`${ASSET_IMAGES}/fondo-login.png`}
                     />
                     <Div
                         sx={{
@@ -60,80 +60,33 @@ export const ForgotPassword = () => {
                                 mb: 0,
                             }}
                         >
-                            Forgot password
+                            {t("forgotPassword.title")}
                         </Typography>
                     </Div>
                 </Div>
                 <CardContent>
                     <JumboForm>
                         <Stack spacing={3} mb={3}>
-                            <JumboInput fieldName="email" label="Email" />
+                            <JumboInput fieldName="email" label={t("forgotPassword.email")} />
                             <LoadingButton
                                 type="submit"
                                 variant="contained"
                                 size="large"
                             // loading={isSubmitting || mutation.isLoading}
                             >
-                                Submit
+                                {t("forgotPassword.submit")}
                             </LoadingButton>
                         </Stack>
                     </JumboForm>
 
                     <Typography textAlign={"center"} variant={"body1"} mb={1}>
-                        Don't remember your email?{" "}
+                        {t("forgotPassword.contactSupport")}{" "}
                         <Link underline="none" to="/">
-                            Contact Support
+                            {t("forgotPassword.contactSupportLink")}
                         </Link>
                     </Typography>
                 </CardContent>
             </Card>
-            <Typography variant={"body1"} mb={2}>
-                Or sign up with
-            </Typography>
-            <Stack direction="row" alignItems="center" spacing={1}>
-                <IconButton
-                    sx={{
-                        bgcolor: "#385196",
-                        color: "common.white",
-                        p: (theme) => theme.spacing(1.25),
-
-                        "&:hover": {
-                            backgroundColor: "#385196",
-                        },
-                    }}
-                    aria-label="Facebook"
-                >
-                    <Facebook fontSize="small" />
-                </IconButton>
-                <IconButton
-                    sx={{
-                        bgcolor: "#00a8ff",
-                        color: "common.white",
-                        p: (theme) => theme.spacing(1.25),
-
-                        "&:hover": {
-                            backgroundColor: "#00a8ff",
-                        },
-                    }}
-                    aria-label="Twitter"
-                >
-                    <Twitter fontSize="small" />
-                </IconButton>
-                <IconButton
-                    sx={{
-                        bgcolor: "#23272b",
-                        color: "common.white",
-                        p: (theme) => theme.spacing(1.25),
-
-                        "&:hover": {
-                            backgroundColor: "#23272b",
-                        },
-                    }}
-                    aria-label="Twitter"
-                >
-                    <Google fontSize="small" />
-                </IconButton>
-            </Stack>
         </Div>
     );
 }; 

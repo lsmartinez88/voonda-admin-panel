@@ -9,10 +9,10 @@ const Logo = ({ mini = false, mode = "light", sx }) => {
           <img
             src={
               mode === "light"
-                ? `/assets/images/logo.png`
-                : `/assets/images/logo-white.png`
+                ? `/assets/images/voonda-logo.png`
+                : `/assets/images/voonda-logo-white.png`
             }
-            alt="Jumbo React"
+            alt="Voonda Admin"
             width={110}
             height={35}
             style={{ verticalAlign: "middle" }}
@@ -21,10 +21,10 @@ const Logo = ({ mini = false, mode = "light", sx }) => {
           <img
             src={
               mode === "light"
-                ? `/assets/images/logo-short.png`
-                : `/assets/images/logo-short-white.png`
+                ? `/assets/images/voonda-logo.png`
+                : `/assets/images/voonda-logo-white.png`
             }
-            alt="Jumbo React"
+            alt="Voonda Admin"
             width={35}
             height={35}
             style={{ verticalAlign: "middle" }}

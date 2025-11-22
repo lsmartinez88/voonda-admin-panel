@@ -7,9 +7,11 @@ import { Visibility, VisibilityOff } from "@mui/icons-material";
 import LoadingButton from "@mui/lab/LoadingButton";
 import { IconButton, InputAdornment, Stack } from "@mui/material";
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { validationSchema } from "./validation";
 
 const SignupForm = () => {
+  const { t } = useTranslation();
   const [values, setValues] = React.useState({
     password: "",
     showPassword: false,
@@ -28,16 +30,16 @@ const SignupForm = () => {
       onChange={() => { }}
     >
       <Stack spacing={3} mb={3}>
-        <JumboInput fieldName={"name"} label={"Name"} defaultValue="Admin" />
+        <JumboInput fieldName={"name"} label={t("signup.name")} defaultValue="Admin" />
         <JumboInput
           fullWidth
           fieldName={"email"}
-          label={"Email"}
+          label={t("signup.email")}
           defaultValue="admin@example.com"
         />
         <JumboOutlinedInput
           fieldName={"password"}
-          label={"Password"}
+          label={t("signup.password")}
           type={values.showPassword ? "text" : "password"}
           margin="none"
           endAdornment={
@@ -61,7 +63,7 @@ const SignupForm = () => {
           size="large"
         // loading={isSubmitting || mutation.isLoading}
         >
-          Signup
+          {t("signup.signupButton")}
         </LoadingButton>
       </Stack>
     </JumboForm>

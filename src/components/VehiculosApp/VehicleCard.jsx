@@ -95,15 +95,35 @@ const VehicleCard = ({ vehiculo, onEdit, onDelete }) => {
         }
 
         switch (estadoCodigo?.toUpperCase()) {
-            case 'DISPONIBLE':
-                return '#4fc3f7' // Celeste más oscuro
+            case 'CONSIGNACION':
+            case 'EN_SALON':
+            case 'EN SALON':
+            case 'SALON':
+            case 'EN_SALÓN':
+            case 'EN SALÓN':
+            case 'SALÓN':
+                return '#2196f3' // Azul
+            case 'EN_PREPARACION':
+            case 'EN PREPARACION':
+            case 'PREPARACION':
+            case 'EN_PREPARACIÓN':
+            case 'EN PREPARACIÓN':
+            case 'PREPARACIÓN':
+                return '#ff9800' // Naranja
             case 'VENDIDO':
-                return '#66bb6a' // Verde más fuerte
+                return '#4caf50' // Verde claro
+            case 'ENTREGADO':
+                return '#2e7d32' // Verde oscuro
+            case 'PERMUTA':
+            case 'COMPRA':
+                return '#757575' // Gris
+            // Estados legacy/adicionales
+            case 'DISPONIBLE':
             case 'RESERVADO':
-                return '#ffa726' // Naranja más fuerte
+                return '#2196f3' // Azul (similar a en salon)
             case 'EN_REPARACION':
             case 'MANTENIMIENTO':
-                return '#ef5350' // Rojo más fuerte
+                return '#ff9800' // Naranja (similar a preparacion)
             case 'EN_TRANSITO':
                 return '#9c27b0' // Violeta
             case 'BAJA':
@@ -301,11 +321,11 @@ const VehicleCard = ({ vehiculo, onEdit, onDelete }) => {
                         label={getEstadoLabel(vehiculo.estado)}
                         size='small'
                         sx={{
-                            backgroundColor: estadoColor,
-                            color: 'white',
+                            backgroundColor: 'white',
+                            color: estadoColor,
                             border: `1px solid ${estadoColor}`,
                             '& .MuiChip-label': {
-                                color: 'white',
+                                color: estadoColor,
                                 fontWeight: 500
                             }
                         }}

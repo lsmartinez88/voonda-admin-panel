@@ -83,7 +83,12 @@ export const VehiclesList = ({
     return (
         <>
             {/* Controles superiores estilo ContactApp */}
-            <Stack direction='row' justifyContent='flex-end' alignItems='center' sx={{ mb: 3 }}>
+            <Stack direction='row' justifyContent='space-between' alignItems='center' sx={{ mb: 3 }}>
+                {/* Contador de vehículos a la izquierda */}
+                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                    {totalVehiculos} vehículos en total
+                </Typography>
+
                 {/* Controles de vista */}
                 <Stack direction='row' alignItems='center' spacing={2}>
                     <FormControl size='small' sx={{ minWidth: 140 }}>

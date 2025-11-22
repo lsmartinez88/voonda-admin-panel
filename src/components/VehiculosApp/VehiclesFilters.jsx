@@ -188,10 +188,22 @@ export const VehiclesFilters = ({
 
             {/* Filtros desktop */}
             <Box sx={{ display: { xs: 'none', lg: 'block' } }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                    <Typography variant='h6' sx={{ fontWeight: 600 }}>
-                        Filtros de Búsqueda
-                    </Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <Typography variant='h6' sx={{ fontWeight: 600, mb: 0 }}>
+                            Filtros de Búsqueda
+                        </Typography>
+                        {(filters.marca || filters.modelo || filters.año || filters.estado || filters.search) && (
+                            <>
+                                <Typography variant='h6' sx={{ color: 'text.secondary', fontWeight: 400 }}>
+                                    |
+                                </Typography>
+                                <Typography variant='body2' sx={{ color: 'primary.main', fontWeight: 500 }}>
+                                    {[filters.marca, filters.modelo, filters.año, filters.estado, filters.search].filter(Boolean).length} filtros activos
+                                </Typography>
+                            </>
+                        )}
+                    </Box>
                     <Button
                         variant="outlined"
                         onClick={handleClearFilters}
@@ -202,7 +214,7 @@ export const VehiclesFilters = ({
                     </Button>
                 </Box>
 
-                <Grid container spacing={3} sx={{ mb: 3 }}>
+                <Grid container spacing={3} sx={{ mb: 3, mt: 2 }}>
                     <Grid size={{ xs: 12, md: 2.4 }}>
                         <TextField
                             fullWidth
@@ -294,14 +306,8 @@ export const VehiclesFilters = ({
                         </FormControl>
                     </Grid>
                 </Grid>
-
-                {(filters.marca || filters.modelo || filters.año || filters.estado || filters.search) && (
-                    <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block' }}>
-                        Filtros activos: {[filters.marca, filters.modelo, filters.año, filters.estado, filters.search].filter(Boolean).length}
-                    </Typography>
-                )}
             </Box>
-        </JumboCard>
+        </JumboCard >
     )
 }
 

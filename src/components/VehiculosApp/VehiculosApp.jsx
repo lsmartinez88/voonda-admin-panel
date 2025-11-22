@@ -434,9 +434,9 @@ export const VehiculosApp = () => {
             setLoading(true);
 
             console.log('🚗 Creando vehículo:', {
-                marca: apiPayload.marca,
-                modelo: apiPayload.modelo,
-                patente: apiPayload.patente,
+                marca: vehicleData.marca,
+                modelo: vehicleData.modelo,
+                patente: vehicleData.patente,
                 pendientes_count: Array.isArray(vehicleData.pendientes_preparacion) ? vehicleData.pendientes_preparacion.length : 0
             })
 
@@ -488,10 +488,12 @@ export const VehiculosApp = () => {
                 vendedor_telefono: vehicleData.vendedor_telefono,
                 vendedor_email: vehicleData.vendedor_email,
 
-                // Notas - convertir array a string para backend
+                // Notas - mantener como array para backend
                 pendientes_preparacion: Array.isArray(vehicleData.pendientes_preparacion)
-                    ? vehicleData.pendientes_preparacion.filter(item => item && item.trim()).join('\n')
-                    : (vehicleData.pendientes_preparacion || ''),
+                    ? vehicleData.pendientes_preparacion.filter(item => item && item.trim())
+                    : (vehicleData.pendientes_preparacion && typeof vehicleData.pendientes_preparacion === 'string'
+                        ? vehicleData.pendientes_preparacion.split('\n').filter(item => item.trim())
+                        : []),
                 comentarios: vehicleData.comentarios || '',
 
                 // Publicaciones procesadas
@@ -588,14 +590,9 @@ export const VehiculosApp = () => {
         <Container maxWidth="xl" sx={{ py: 4, minHeight: '100vh' }}>
             {/* Header */}
             <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
-                <Box>
-                    <Typography variant="h4" component="h1" color="primary" gutterBottom>
-                        Gestión de Vehículos
-                    </Typography>
-                    <Typography variant="body1" color="text.secondary">
-                        {totalVehiculos} vehículos en total
-                    </Typography>
-                </Box>
+                <Typography variant="h4" component="h1" color="primary" gutterBottom>
+                    Gestión de Vehículos
+                </Typography>
 
                 <Stack spacing={1} direction='row'>
                     <Button

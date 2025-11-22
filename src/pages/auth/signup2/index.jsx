@@ -75,7 +75,7 @@ export default function Signup2() {
 
             <Div sx={{ mt: "auto" }}>
               <Link to="/" underline="none" sx={{ display: "inline-flex" }}>
-                <img src={`${ASSET_IMAGES}/logo-white.png`} alt="Jumbo React" />
+                <img src={`${ASSET_IMAGES}/voonda-logo-white.png`} alt="Voonda" />
               </Link>
             </Div>
           </Div>
