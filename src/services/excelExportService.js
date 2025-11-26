@@ -4,7 +4,7 @@ class ExcelExportService {
     static prepareExcelData(data) {
         // Columnas requeridas exactamente como las especificaste
         const headers = [
-            "patente",
+            "id",
             "kilometros",
             "vehiculo_ano",
             "valor",
@@ -15,6 +15,8 @@ class ExcelExportService {
             "modelo",
             "modelo_ano",
             "version",
+            "tipo_carroceria",
+            "origen",
             "motorizacion",
             "combustible",
             "caja",
@@ -31,9 +33,9 @@ class ExcelExportService {
             "multimedia",
             "frenos",
             "neumaticos",
-            "llantas",
             "asistencia_manejo",
-            "rendimiento_mixto",
+            "consumo_ciudad",
+            "consumo_ruta",
             "capacidad_baul",
             "capacidad_combustible",
             "velocidad_max",
@@ -41,7 +43,6 @@ class ExcelExportService {
             "ancho",
             "alto",
             "url_ficha",
-            "modelo_rag",
             "titulo_legible",
             "ficha_breve"
         ]
@@ -65,7 +66,7 @@ class ExcelExportService {
 
             // Extraer datos del enriquecimiento
             const enrichedData = vehicle.enrichedData || {}
-            
+
             // Para compatibilidad: los datos OpenAI ahora están directamente en enrichedData
             const openaiData = enrichedData // Alias para el código legacy
 
@@ -77,7 +78,7 @@ class ExcelExportService {
             }
 
             // === DATOS DE LA NUEVA ESTRUCTURA SIMPLIFICADA ===
-            excelRow.patente = enrichedData.patente || ""
+            excelRow.id = enrichedData.id || ""
             excelRow.kilometros = enrichedData.kilometros || ""
             excelRow.vehiculo_ano = enrichedData.vehiculo_ano || ""
             excelRow.valor = enrichedData.valor || ""
@@ -89,6 +90,10 @@ class ExcelExportService {
             excelRow.modelo_ano = enrichedData.modelo_ano || ""
             excelRow.version = enrichedData.version || ""
             excelRow.color = enrichedData.color || ""
+
+            // === CLASIFICACIÓN Y ORIGEN ===
+            excelRow.tipo_carroceria = enrichedData.tipo_carroceria || ""
+            excelRow.origen = enrichedData.origen || ""
 
             // === ESPECIFICACIONES TÉCNICAS ===
             // Los datos de OpenAI están ahora directamente en enrichedData
@@ -118,13 +123,13 @@ class ExcelExportService {
             // === CHASIS Y SUSPENSIÓN ===
             excelRow.frenos = enrichedData.frenos || ""
             excelRow.neumaticos = enrichedData.neumaticos || ""
-            excelRow.llantas = enrichedData.llantas || ""
 
             // === ASISTENCIA Y TECNOLOGÍA ===
             excelRow.asistencia_manejo = enrichedData.asistencia_manejo || ""
 
-            // === RENDIMIENTO ===
-            excelRow.rendimiento_mixto = enrichedData.rendimiento_mixto || ""
+            // === CONSUMO ===
+            excelRow.consumo_ciudad = enrichedData.consumo_ciudad || ""
+            excelRow.consumo_ruta = enrichedData.consumo_ruta || ""
 
             // === CAPACIDADES ===
             excelRow.capacidad_baul = enrichedData.capacidad_baul || ""
@@ -140,11 +145,12 @@ class ExcelExportService {
             excelRow.url_ficha = enrichedData.url_ficha || ""
 
             // === DATOS DE ANÁLISIS ===
-            excelRow.modelo_rag = enrichedData.informacion_rag || enrichedData.modelo_rag || ""
             excelRow.titulo_legible = enrichedData.titulo_legible || ""
             excelRow.ficha_breve = enrichedData.ficha_breve || ""
 
             // === SEGMENTACIÓN Y CLASIFICACIÓN ===
+            excelRow.tipo_carroceria = openaiData.tipo_carroceria || catalogVehicle.body_type || enrichedData.body_type || ""
+            excelRow.origen = openaiData.origen || catalogVehicle.origin || enrichedData.origin || catalogVehicle.country || ""
             excelRow.segmento_modelo = openaiData.segmento_modelo || catalogVehicle.segment || enrichedData.segment || catalogVehicle.category || ""
 
             // === ESPECIFICACIONES DEL MOTOR ===
@@ -164,13 +170,15 @@ class ExcelExportService {
             // === COMPONENTES ===
             excelRow.frenos = openaiData.frenos || catalogVehicle.brakes || enrichedData.brakes || ""
             excelRow.neumaticos = openaiData.neumaticos || catalogVehicle.tires || enrichedData.tires || ""
-            excelRow.llantas = openaiData.llantas || catalogVehicle.wheels || enrichedData.wheels || ""
 
             // === ASISTENCIAS Y TECNOLOGÍA ===
             excelRow.asistencia_manejo = openaiData.asistencia_manejo || catalogVehicle.driving_assistance || enrichedData.driving_assistance || ""
 
+            // === CONSUMO ===
+            excelRow.consumo_ciudad = openaiData.consumo_ciudad || catalogVehicle.fuel_consumption_city || enrichedData.fuel_consumption_city || ""
+            excelRow.consumo_ruta = openaiData.consumo_ruta || catalogVehicle.fuel_consumption_highway || enrichedData.fuel_consumption_highway || ""
+
             // === RENDIMIENTO Y CAPACIDADES ===
-            excelRow.rendimiento_mixto = openaiData.rendimiento_mixto || catalogVehicle.fuel_consumption || enrichedData.fuel_consumption || ""
             excelRow.capacidad_baul = openaiData.capacidad_baul || catalogVehicle.trunk_capacity || enrichedData.trunk_capacity || ""
             excelRow.capacidad_combustible = openaiData.capacidad_combustible || catalogVehicle.fuel_capacity || enrichedData.fuel_capacity || ""
             excelRow.velocidad_max = openaiData.velocidad_max || catalogVehicle.max_speed || enrichedData.max_speed || ""
@@ -184,7 +192,6 @@ class ExcelExportService {
             excelRow.url_ficha = openaiData.url_ficha || catalogVehicle.detail_url || enrichedData.detail_url || catalogVehicle.url || ""
 
             // === DATOS DE ANÁLISIS ===
-            excelRow.modelo_rag = openaiData.informacion_rag || this.generateModelRAG(vehicle)
             excelRow.titulo_legible = this.generateReadableTitle(vehicle)
             excelRow.ficha_breve = this.generateBriefSummary(vehicle)
 
@@ -251,6 +258,17 @@ class ExcelExportService {
         const catalogVehicle = matchData.catalogVehicle || {}
         const enrichedData = vehicle.enrichedData || {}
 
+        // Prioridad 1: Usar description de enrichedData (viene de la API de Fratelli)
+        if (enrichedData.description) {
+            return enrichedData.description
+        }
+
+        // Prioridad 2: Usar description directamente del vehículo (cuando viene del enriquecimiento)
+        if (vehicle.description) {
+            return vehicle.description
+        }
+
+        // Fallback: Generar resumen a partir de especificaciones técnicas
         const parts = []
 
         // Especificaciones técnicas

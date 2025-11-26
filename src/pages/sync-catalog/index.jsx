@@ -372,24 +372,33 @@ Año: ${ano}
 
 El JSON debe tener esta estructura (usa null si no tienes el dato):
 {
-  "combustible": "nafta | diésel | híbrido | eléctrico",
-  "cilindrada": "número en cc",
-  "potencia_hp": "número en HP",
-  "torque_nm": "número en Nm",
-  "transmision": "manual | automática",
-  "traccion": "delantera | trasera | integral",
-  "airbags": "número",
-  "abs": true/false,
-  "velocidad_maxima": "número en km/h",
-  "aceleracion_0_100": "número en segundos",
-  "consumo_mixto": "número en km/l",
-  "capacidad_tanque": "número en litros",
-  "largo": "número en mm",
-  "ancho": "número en mm",
-  "alto": "número en mm",
-  "peso": "número en kg",
-  "capacidad_baul": "número en litros",
-  "asientos": "número"
+  "tipo_carroceria": "tipo de carrocería (ej: 'Sedán', 'SUV', 'Hatchback', 'Pick-up', 'Coupé', 'Station Wagon')",
+  "origen": "país de fabricación (ej: 'Alemania', 'Japón', 'Argentina', 'Brasil')",
+  "motorizacion": "descripción del motor (ej: '2.0 16V Turbo')",
+  "traccion": "delantera | trasera | integral | 4x4",
+  "cilindrada": "número en cc (ej: 1600)",
+  "potencia_hp": "número en HP (ej: 150)",
+  "torque_nm": "número en Nm (ej: 210)",
+  "airbags": "cantidad y distribución (ej: '6 airbags: frontales, laterales y de cortina')",
+  "abs": "tipo de freno (ej: 'ABS + EBD', 'ABS con distribución electrónica', 'Frenos de disco ventilados')",
+  "control_estabilidad": "si tiene y tipo (ej: 'ESP', 'Control de estabilidad adaptativo', 'ESC con asistente de arranque en pendiente')",
+  "climatizador": "tipo (ej: 'Climatizador automático bizona', 'Aire acondicionado manual', 'Climatizador digital')",
+  "multimedia": "descripción del sistema (ej: 'Pantalla táctil 8\" con Android Auto y Apple CarPlay', 'Radio AM/FM con Bluetooth')",
+  "frenos": "tipo delanteros y traseros (ej: 'Disco ventilado adelante, disco sólido atrás')",
+  "neumaticos": "medida y especificación (ej: '205/55 R16', '225/45 R17')",
+  "asistencia_manejo": "sistemas ADAS (ej: 'Control crucero adaptativo, Alerta de cambio de carril, Frenado autónomo de emergencia')",
+  "consumo_ciudad": "consumo urbano en km/l (ej: 10.5)",
+  "consumo_ruta": "consumo en ruta en km/l (ej: 15.2)",
+  "capacidad_baul": "capacidad en litros (ej: 480)",
+  "capacidad_combustible": "capacidad del tanque en litros (ej: 50)",
+  "velocidad_max": "velocidad máxima en km/h (ej: 195)",
+  "largo": "largo total en cm (ej: 455)",
+  "ancho": "ancho total en cm (ej: 180)",
+  "alto": "altura total en cm (ej: 145)",
+  "peso": "peso en kg (ej: 1250)",
+  "asientos": "número de asientos (ej: 5)",
+  "aceleracion_0_100": "aceleración 0-100 km/h en segundos (ej: 9.5)",
+  "url_ficha": "URL de la fuente de información si existe (ej: sitio web del fabricante)"
 }`;
 
                         console.log(`   - Enriqueciendo con OpenAI: ${marca} ${modelo} ${version}`);
@@ -407,7 +416,7 @@ El JSON debe tener esta estructura (usa null si no tienes el dato):
                                     role: 'user',
                                     content: prompt
                                 }],
-                                max_tokens: 500,
+                                max_tokens: 1000,
                                 temperature: 0.3
                             })
                         });
@@ -423,6 +432,8 @@ El JSON debe tener esta estructura (usa null si no tienes el dato):
                                 if (jsonMatch) {
                                     technicalData = JSON.parse(jsonMatch[0]);
                                     console.log(`      ✓ Datos técnicos obtenidos de OpenAI`);
+                                    console.log(`      📋 Campos recibidos:`, Object.keys(technicalData).join(', '));
+                                    console.log(`      🆕 Nuevos campos: tipo_carroceria=${technicalData.tipo_carroceria || 'N/A'}, origen=${technicalData.origen || 'N/A'}, consumo_ciudad=${technicalData.consumo_ciudad || 'N/A'}, consumo_ruta=${technicalData.consumo_ruta || 'N/A'}`);
                                 }
                             } catch (parseError) {
                                 console.warn(`      ✗ Error parseando JSON:`, parseError);
@@ -476,17 +487,106 @@ El JSON debe tener esta estructura (usa null si no tienes el dato):
     };
 
     // Funciones de exportación
-    const showGoogleSheetsExportDialog = () => {
-        setShowGoogleSheetsDialog(true);
-        setGoogleSheetsUrl('');
-        setGoogleSheetsUrlError('');
+    const exportToGoogleSheets = async () => {
+        if (!enrichedData?.success || !enrichedData?.data) return;
+
+        try {
+            // Preparar datos para copiar (formato TSV - Tab Separated Values)
+            const headers = [
+                "id", "kilometros", "vehiculo_ano", "valor", "moneda",
+                "publicacion_web", "publicacion_api_call", "marca", "modelo", "modelo_ano",
+                "version", "tipo_carroceria", "origen", "motorizacion", "combustible",
+                "caja", "traccion", "puertas", "segmento_modelo", "cilindrada",
+                "potencia_hp", "torque_nm", "airbags", "abs", "control_estabilidad",
+                "climatizador", "multimedia", "frenos", "neumaticos", "asistencia_manejo",
+                "consumo_ciudad", "consumo_ruta", "capacidad_baul", "capacidad_combustible",
+                "velocidad_max", "largo", "ancho", "alto", "url_ficha",
+                "titulo_legible", "ficha_breve", "featured", "favorite"
+            ];
+
+            const rows = enrichedData.data.map(vehicle => {
+                // Helper para limpiar texto: remover saltos de línea y tabuladores
+                const cleanText = (text) => {
+                    if (!text) return '';
+                    return String(text)
+                        .replace(/[\r\n]+/g, ' ')  // Reemplazar saltos de línea por espacios
+                        .replace(/\t/g, ' ')        // Reemplazar tabs por espacios
+                        .replace(/\s{2,}/g, ' ')    // Comprimir múltiples espacios en uno
+                        .trim();
+                };
+
+                return [
+                    vehicle.id || '',
+                    vehicle.mileage || '',
+                    vehicle.year || '',
+                    vehicle.price || '',
+                    'ARS',
+                    vehicle.id ? `https://www.fratelliautomotores.com.ar/catalogo/${vehicle.id}` : 'si',
+                    vehicle.id ? `https://api.fratelliautomotores.com.ar/api/cars/${vehicle.id}` : 'si',
+                    vehicle.brand || '',
+                    vehicle.model || '',
+                    vehicle.year || '',
+                    vehicle.version || '',
+                    vehicle.tipo_carroceria || '',
+                    vehicle.origen || '',
+                    vehicle.motorizacion || '',
+                    vehicle.fuel || vehicle.combustible || '',
+                    vehicle.transmission || vehicle.caja || '',
+                    vehicle.traccion || '',
+                    vehicle.doors || vehicle.puertas || '',
+                    vehicle.segmento_modelo || vehicle.Category?.name || '',
+                    vehicle.cilindrada || '',
+                    vehicle.potencia_hp || '',
+                    vehicle.torque_nm || '',
+                    vehicle.airbags || '',
+                    vehicle.abs || '',
+                    vehicle.control_estabilidad || '',
+                    vehicle.climatizador || '',
+                    vehicle.multimedia || '',
+                    vehicle.frenos || '',
+                    vehicle.neumaticos || '',
+                    vehicle.asistencia_manejo || '',
+                    vehicle.consumo_ciudad || '',
+                    vehicle.consumo_ruta || '',
+                    vehicle.capacidad_baul || '',
+                    vehicle.capacidad_combustible || '',
+                    vehicle.velocidad_max || '',
+                    vehicle.largo || '',
+                    vehicle.ancho || '',
+                    vehicle.alto || '',
+                    vehicle.url_ficha || '',
+                    cleanText(`${vehicle.brand} ${vehicle.model} ${vehicle.year} ${vehicle.version || ''}`),
+                    cleanText(vehicle.description || ''),  // Limpiar saltos de línea en ficha_breve
+                    vehicle.featured ? 'Sí' : 'No',
+                    vehicle.favorite ? 'Sí' : 'No'
+                ];
+            });
+
+            // Crear contenido TSV (Tab Separated Values) para pegar en Google Sheets
+            const tsvContent = [
+                headers.join('\t'),
+                ...rows.map(row => row.join('\t'))
+            ].join('\n');
+
+            // Copiar al portapapeles
+            await navigator.clipboard.writeText(tsvContent);
+
+            // Mostrar diálogo con instrucciones
+            setShowGoogleSheetsDialog(true);
+            setMessage(`✅ ¡${enrichedData.data.length} vehículos copiados al portapapeles!`);
+            setMessageType('success');
+        } catch (error) {
+            console.error('❌ Error copiando al portapapeles:', error);
+            setMessage(`❌ Error al copiar datos: ${error.message}`);
+            setMessageType('error');
+        }
     };
 
     const exportToCSV = async () => {
         if (!enrichedData?.success || !enrichedData?.data) return;
 
         setExporting(true);
-        setMessage('📄 Exportando a CSV...');
+        setMessage('📄 Generando CSV...');
         setMessageType('info');
 
         try {
@@ -515,47 +615,6 @@ El JSON debe tener esta estructura (usa null si no tienes el dato):
         }
     };
 
-    const exportToSpecificGoogleSheet = async () => {
-        if (!googleSheetsUrl.trim()) {
-            setGoogleSheetsUrlError('Por favor ingresa un link de Google Sheets');
-            return;
-        }
-
-        const validation = GoogleSheetsService.validateGoogleSheetUrl(googleSheetsUrl);
-        if (!validation.valid) {
-            setGoogleSheetsUrlError(validation.error);
-            return;
-        }
-
-        setShowGoogleSheetsDialog(false);
-        setExporting(true);
-        setMessage('📊 Conectando con Google Sheets...');
-        setMessageType('info');
-
-        try {
-            const result = await GoogleSheetsService.exportToSpecificGoogleSheet(
-                enrichedData.data,
-                { totalRecords: enrichedData.data.length },
-                googleSheetsUrl
-            );
-
-            if (result.success) {
-                setExportResult(result);
-                setMessage(`✅ ¡Datos exportados exitosamente a Google Sheets!`);
-                setMessageType('success');
-            } else {
-                setMessage(`❌ Error exportando a Google Sheets: ${result.error}`);
-                setMessageType('error');
-            }
-        } catch (error) {
-            setMessage(`❌ Error inesperado exportando a Google Sheets: ${error.message}`);
-            setMessageType('error');
-        } finally {
-            setExporting(false);
-            setTimeout(() => setMessage(''), 15000);
-        }
-    };
-
     const exportToExcel = async () => {
         if (!enrichedData || !enrichedData.data) {
             setMessage('❌ No hay datos enriquecidos para exportar');
@@ -573,35 +632,19 @@ El JSON debe tener esta estructura (usa null si no tienes el dato):
             console.log('🔍 Primer vehículo antes de transformar:', enrichedData.data[0]);
 
             // Transformar los datos al formato esperado por ExcelExportService
-            // Helper: remove the version text from the model when present
-            const sanitizeModel = (model = '', version = '') => {
-                if (!model) return '';
-                if (!version) return model.trim();
-                try {
-                    const v = version.toString().trim();
-                    const escaped = v.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&");
-                    const re = new RegExp(escaped, 'i');
-                    let cleaned = model.replace(re, '').replace(/[-\\/\\|]/g, ' ');
-                    cleaned = cleaned.replace(/\\s{2,}/g, ' ').trim();
-                    return cleaned || model.trim();
-                } catch (e) {
-                    return model.trim();
-                }
-            };
-
             const dataForExport = enrichedData.data.map((vehicle) => {
                 // Mapeo de campos de la API de Fratelli a campos del Excel
                 return {
                     enrichedData: {
                         // === MAPEO DIRECTO DE LA API DE FRATELLI ===
-                        // id -> id
+                        // id -> id (primer campo)
                         id: vehicle.id || '',
 
                         // brand -> marca
                         marca: vehicle.brand || '',
 
-                        // model -> modelo (sin versión)
-                        modelo: sanitizeModel(vehicle.model, vehicle.version) || '',
+                        // model -> modelo (sin marca ni versión)
+                        modelo: sanitizeModel(vehicle.model, vehicle.brand, vehicle.version) || '',
 
                         // year -> vehiculo_ano y modelo_ano
                         vehiculo_ano: vehicle.year || '',
@@ -642,13 +685,12 @@ El JSON debe tener esta estructura (usa null si no tienes el dato):
                         publicacion_web: vehicle.id ? `https://www.fratelliautomotores.com.ar/catalogo/${vehicle.id}` : 'si',
                         publicacion_api_call: vehicle.id ? `https://api.fratelliautomotores.com.ar/api/cars/${vehicle.id}` : 'si',
 
-                        // Patente (no viene de la API, dejar vacío)
-                        patente: '',
-
                         // === DATOS TÉCNICOS DE OPENAI (si están disponibles) ===
+                        tipo_carroceria: vehicle.tipo_carroceria || '',
+                        origen: vehicle.origen || '',
                         motorizacion: vehicle.motorizacion || '',
                         traccion: vehicle.traccion || '',
-                        segmento_modelo: vehicle.segmento_modelo || vehicle.category || '',
+                        segmento_modelo: vehicle.segmento_modelo || vehicle.Category?.name || '',
                         cilindrada: vehicle.cilindrada || '',
                         potencia_hp: vehicle.potencia_hp || '',
                         torque_nm: vehicle.torque_nm || '',
@@ -660,23 +702,20 @@ El JSON debe tener esta estructura (usa null si no tienes el dato):
                         asistencia_manejo: vehicle.asistencia_manejo || '',
                         frenos: vehicle.frenos || '',
                         neumaticos: vehicle.neumaticos || '',
-                        llantas: vehicle.llantas || '',
-                        rendimiento_mixto: vehicle.consumo_mixto || vehicle.rendimiento_mixto || '',
-                        velocidad_max: vehicle.velocidad_maxima || vehicle.velocidad_max || '',
+                        consumo_ciudad: vehicle.consumo_ciudad || '',
+                        consumo_ruta: vehicle.consumo_ruta || '',
+                        velocidad_max: vehicle.velocidad_max || '',
                         aceleracion_0_100: vehicle.aceleracion_0_100 || '',
                         capacidad_baul: vehicle.capacidad_baul || '',
-                        capacidad_combustible: vehicle.capacidad_tanque || vehicle.capacidad_combustible || '',
+                        capacidad_combustible: vehicle.capacidad_combustible || '',
                         largo: vehicle.largo || '',
                         ancho: vehicle.ancho || '',
                         alto: vehicle.alto || '',
                         peso: vehicle.peso || '',
                         asientos: vehicle.asientos || '',
-                        consumo_ciudad: vehicle.consumo_ciudad || '',
-                        consumo_ruta: vehicle.consumo_ruta || '',
 
                         // Metadatos
                         url_ficha: vehicle.url_ficha || '',
-                        modelo_rag: vehicle.modelo_rag || '',
                         titulo_legible: vehicle.titulo_legible || ''
                     }
                 };
@@ -1040,7 +1079,7 @@ El JSON debe tener esta estructura (usa null si no tienes el dato):
                     </Button>
 
                     <Button
-                        onClick={showGoogleSheetsExportDialog}
+                        onClick={exportToGoogleSheets}
                         variant="outlined"
                         disabled={!enrichedData?.success || exporting}
                         startIcon={<VisibilityIcon />}
@@ -1085,20 +1124,38 @@ El JSON debe tener esta estructura (usa null si no tienes el dato):
         </Card>
     );
 
-    // Helper disponible para vista previa y exportación: elimina la versión del nombre del modelo
-    const sanitizeModel = (model = '', version = '') => {
+    // Helper disponible para vista previa y exportación: elimina la marca y versión del nombre del modelo
+    const sanitizeModel = (model = '', brand = '', version = '') => {
         if (!model) return '';
-        if (!version) return model.trim();
-        try {
-            const v = version.toString().trim();
-            const escaped = v.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&");
-            const re = new RegExp(escaped, 'i');
-            let cleaned = model.replace(re, '').replace(/[-\\/\\|]/g, ' ');
-            cleaned = cleaned.replace(/\\s{2,}/g, ' ').trim();
-            return cleaned || model.trim();
-        } catch (e) {
-            return model.trim();
+        let cleaned = model.trim();
+
+        // Primero eliminar la marca si está presente al inicio del modelo
+        if (brand) {
+            try {
+                const b = brand.toString().trim();
+                const escapedBrand = b.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&");
+                const brandRe = new RegExp(`^${escapedBrand}\\s+`, 'i');
+                cleaned = cleaned.replace(brandRe, '');
+            } catch (e) {
+                // Si falla, continuar sin remover la marca
+            }
         }
+
+        // Luego eliminar la versión si está presente
+        if (version) {
+            try {
+                const v = version.toString().trim();
+                const escapedVersion = v.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&");
+                const versionRe = new RegExp(escapedVersion, 'i');
+                cleaned = cleaned.replace(versionRe, '');
+            } catch (e) {
+                // Si falla, continuar sin remover la versión
+            }
+        }
+
+        // Limpiar separadores y espacios múltiples
+        cleaned = cleaned.replace(/[-\\/\\|]/g, ' ').replace(/\\s{2,}/g, ' ').trim();
+        return cleaned || model.trim();
     };
 
     // Vista previa final (colapsable)
@@ -1106,7 +1163,7 @@ El JSON debe tener esta estructura (usa null si no tienes el dato):
         <Accordion sx={{ mt: 3 }}>
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                 <Typography variant="subtitle1">
-                    👀 Vista Previa de Datos Finales ({enrichedData.data.length} registros - 42 columnas)
+                    👀 Vista Previa de Datos Finales ({enrichedData.data.length} registros - 43 columnas)
                 </Typography>
             </AccordionSummary>
             <AccordionDetails>
@@ -1118,7 +1175,7 @@ El JSON debe tener esta estructura (usa null si no tienes el dato):
                     <Table size="small" stickyHeader>
                         <TableHead>
                             <TableRow>
-                                <TableCell sx={{ minWidth: 100 }}><strong>patente</strong></TableCell>
+                                <TableCell sx={{ minWidth: 80 }}><strong>id</strong></TableCell>
                                 <TableCell sx={{ minWidth: 100 }}><strong>kilometros</strong></TableCell>
                                 <TableCell sx={{ minWidth: 100 }}><strong>vehiculo_ano</strong></TableCell>
                                 <TableCell sx={{ minWidth: 100 }}><strong>valor</strong></TableCell>
@@ -1129,6 +1186,8 @@ El JSON debe tener esta estructura (usa null si no tienes el dato):
                                 <TableCell sx={{ minWidth: 100 }}><strong>modelo</strong></TableCell>
                                 <TableCell sx={{ minWidth: 100 }}><strong>modelo_ano</strong></TableCell>
                                 <TableCell sx={{ minWidth: 100 }}><strong>version</strong></TableCell>
+                                <TableCell sx={{ minWidth: 120 }}><strong>tipo_carroceria</strong></TableCell>
+                                <TableCell sx={{ minWidth: 100 }}><strong>origen</strong></TableCell>
                                 <TableCell sx={{ minWidth: 120 }}><strong>motorizacion</strong></TableCell>
                                 <TableCell sx={{ minWidth: 100 }}><strong>combustible</strong></TableCell>
                                 <TableCell sx={{ minWidth: 80 }}><strong>caja</strong></TableCell>
@@ -1145,9 +1204,9 @@ El JSON debe tener esta estructura (usa null si no tienes el dato):
                                 <TableCell sx={{ minWidth: 100 }}><strong>multimedia</strong></TableCell>
                                 <TableCell sx={{ minWidth: 80 }}><strong>frenos</strong></TableCell>
                                 <TableCell sx={{ minWidth: 100 }}><strong>neumaticos</strong></TableCell>
-                                <TableCell sx={{ minWidth: 80 }}><strong>llantas</strong></TableCell>
                                 <TableCell sx={{ minWidth: 140 }}><strong>asistencia_manejo</strong></TableCell>
-                                <TableCell sx={{ minWidth: 140 }}><strong>rendimiento_mixto</strong></TableCell>
+                                <TableCell sx={{ minWidth: 120 }}><strong>consumo_ciudad</strong></TableCell>
+                                <TableCell sx={{ minWidth: 120 }}><strong>consumo_ruta</strong></TableCell>
                                 <TableCell sx={{ minWidth: 120 }}><strong>capacidad_baul</strong></TableCell>
                                 <TableCell sx={{ minWidth: 160 }}><strong>capacidad_combustible</strong></TableCell>
                                 <TableCell sx={{ minWidth: 120 }}><strong>velocidad_max</strong></TableCell>
@@ -1155,7 +1214,6 @@ El JSON debe tener esta estructura (usa null si no tienes el dato):
                                 <TableCell sx={{ minWidth: 80 }}><strong>ancho</strong></TableCell>
                                 <TableCell sx={{ minWidth: 80 }}><strong>alto</strong></TableCell>
                                 <TableCell sx={{ minWidth: 120 }}><strong>url_ficha</strong></TableCell>
-                                <TableCell sx={{ minWidth: 100 }}><strong>modelo_rag</strong></TableCell>
                                 <TableCell sx={{ minWidth: 140 }}><strong>titulo_legible</strong></TableCell>
                                 <TableCell sx={{ minWidth: 200 }}><strong>ficha_breve</strong></TableCell>
                                 <TableCell sx={{ minWidth: 80 }}><strong>featured</strong></TableCell>
@@ -1166,7 +1224,7 @@ El JSON debe tener esta estructura (usa null si no tienes el dato):
                             {enrichedData.data.map((vehicle, index) => {
                                 return (
                                     <TableRow key={index} sx={{ height: 64, '& > *': { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }}>
-                                        <TableCell>{vehicle.patente || ""}</TableCell>
+                                        <TableCell>{vehicle.id || "-"}</TableCell>
                                         <TableCell>{vehicle.mileage ? vehicle.mileage.toLocaleString() : "-"}</TableCell>
                                         <TableCell>{vehicle.year || "-"}</TableCell>
                                         <TableCell>{vehicle.price ? `$${vehicle.price.toLocaleString()}` : "-"}</TableCell>
@@ -1174,9 +1232,11 @@ El JSON debe tener esta estructura (usa null si no tienes el dato):
                                         <TableCell>{vehicle.id ? `https://www.fratelliautomotores.com.ar/catalogo/${vehicle.id}` : 'si'}</TableCell>
                                         <TableCell>{vehicle.id ? `https://api.fratelliautomotores.com.ar/api/cars/${vehicle.id}` : 'si'}</TableCell>
                                         <TableCell>{vehicle.brand || "-"}</TableCell>
-                                        <TableCell>{sanitizeModel(vehicle.model, vehicle.version) || "-"}</TableCell>
+                                        <TableCell>{sanitizeModel(vehicle.model, vehicle.brand, vehicle.version) || "-"}</TableCell>
                                         <TableCell>{vehicle.year || "-"}</TableCell>
                                         <TableCell>{vehicle.version || "-"}</TableCell>
+                                        <TableCell>{vehicle.tipo_carroceria || "-"}</TableCell>
+                                        <TableCell>{vehicle.origen || "-"}</TableCell>
                                         <TableCell>{vehicle.motorizacion || "-"}</TableCell>
                                         <TableCell>{vehicle.fuel || vehicle.combustible || "-"}</TableCell>
                                         <TableCell>{vehicle.transmission || vehicle.caja || "-"}</TableCell>
@@ -1193,9 +1253,9 @@ El JSON debe tener esta estructura (usa null si no tienes el dato):
                                         <TableCell>{vehicle.multimedia || "-"}</TableCell>
                                         <TableCell>{vehicle.frenos || "-"}</TableCell>
                                         <TableCell>{vehicle.neumaticos || "-"}</TableCell>
-                                        <TableCell>{vehicle.llantas || "-"}</TableCell>
                                         <TableCell>{vehicle.asistencia_manejo || "-"}</TableCell>
-                                        <TableCell>{vehicle.consumo_mixto || vehicle.rendimiento_mixto || "-"}</TableCell>
+                                        <TableCell>{vehicle.consumo_ciudad || "-"}</TableCell>
+                                        <TableCell>{vehicle.consumo_ruta || "-"}</TableCell>
                                         <TableCell>{vehicle.capacidad_baul || "-"}</TableCell>
                                         <TableCell>{vehicle.capacidad_tanque || vehicle.capacidad_combustible || "-"}</TableCell>
                                         <TableCell>{vehicle.velocidad_maxima || vehicle.velocidad_max || "-"}</TableCell>
@@ -1203,8 +1263,7 @@ El JSON debe tener esta estructura (usa null si no tienes el dato):
                                         <TableCell>{vehicle.ancho || "-"}</TableCell>
                                         <TableCell>{vehicle.alto || "-"}</TableCell>
                                         <TableCell>{vehicle.url_ficha || "-"}</TableCell>
-                                        <TableCell>{vehicle.modelo_rag || "-"}</TableCell>
-                                        <TableCell>{`${vehicle.brand} ${sanitizeModel(vehicle.model, vehicle.version)} ${vehicle.year} ${vehicle.version || ''}`.trim()}</TableCell>
+                                        <TableCell>{`${vehicle.brand} ${sanitizeModel(vehicle.model, vehicle.brand, vehicle.version)} ${vehicle.year} ${vehicle.version || ''}`.trim()}</TableCell>
                                         <TableCell sx={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                             {vehicle.description || "-"}
                                         </TableCell>
@@ -1337,37 +1396,62 @@ El JSON debe tener esta estructura (usa null si no tienes el dato):
             {/* Dialog para Google Sheets */}
             <Dialog open={showGoogleSheetsDialog} onClose={() => setShowGoogleSheetsDialog(false)} maxWidth="md" fullWidth>
                 <DialogTitle>
-                    📊 Exportar a Google Sheets
+                    ✅ Datos Copiados al Portapapeles
                 </DialogTitle>
                 <DialogContent>
-                    <Typography variant="body1" sx={{ mb: 3 }}>
-                        Ingresa el link de tu Google Sheets donde quieres agregar los datos procesados.
+                    <Alert severity="success" sx={{ mb: 3 }}>
+                        ¡Los datos han sido copiados al portapapeles exitosamente!
+                    </Alert>
+
+                    <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
+                        📋 Instrucciones para pegar en Google Sheets:
                     </Typography>
 
-                    <TextField
-                        fullWidth
-                        label="Link de Google Sheets"
-                        placeholder="https://docs.google.com/spreadsheets/d/TU_SHEET_ID/edit"
-                        value={googleSheetsUrl}
-                        onChange={(e) => {
-                            setGoogleSheetsUrl(e.target.value);
-                            setGoogleSheetsUrlError('');
-                        }}
-                        error={!!googleSheetsUrlError}
-                        helperText={googleSheetsUrlError || 'Pega aquí el link completo de tu Google Sheets'}
-                        sx={{ mb: 2 }}
-                    />
+                    <Box component="ol" sx={{ pl: 2, '& li': { mb: 2 } }}>
+                        <li>
+                            <Typography variant="body1">
+                                <strong>Abre Google Sheets</strong> en tu navegador:
+                                <Button
+                                    href="https://sheets.google.com"
+                                    target="_blank"
+                                    size="small"
+                                    sx={{ ml: 1 }}
+                                >
+                                    Abrir Google Sheets
+                                </Button>
+                            </Typography>
+                        </li>
+                        <li>
+                            <Typography variant="body1">
+                                <strong>Crea una nueva hoja</strong> o abre una existente
+                            </Typography>
+                        </li>
+                        <li>
+                            <Typography variant="body1">
+                                <strong>Selecciona la celda A1</strong> (primera celda de la hoja)
+                            </Typography>
+                        </li>
+                        <li>
+                            <Typography variant="body1">
+                                <strong>Pega los datos</strong> usando <code>Ctrl+V</code> (Windows/Linux) o <code>⌘+V</code> (Mac)
+                            </Typography>
+                        </li>
+                        <li>
+                            <Typography variant="body1">
+                                Los datos se pegarán automáticamente con el formato correcto incluyendo todas las {enrichedData?.data?.length || 0} filas
+                            </Typography>
+                        </li>
+                    </Box>
+
+                    <Alert severity="info" sx={{ mt: 3 }}>
+                        <Typography variant="body2">
+                            💡 <strong>Tip:</strong> Si los datos no se pegan correctamente, intenta usar "Pegar valores únicamente" desde el menú de Google Sheets.
+                        </Typography>
+                    </Alert>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setShowGoogleSheetsDialog(false)}>
-                        Cancelar
-                    </Button>
-                    <Button
-                        onClick={exportToSpecificGoogleSheet}
-                        variant="contained"
-                        disabled={!googleSheetsUrl.trim()}
-                    >
-                        Crear Nueva Hoja
+                    <Button onClick={() => setShowGoogleSheetsDialog(false)} variant="contained">
+                        Entendido
                     </Button>
                 </DialogActions>
             </Dialog>
