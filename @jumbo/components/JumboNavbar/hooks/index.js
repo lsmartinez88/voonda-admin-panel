@@ -7,7 +7,7 @@ function useJumboNavbar() {
   const context = React.useContext(JumboNavbarContext);
   //TODO: probably we can fix the activeLocale thing
   function isActive(path) {
-    return location.pathname === `${path}`;
+    return location.pathname === path || location.pathname.startsWith(`${path}/`);
     // return pathname === `${locale ? '/' + locale : ''}${path}`;
   }
 

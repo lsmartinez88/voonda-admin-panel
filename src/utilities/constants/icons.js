@@ -1,4 +1,4 @@
-import { CreditCardOutlined, DeveloperBoardOutlined, FacebookOutlined, HandshakeOutlined, Instagram, LinkedIn, Mail, MessageOutlined, NotificationsActiveRounded, PaymentOutlined, Refresh, Settings, SettingsOutlined, TaskAltOutlined, Twitter, YouTube } from "@mui/icons-material"
+import { AccessTime, CreditCardOutlined, DeveloperBoardOutlined, FacebookOutlined, HandshakeOutlined, Instagram, LinkedIn, Mail, MessageOutlined, NotificationsActiveRounded, PaymentOutlined, Refresh, Settings, SettingsOutlined, TaskAltOutlined, Twitter, YouTube } from "@mui/icons-material"
 import BackupOutlinedIcon from "@mui/icons-material/BackupOutlined"
 import CurrencyExchangeOutlinedIcon from "@mui/icons-material/CurrencyExchangeOutlined"
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator"
@@ -377,6 +377,11 @@ const APP_ICONS = [
         Component: AdminPanelSettingsOutlinedIcon,
         props: { sx: { fontSize: 20 } }
     }
-]
+    ,
+    {
+        name: "clock",
+        Component: AccessTime,
+        props: { sx: { fontSize: 20 } }
+    }]
 
 export { APP_ICONS }

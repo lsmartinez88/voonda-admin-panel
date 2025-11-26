@@ -52,7 +52,8 @@ import ProjectsListPage from "@/pages/list-views/projects";
 import UsersListPage from "@/pages/list-views/users";
 import UploadPage from "@/pages/upload";
 import VehiculosPage from "@/pages/vehiculos";
-import AdminPage from "@/pages/admin";
+import VoondaAdminLayout from "@/layouts/VoondaAdminLayout";
+import { HorariosAtencion } from "@/components/voonda-admin/HorariosAtencion";
 import MetricsPage from "@/pages/metrics";
 import BasicCalendarPage from "@/pages/modules/calendars/basic";
 import CultureCalendarPage from "@/pages/modules/calendars/culture";
@@ -421,7 +422,17 @@ const routes = [
       },
       {
         path: "/voonda/admin",
-        element: <Page Component={AdminPage} hoc={withAuth} />,
+        element: <VoondaAdminLayout />,
+        children: [
+          {
+            index: true,
+            element: <Navigate to="/voonda/admin/horarios-atencion" replace />,
+          },
+          {
+            path: "horarios-atencion",
+            element: <Page Component={HorariosAtencion} hoc={withAuth} />,
+          },
+        ],
       },
       // /** extra routes */
       {
