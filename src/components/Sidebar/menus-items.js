@@ -55,6 +55,11 @@ export function getMenus() {
                     icon: "upload"
                 },
                 {
+                    path: "/voonda/sync-catalog",
+                    label: "Sincronizar Catálogo",
+                    icon: "sync"
+                },
+                {
                     path: "/voonda/vehiculos",
                     label: "Vehículos",
                     icon: "vehicles"

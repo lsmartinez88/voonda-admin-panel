@@ -1,4 +1,4 @@
-import { AccessTime, CreditCardOutlined, DeveloperBoardOutlined, FacebookOutlined, HandshakeOutlined, Instagram, LinkedIn, Mail, MessageOutlined, NotificationsActiveRounded, PaymentOutlined, Refresh, Settings, SettingsOutlined, TaskAltOutlined, Twitter, YouTube } from "@mui/icons-material"
+import { AccessTime, CreditCardOutlined, DeveloperBoardOutlined, FacebookOutlined, HandshakeOutlined, Instagram, LinkedIn, Mail, MessageOutlined, NotificationsActiveRounded, PaymentOutlined, Refresh, Settings, SettingsOutlined, Sync, TaskAltOutlined, Twitter, YouTube } from "@mui/icons-material"
 import BackupOutlinedIcon from "@mui/icons-material/BackupOutlined"
 import CurrencyExchangeOutlinedIcon from "@mui/icons-material/CurrencyExchangeOutlined"
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator"
@@ -368,6 +368,11 @@ const APP_ICONS = [
         props: { sx: { fontSize: 20 } }
     },
     {
+        name: "sync",
+        Component: Sync,
+        props: { sx: { fontSize: 20 } }
+    },
+    {
         name: "vehicles",
         Component: DirectionsCarOutlinedIcon,
         props: { sx: { fontSize: 20 } }
@@ -376,12 +381,12 @@ const APP_ICONS = [
         name: "admin",
         Component: AdminPanelSettingsOutlinedIcon,
         props: { sx: { fontSize: 20 } }
-    }
-    ,
+    },
     {
         name: "clock",
         Component: AccessTime,
         props: { sx: { fontSize: 20 } }
-    }]
+    }
+]
 
 export { APP_ICONS }

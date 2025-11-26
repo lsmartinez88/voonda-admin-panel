@@ -51,6 +51,7 @@ import UsersGridPage from "@/pages/grid-views/users";
 import ProjectsListPage from "@/pages/list-views/projects";
 import UsersListPage from "@/pages/list-views/users";
 import UploadPage from "@/pages/upload";
+import SyncCatalogPage from "@/pages/sync-catalog";
 import VehiculosPage from "@/pages/vehiculos";
 import VoondaAdminLayout from "@/layouts/VoondaAdminLayout";
 import { HorariosAtencion } from "@/components/voonda-admin/HorariosAtencion";
@@ -415,6 +416,10 @@ const routes = [
       {
         path: "/voonda/upload",
         element: <Page Component={UploadPage} hoc={withAuth} />,
+      },
+      {
+        path: "/voonda/sync-catalog",
+        element: <Page Component={SyncCatalogPage} hoc={withAuth} />,
       },
       {
         path: "/voonda/vehiculos",
