@@ -142,26 +142,15 @@ const SyncCatalogPage = () => {
     // Paso 1: Obtener Catálogo
     const fetchCatalog = async () => {
         setLoading(true);
-        setMessage('📡 Obteniendo catálogo de Fratelli Automotores... (MODO PRUEBA: 5 vehículos)');
+        setMessage('📡 Obteniendo catálogo de Fratelli Automotores...');
         setMessageType('info');
 
         try {
             const result = await FratelliCatalogService.getCatalogProcessed();
 
             if (result.success) {
-                // 🧪 MODO PRUEBA: Limitar a 5 vehículos
-                const limitedResult = {
-                    ...result,
-                    data: result.data.slice(0, 5),
-                    stats: {
-                        ...result.stats,
-                        total: Math.min(5, result.data.length),
-                        withVersion: result.data.slice(0, 5).filter(v => v.version).length,
-                        withoutVersion: result.data.slice(0, 5).filter(v => !v.version).length
-                    }
-                };
-                setCatalogData(limitedResult);
-                setMessage(`✅ Catálogo cargado: ${limitedResult.stats.total} vehículos (MODO PRUEBA)`);
+                setCatalogData(result);
+                setMessage(`✅ Catálogo cargado: ${result.stats.total} vehículos`);
                 setMessageType('success');
             } else {
                 setMessage(`❌ Error cargando catálogo: ${result.error}`);
