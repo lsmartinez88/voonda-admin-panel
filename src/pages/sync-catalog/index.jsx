@@ -48,11 +48,18 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import FratelliCatalogService from '../../services/fratelliCatalogService';
 import ApiEnrichmentService from '../../services/apiEnrichmentService';
 import GoogleSheetsService from '../../services/googleSheetsService';
+import GoogleSheetsReaderService from '../../services/googleSheetsReaderService';
 import ExcelExportService from '../../services/excelExportService';
 
 const SyncCatalogPage = () => {
     // Estados del stepper
-    const [activeStep, setActiveStep] = useState(0);
+    const [activeStep, setActiveStep] = useState(-1); // -1 para mostrar selección de modo primero
+
+    // Estados de modo de sincronización
+    const [syncMode, setSyncMode] = useState(null); // 'new' o 'update'
+    const [sheetUrl, setSheetUrl] = useState('https://docs.google.com/spreadsheets/d/1cipKoi9rE5QQwiBwNtQONimA8upnYDK2hGtoAavBdbo/edit?usp=sharing');
+    const [existingSheetData, setExistingSheetData] = useState(null);
+    const [comparisonResult, setComparisonResult] = useState(null);
 
     // Estados de datos
     const [catalogData, setCatalogData] = useState(null);
@@ -115,7 +122,14 @@ const SyncCatalogPage = () => {
     };
 
     const canProceedToNext = () => {
-        if (activeStep === 0) return catalogData?.success;
+        if (activeStep === 0) {
+            // En modo update, necesitamos comparisonResult
+            if (syncMode === 'update') {
+                return comparisonResult !== null;
+            }
+            // En modo new, necesitamos catalogData
+            return catalogData?.success;
+        }
         if (activeStep === 1) return versionData?.success;
         if (activeStep === 2) return enrichedData?.success;
         return false;
@@ -137,6 +151,348 @@ const SyncCatalogPage = () => {
     const showInfo = (msg) => {
         setMessage(msg);
         setMessageType('info');
+    };
+
+    // Función helper para transformar vehículos al formato de exportación
+    const transformVehicleToExportFormat = (vehicle) => {
+        // Generar titulo_legible si no existe
+        const marca = vehicle.marca || vehicle.brand || '';
+        const modelo = vehicle.modelo || sanitizeModel(vehicle.model, vehicle.brand || vehicle.marca, vehicle.version) || '';
+        const ano = vehicle.vehiculo_ano || vehicle.year || '';
+        const version = vehicle.version || '';
+        const tituloLegible = vehicle.titulo_legible || `${marca} ${modelo} ${ano} ${version}`.trim();
+
+        return {
+            // === MAPEO DIRECTO DE LA API DE FRATELLI ===
+            // id -> id (primer campo)
+            id: vehicle.id || '',
+
+            // brand/marca -> marca
+            marca: marca,
+
+            // model/modelo -> modelo (sin marca ni versión)
+            modelo: modelo,
+
+            // year/vehiculo_ano -> vehiculo_ano y modelo_ano
+            vehiculo_ano: vehicle.vehiculo_ano || vehicle.year || '',
+            modelo_ano: vehicle.modelo_ano || vehicle.year || '',
+
+            // version (del paso 2 de validación)
+            version: version,
+
+            // price/valor -> valor
+            valor: vehicle.valor || vehicle.price || '',
+            moneda: 'ARS',
+
+            // mileage/kilometros -> kilometros
+            kilometros: vehicle.kilometros || vehicle.mileage || '',
+
+            // color -> color
+            color: vehicle.color || '',
+
+            // description/ficha_breve -> ficha_breve
+            ficha_breve: vehicle.ficha_breve || vehicle.description || '',
+
+            // transmission/caja -> caja
+            caja: vehicle.caja || vehicle.transmission || '',
+
+            // fuel/combustible -> combustible
+            combustible: vehicle.combustible || vehicle.fuel || '',
+
+            // doors/puertas -> puertas
+            puertas: vehicle.puertas || vehicle.doors || '',
+
+            // featured -> featured
+            featured: vehicle.featured || false,
+
+            // favorite -> favorite
+            favorite: vehicle.favorite || false,
+
+            // Campos de publicación: URLs construidas usando el id
+            publicacion_web: vehicle.publicacion_web || (vehicle.id ? `https://www.fratelliautomotores.com.ar/catalogo/${vehicle.id}` : 'si'),
+            publicacion_api_call: vehicle.publicacion_api_call || (vehicle.id ? `https://api.fratelliautomotores.com.ar/api/cars/${vehicle.id}` : 'si'),
+
+            // === DATOS TÉCNICOS DE OPENAI (si están disponibles) ===
+            tipo_carroceria: vehicle.tipo_carroceria || '',
+            origen: vehicle.origen || '',
+            motorizacion: vehicle.motorizacion || '',
+            traccion: vehicle.traccion || '',
+            segmento_modelo: vehicle.segmento_modelo || vehicle.Category?.name || '',
+            cilindrada: vehicle.cilindrada || '',
+            potencia_hp: vehicle.potencia_hp || '',
+            torque_nm: vehicle.torque_nm || '',
+            airbags: vehicle.airbags || '',
+            abs: vehicle.abs ?? '',
+            control_estabilidad: vehicle.control_estabilidad ?? '',
+            climatizador: vehicle.climatizador || '',
+            multimedia: vehicle.multimedia || '',
+            asistencia_manejo: vehicle.asistencia_manejo ?? '',
+            frenos: vehicle.frenos || '',
+            neumaticos: vehicle.neumaticos || '',
+            consumo_ciudad: vehicle.consumo_ciudad || '',
+            consumo_ruta: vehicle.consumo_ruta || '',
+            velocidad_max: vehicle.velocidad_max || '',
+            aceleracion_0_100: vehicle.aceleracion_0_100 || '',
+            capacidad_baul: vehicle.capacidad_baul || '',
+            capacidad_combustible: vehicle.capacidad_combustible || '',
+            largo: vehicle.largo || '',
+            ancho: vehicle.ancho || '',
+            alto: vehicle.alto || '',
+            peso: vehicle.peso || '',
+            asientos: vehicle.asientos || '',
+
+            // Metadatos
+            url_ficha: vehicle.url_ficha || '',
+            titulo_legible: tituloLegible,
+
+            // Fechas de creación y actualización
+            fecha_creacion: vehicle.fecha_creacion || vehicle.createdAt || '',
+            fecha_actualizacion: vehicle.fecha_actualizacion || vehicle.updatedAt || ''
+        };
+    };
+
+    // Función para seleccionar modo de sincronización
+    const handleSelectMode = (mode) => {
+        setSyncMode(mode);
+        setActiveStep(0); // Avanzar al paso 1
+        if (mode === 'new') {
+            // Modo crear desde cero: flujo normal
+            setMessage('🆕 Modo: Crear catálogo desde cero');
+        } else {
+            // Modo sincronizar: pedir URL de planilla
+            setMessage('🔄 Modo: Sincronizar con planilla existente');
+        }
+    };
+
+    // Función para leer planilla existente
+    const loadExistingSheet = async () => {
+        if (!sheetUrl.trim()) {
+            showError('Por favor ingresa una URL de Google Sheets válida');
+            return;
+        }
+
+        setLoading(true);
+        showInfo('📖 Leyendo planilla existente...');
+
+        try {
+            const result = await GoogleSheetsReaderService.readVehiclesFromSheet(sheetUrl);
+
+            if (result.success) {
+                setExistingSheetData(result);
+                showSuccess(`✅ Planilla leída: ${result.totalVehicles} vehículos encontrados`);
+
+                // Automáticamente comparar con catálogo API
+                await compareWithCatalog(result.vehicles);
+            } else {
+                showError(`❌ Error leyendo planilla: ${result.message}`);
+            }
+        } catch (error) {
+            showError(`❌ Error inesperado: ${error.message}`);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Función para comparar vehículos de planilla vs catálogo API
+    const compareWithCatalog = async (existingVehicles) => {
+        setLoading(true);
+        showInfo('🔍 Comparando planilla con catálogo API...');
+
+        try {
+            // Obtener catálogo actual de la API
+            const apiResult = await FratelliCatalogService.getCatalogProcessed();
+
+            if (!apiResult.success) {
+                showError(`❌ Error obteniendo catálogo API: ${apiResult.error}`);
+                return;
+            }
+
+            const apiVehicles = apiResult.data;
+
+            console.log('🔍 DIAGNÓSTICO DE COMPARACIÓN:');
+            console.log('   - Vehículos en planilla:', existingVehicles.length);
+            console.log('   - Vehículos en API:', apiVehicles.length);
+            console.log('   - Primer vehículo planilla:', existingVehicles[0]);
+            console.log('   - ID tipo planilla:', typeof existingVehicles[0]?.id, existingVehicles[0]?.id);
+            console.log('   - Primer vehículo API:', apiVehicles[0]);
+            console.log('   - ID tipo API:', typeof apiVehicles[0]?.id, apiVehicles[0]?.id);
+
+            // Normalizar IDs a string para comparación
+            const normalizeId = (id) => String(id).trim();
+
+            // Crear mapas por ID para comparación rápida (normalizando IDs)
+            const existingMap = new Map(
+                existingVehicles
+                    .filter(v => v.id)
+                    .map(v => [normalizeId(v.id), v])
+            );
+            const apiMap = new Map(
+                apiVehicles
+                    .filter(v => v.id)
+                    .map(v => [normalizeId(v.id), v])
+            );
+
+            console.log('   - IDs en planilla (primeros 10):', Array.from(existingMap.keys()).slice(0, 10));
+            console.log('   - IDs en API (primeros 10):', Array.from(apiMap.keys()).slice(0, 10));
+
+            const unchanged = [];
+            const modified = [];
+            const newVehicles = [];
+            const deleted = [];
+
+            // Comparar vehículos existentes en planilla
+            for (const [id, existingVehicle] of existingMap) {
+                const apiVehicle = apiMap.get(id);
+
+                if (!apiVehicle) {
+                    // Vehículo está en planilla pero NO en API (fue eliminado)
+                    deleted.push(existingVehicle);
+                    console.log('   🗑️ Eliminado:', id);
+                } else {
+                    // Comparar campos relevantes del catálogo
+                    const hasChanges = compareVehicleFields(existingVehicle, apiVehicle);
+
+                    if (hasChanges) {
+                        modified.push({
+                            existing: existingVehicle,
+                            api: apiVehicle,
+                            changes: getFieldChanges(existingVehicle, apiVehicle)
+                        });
+                        console.log('   🔄 Modificado:', id, getFieldChanges(existingVehicle, apiVehicle));
+                    } else {
+                        // Sin cambios: mantener datos de planilla pero agregar fechas de la API
+                        unchanged.push({
+                            ...existingVehicle,
+                            fecha_creacion: apiVehicle.createdAt,
+                            fecha_actualizacion: apiVehicle.updatedAt
+                        });
+                    }
+                }
+            }
+
+            // Encontrar vehículos nuevos (están en API pero NO en planilla)
+            for (const [id, apiVehicle] of apiMap) {
+                if (!existingMap.has(id)) {
+                    newVehicles.push(apiVehicle);
+                    console.log('   🆕 Nuevo:', id);
+                }
+            }
+
+            const comparison = {
+                unchanged,
+                modified,
+                new: newVehicles,
+                deleted,
+                stats: {
+                    unchanged: unchanged.length,
+                    modified: modified.length,
+                    new: newVehicles.length,
+                    deleted: deleted.length,
+                    total: unchanged.length + modified.length + newVehicles.length
+                }
+            };
+
+            setComparisonResult(comparison);
+            setCatalogData(apiResult); // Guardar catálogo completo para uso posterior
+
+            showSuccess(`✅ Comparación completada: ${comparison.stats.unchanged} sin cambios, ${comparison.stats.modified} modificados, ${comparison.stats.new} nuevos, ${comparison.stats.deleted} eliminados`);
+
+        } catch (error) {
+            showError(`❌ Error en comparación: ${error.message}`);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Función para comparar campos de vehículos
+    const compareVehicleFields = (existing, api) => {
+        // Mapear campos: planilla usa español, API usa inglés
+        const fieldsToCompare = [
+            { planilla: 'valor', api: 'price' },
+            { planilla: 'kilometros', api: 'mileage' },
+            { planilla: 'vehiculo_ano', api: 'year' },
+            { planilla: 'featured', api: 'featured' },
+            { planilla: 'favorite', api: 'favorite' }
+        ];
+
+        return fieldsToCompare.some(({ planilla, api: apiField }) => {
+            let existingValue = existing[planilla] ?? '';
+            let apiValue = api[apiField] ?? '';
+
+            // Para precio: manejar casos especiales
+            if (planilla === 'valor') {
+                const existingIsEmpty = !existingValue || existingValue === 0 || existingValue === '0';
+                const apiIsEmpty = !apiValue || apiValue === 0 || apiValue === '0';
+
+                // Si ambos están vacíos, no es cambio
+                if (existingIsEmpty && apiIsEmpty) {
+                    return false;
+                }
+
+                // Si uno está vacío y el otro no, SÍ es cambio
+                if (existingIsEmpty !== apiIsEmpty) {
+                    console.log(`      Campo ${planilla}/${apiField} cambió: "${existingValue}" (vacío) → "${apiValue}" (tiene valor)`);
+                    return true;
+                }
+            }
+
+            const hasChange = existingValue.toString() !== apiValue.toString();
+
+            if (hasChange) {
+                console.log(`      Campo ${planilla}/${apiField} cambió: "${existingValue}" → "${apiValue}"`);
+            }
+
+            return hasChange;
+        });
+    };
+
+    // Función para obtener detalle de cambios
+    const getFieldChanges = (existing, api) => {
+        const fieldsToCompare = [
+            { planilla: 'valor', api: 'price', label: 'Precio' },
+            { planilla: 'kilometros', api: 'mileage', label: 'Kilometraje' },
+            { planilla: 'vehiculo_ano', api: 'year', label: 'Año' },
+            { planilla: 'featured', api: 'featured', label: 'Destacado' },
+            { planilla: 'favorite', api: 'favorite', label: 'Favorito' }
+        ];
+
+        const changes = [];
+
+        fieldsToCompare.forEach(({ planilla, api: apiField, label }) => {
+            let existingValue = existing[planilla] ?? '';
+            let apiValue = api[apiField] ?? '';
+
+            // Para precio: manejar casos especiales
+            if (planilla === 'valor') {
+                const existingIsEmpty = !existingValue || existingValue === 0 || existingValue === '0';
+                const apiIsEmpty = !apiValue || apiValue === 0 || apiValue === '0';
+
+                // Si ambos están vacíos, no reportar cambio
+                if (existingIsEmpty && apiIsEmpty) {
+                    return;
+                }
+
+                // Si uno está vacío y el otro no, SÍ reportar cambio
+                if (existingIsEmpty !== apiIsEmpty) {
+                    changes.push({
+                        field: label,
+                        oldValue: existingIsEmpty ? '(vacío)' : existingValue,
+                        newValue: apiIsEmpty ? '(vacío)' : apiValue
+                    });
+                    return;
+                }
+            }
+
+            if (existingValue.toString() !== apiValue.toString()) {
+                changes.push({
+                    field: label,
+                    oldValue: existingValue,
+                    newValue: apiValue
+                });
+            }
+        });
+
+        return changes;
     };
 
     // Paso 1: Obtener Catálogo
@@ -173,15 +529,25 @@ const SyncCatalogPage = () => {
         showInfo('🤖 Extrayendo versiones con OpenAI...');
 
         try {
-            console.log('🔍 Validando versiones con OpenAI...');
-            console.log('   - Total vehículos:', catalogData.data.length);
+            // Determinar qué vehículos procesar
+            let vehiclesToProcess = catalogData.data;
+
+            if (syncMode === 'update' && comparisonResult) {
+                // Solo procesar vehículos NUEVOS en modo sincronizar
+                vehiclesToProcess = comparisonResult.new;
+                console.log('🔄 Modo sincronizar: solo procesando vehículos nuevos');
+                console.log('   - Total vehículos nuevos:', vehiclesToProcess.length);
+            } else {
+                console.log('🆕 Modo crear desde cero: procesando todos los vehículos');
+                console.log('   - Total vehículos:', catalogData.data.length);
+            }
 
             const vehiclesWithVersions = [];
             let completed = 0;
-            const total = catalogData.data.length;
+            const total = vehiclesToProcess.length;
 
             // Procesar cada vehículo con OpenAI
-            for (const vehicle of catalogData.data) {
+            for (const vehicle of vehiclesToProcess) {
                 try {
                     // Preparar el prompt para extraer la versión
                     const prompt = `Extraer únicamente la versión del siguiente vehículo. La respuesta debe ser solo la versión, sin texto adicional.
@@ -286,16 +652,27 @@ Año: ${vehicle.year || 'No disponible'}`;
         showInfo('🔄 Obteniendo detalles completos de cada vehículo...');
 
         try {
+            // Determinar qué vehículos procesar
+            let vehiclesToEnrich = versionData.data;
+
+            if (syncMode === 'update' && comparisonResult) {
+                // Solo procesar vehículos NUEVOS en modo sincronizar
+                vehiclesToEnrich = versionData.data; // Ya deberían ser solo los nuevos del paso anterior
+                console.log('🔄 Modo sincronizar: enriqueciendo solo vehículos nuevos');
+            } else {
+                console.log('🆕 Modo crear desde cero: enriqueciendo todos los vehículos');
+            }
+
             console.log('📡 Iniciando enriquecimiento...');
-            console.log('   - Total vehículos:', versionData.data.length);
+            console.log('   - Total vehículos a enriquecer:', vehiclesToEnrich.length);
             console.log('   - Enriquecimiento con OpenAI:', enableOpenAI ? 'SÍ' : 'NO');
 
             const enrichedVehicles = [];
             let completed = 0;
-            const total = versionData.data.length;
+            const total = vehiclesToEnrich.length;
 
             // PASO 1: Obtener detalles completos de cada vehículo desde la API
-            for (const vehicle of versionData.data) {
+            for (const vehicle of vehiclesToEnrich) {
                 try {
                     showInfo(`🔄 Obteniendo detalles: ${completed + 1}/${total}`);
 
@@ -450,18 +827,76 @@ El JSON debe tener esta estructura (usa null si no tienes el dato):
                 }
             }
 
+            // COMBINAR TODOS LOS VEHÍCULOS PARA VISTA PREVIA Y EXPORTACIÓN
+            let allVehiclesForExport = [];
+
+            if (syncMode === 'update' && comparisonResult) {
+                console.log('🔄 Modo sincronizar: combinando todos los vehículos para vista previa');
+
+                // 1. Vehículos sin cambios (transformar a formato de exportación)
+                const unchangedTransformed = comparisonResult.unchanged.map(v => ({
+                    ...transformVehicleToExportFormat(v),
+                    _isNew: false
+                }));
+
+                // 2. Vehículos modificados (transformar combinando datos)
+                const modifiedTransformed = comparisonResult.modified.map(item => {
+                    // Transformar los datos existentes de la planilla
+                    const existingTransformed = transformVehicleToExportFormat(item.existing);
+
+                    return {
+                        // Base: TODOS los datos existentes de la planilla (ya transformados)
+                        ...existingTransformed,
+                        // Sobrescribir SOLO los campos básicos que se actualizan de la API
+                        valor: item.api.price ?? existingTransformed.valor,
+                        kilometros: item.api.mileage ?? existingTransformed.kilometros,
+                        vehiculo_ano: item.api.year ?? existingTransformed.vehiculo_ano,
+                        modelo_ano: item.api.year ?? existingTransformed.modelo_ano,
+                        featured: item.api.featured ?? existingTransformed.featured,
+                        favorite: item.api.favorite ?? existingTransformed.favorite,
+                        fecha_creacion: item.api.createdAt ?? existingTransformed.fecha_creacion,
+                        fecha_actualizacion: item.api.updatedAt ?? existingTransformed.fecha_actualizacion,
+                        // Flags de identificación
+                        _isNew: false,
+                        _isModified: true
+                    };
+                });
+
+                // 3. Vehículos nuevos enriquecidos (transformar a formato de exportación)
+                const newTransformed = finalEnrichedVehicles.map(v => ({
+                    ...transformVehicleToExportFormat(v),
+                    _isNew: true
+                }));
+
+                allVehiclesForExport = [
+                    ...unchangedTransformed,
+                    ...modifiedTransformed,
+                    ...newTransformed
+                ];
+
+                console.log('   - Vehículos sin cambios:', unchangedTransformed.length);
+                console.log('   - Vehículos modificados:', modifiedTransformed.length);
+                console.log('   - Vehículos nuevos:', newTransformed.length);
+                console.log('   - Total combinado:', allVehiclesForExport.length);
+            } else {
+                // Modo crear desde cero: usar todos los enriquecidos
+                allVehiclesForExport = finalEnrichedVehicles;
+                console.log('🆕 Modo crear: usando todos los vehículos enriquecidos:', allVehiclesForExport.length);
+            }
+
             setEnrichedData({
                 success: true,
-                data: finalEnrichedVehicles,
-                total: finalEnrichedVehicles.length,
-                message: `Datos enriquecidos correctamente para ${finalEnrichedVehicles.length} vehículos${enableOpenAI ? ' (con OpenAI)' : ''}`
+                data: allVehiclesForExport,
+                newVehiclesOnly: syncMode === 'update' ? finalEnrichedVehicles : allVehiclesForExport, // Solo los nuevos enriquecidos
+                total: allVehiclesForExport.length,
+                message: `Datos enriquecidos correctamente para ${allVehiclesForExport.length} vehículos${enableOpenAI ? ' (con OpenAI)' : ''}`
             });
             console.log('✅ Datos enriquecidos guardados:');
-            console.log('   - Total:', finalEnrichedVehicles.length);
-            console.log('   - Primer vehículo completo:', finalEnrichedVehicles[0]);
-            console.log('   - Campos del primer vehículo:', Object.keys(finalEnrichedVehicles[0]));
+            console.log('   - Total:', allVehiclesForExport.length);
+            console.log('   - Primer vehículo completo:', allVehiclesForExport[0]);
+            console.log('   - Campos del primer vehículo:', Object.keys(allVehiclesForExport[0]));
 
-            showSuccess(`✅ ${finalEnrichedVehicles.length} vehículos enriquecidos${enableOpenAI ? ' con OpenAI' : ''}`);
+            showSuccess(`✅ ${allVehiclesForExport.length} vehículos preparados para exportación${enableOpenAI ? ' (con OpenAI)' : ''}`);
         } catch (error) {
             console.error('❌ Error enriqueciendo datos:', error);
             showError('Error al enriquecer datos: ' + error.message);
@@ -480,6 +915,28 @@ El JSON debe tener esta estructura (usa null si no tienes el dato):
         if (!enrichedData?.success || !enrichedData?.data) return;
 
         try {
+            // Helper para limpiar texto: remover saltos de línea y tabuladores
+            const cleanText = (text) => {
+                if (!text) return '';
+                return String(text)
+                    .replace(/[\r\n]+/g, ' ')  // Reemplazar saltos de línea por espacios
+                    .replace(/\t/g, ' ')        // Reemplazar tabs por espacios
+                    .replace(/\s{2,}/g, ' ')    // Comprimir múltiples espacios en uno
+                    .trim();
+            };
+
+            // Preparar lista de vehículos según el modo
+            let vehiclesToExport = [];
+
+            if (syncMode === 'update' && comparisonResult) {
+                // MODO SINCRONIZAR: enrichedData.data ya contiene todos los vehículos combinados
+                console.log('🔄 Modo sincronizar: usando datos ya combinados de enrichedData');
+                vehiclesToExport = enrichedData.data;
+            } else {
+                // MODO CREAR DESDE CERO: Todos los datos enriquecidos
+                vehiclesToExport = enrichedData.data;
+            }
+
             // Preparar datos para copiar (formato TSV - Tab Separated Values)
             const headers = [
                 "id", "kilometros", "vehiculo_ano", "valor", "moneda",
@@ -493,28 +950,18 @@ El JSON debe tener esta estructura (usa null si no tienes el dato):
                 "titulo_legible", "ficha_breve", "featured", "favorite"
             ];
 
-            const rows = enrichedData.data.map(vehicle => {
-                // Helper para limpiar texto: remover saltos de línea y tabuladores
-                const cleanText = (text) => {
-                    if (!text) return '';
-                    return String(text)
-                        .replace(/[\r\n]+/g, ' ')  // Reemplazar saltos de línea por espacios
-                        .replace(/\t/g, ' ')        // Reemplazar tabs por espacios
-                        .replace(/\s{2,}/g, ' ')    // Comprimir múltiples espacios en uno
-                        .trim();
-                };
-
+            const rows = vehiclesToExport.map(vehicle => {
                 return [
                     vehicle.id || '',
-                    vehicle.mileage || '',
-                    vehicle.year || '',
-                    vehicle.price || '',
+                    vehicle.mileage || vehicle.kilometros || '',
+                    vehicle.year || vehicle.vehiculo_ano || '',
+                    vehicle.price || vehicle.valor || '',
                     'ARS',
                     vehicle.id ? `https://www.fratelliautomotores.com.ar/catalogo/${vehicle.id}` : 'si',
                     vehicle.id ? `https://api.fratelliautomotores.com.ar/api/cars/${vehicle.id}` : 'si',
-                    vehicle.brand || '',
-                    vehicle.model || '',
-                    vehicle.year || '',
+                    vehicle.brand || vehicle.marca || '',
+                    vehicle.model || vehicle.modelo || '',
+                    vehicle.year || vehicle.modelo_ano || '',
                     vehicle.version || '',
                     vehicle.tipo_carroceria || '',
                     vehicle.origen || '',
@@ -544,8 +991,8 @@ El JSON debe tener esta estructura (usa null si no tienes el dato):
                     vehicle.ancho || '',
                     vehicle.alto || '',
                     vehicle.url_ficha || '',
-                    cleanText(`${vehicle.brand} ${vehicle.model} ${vehicle.year} ${vehicle.version || ''}`),
-                    cleanText(vehicle.description || ''),  // Limpiar saltos de línea en ficha_breve
+                    cleanText(vehicle.titulo_legible || `${vehicle.brand || vehicle.marca} ${vehicle.model || vehicle.modelo} ${vehicle.year || vehicle.vehiculo_ano} ${vehicle.version || ''}`),
+                    cleanText(vehicle.description || vehicle.ficha_breve || ''),  // Limpiar saltos de línea en ficha_breve
                     vehicle.featured ? 'Sí' : 'No',
                     vehicle.favorite ? 'Sí' : 'No'
                 ];
@@ -617,99 +1064,31 @@ El JSON debe tener esta estructura (usa null si no tienes el dato):
 
         try {
             console.log('📊 Preparando datos para exportación...');
-            console.log('📊 Datos enriquecidos disponibles:', enrichedData.data.length);
-            console.log('🔍 Primer vehículo antes de transformar:', enrichedData.data[0]);
 
-            // Transformar los datos al formato esperado por ExcelExportService
-            const dataForExport = enrichedData.data.map((vehicle) => {
-                // Mapeo de campos de la API de Fratelli a campos del Excel
-                return {
-                    enrichedData: {
-                        // === MAPEO DIRECTO DE LA API DE FRATELLI ===
-                        // id -> id (primer campo)
-                        id: vehicle.id || '',
+            let dataForExport = [];
 
-                        // brand -> marca
-                        marca: vehicle.brand || '',
+            if (syncMode === 'update' && comparisonResult) {
+                // MODO SINCRONIZAR: enrichedData.data ya contiene todos los vehículos combinados
+                console.log('🔄 Modo sincronizar: usando datos ya combinados de enrichedData');
+                console.log('   - Total vehículos en enrichedData:', enrichedData.data.length);
 
-                        // model -> modelo (sin marca ni versión)
-                        modelo: sanitizeModel(vehicle.model, vehicle.brand, vehicle.version) || '',
+                dataForExport = enrichedData.data.map((vehicle) => ({
+                    enrichedData: vehicle // Ya están transformados
+                }));
 
-                        // year -> vehiculo_ano y modelo_ano
-                        vehiculo_ano: vehicle.year || '',
-                        modelo_ano: vehicle.year || '',
+                console.log('📊 Total vehículos para exportar:', dataForExport.length);
 
-                        // version (del paso 2 de validación)
-                        version: vehicle.version || '',
+            } else {
+                // MODO CREAR DESDE CERO: Usar todos los datos enriquecidos
+                console.log('🆕 Modo crear desde cero: exportando todos los vehículos enriquecidos');
+                console.log('📊 Datos enriquecidos disponibles:', enrichedData.data.length);
 
-                        // price -> valor
-                        valor: vehicle.price || '',
-                        moneda: 'ARS',
+                dataForExport = enrichedData.data.map((vehicle) => ({
+                    enrichedData: vehicle
+                }));
+            }
 
-                        // mileage -> kilometros
-                        kilometros: vehicle.mileage || '',
-
-                        // color -> color
-                        color: vehicle.color || '',
-
-                        // description -> ficha_breve
-                        ficha_breve: vehicle.description || '',
-
-                        // transmission -> caja
-                        caja: vehicle.transmission || '',
-
-                        // fuel -> combustible
-                        combustible: vehicle.fuel || '',
-
-                        // doors -> puertas
-                        puertas: vehicle.doors || '',
-
-                        // featured -> featured
-                        featured: vehicle.featured || false,
-
-                        // favorite -> favorite
-                        favorite: vehicle.favorite || false,
-
-                        // Campos de publicación: URLs construidas usando el id
-                        publicacion_web: vehicle.id ? `https://www.fratelliautomotores.com.ar/catalogo/${vehicle.id}` : 'si',
-                        publicacion_api_call: vehicle.id ? `https://api.fratelliautomotores.com.ar/api/cars/${vehicle.id}` : 'si',
-
-                        // === DATOS TÉCNICOS DE OPENAI (si están disponibles) ===
-                        tipo_carroceria: vehicle.tipo_carroceria || '',
-                        origen: vehicle.origen || '',
-                        motorizacion: vehicle.motorizacion || '',
-                        traccion: vehicle.traccion || '',
-                        segmento_modelo: vehicle.segmento_modelo || vehicle.Category?.name || '',
-                        cilindrada: vehicle.cilindrada || '',
-                        potencia_hp: vehicle.potencia_hp || '',
-                        torque_nm: vehicle.torque_nm || '',
-                        airbags: vehicle.airbags || '',
-                        abs: vehicle.abs || '',
-                        control_estabilidad: vehicle.control_estabilidad || '',
-                        climatizador: vehicle.climatizador || '',
-                        multimedia: vehicle.multimedia || '',
-                        asistencia_manejo: vehicle.asistencia_manejo || '',
-                        frenos: vehicle.frenos || '',
-                        neumaticos: vehicle.neumaticos || '',
-                        consumo_ciudad: vehicle.consumo_ciudad || '',
-                        consumo_ruta: vehicle.consumo_ruta || '',
-                        velocidad_max: vehicle.velocidad_max || '',
-                        aceleracion_0_100: vehicle.aceleracion_0_100 || '',
-                        capacidad_baul: vehicle.capacidad_baul || '',
-                        capacidad_combustible: vehicle.capacidad_combustible || '',
-                        largo: vehicle.largo || '',
-                        ancho: vehicle.ancho || '',
-                        alto: vehicle.alto || '',
-                        peso: vehicle.peso || '',
-                        asientos: vehicle.asientos || '',
-
-                        // Metadatos
-                        url_ficha: vehicle.url_ficha || '',
-                        titulo_legible: vehicle.titulo_legible || ''
-                    }
-                };
-            });
-
+            console.log('🔍 Primer registro transformado:', dataForExport[0]);
             console.log('📊 Datos transformados:', dataForExport.length, 'vehículos');
             console.log('🔍 Primer vehículo transformado completo:', JSON.stringify(dataForExport[0], null, 2));
             console.log('🔍 EnrichedData del primer vehículo:', dataForExport[0].enrichedData);
@@ -839,30 +1218,38 @@ El JSON debe tener esta estructura (usa null si no tienes el dato):
     };
 
     // Paso 1: Catálogo
-    const renderCatalogStep = () => (
-        <Card sx={{ mb: 3 }}>
-            <CardContent>
-                <Typography variant="h6" gutterBottom>
-                    📡 Obtener Catálogo de Vehículos
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                    Descarga todos los vehículos activos desde la API de Fratelli Automotores
-                </Typography>
+    const renderCatalogStep = () => {
+        // Modo sincronizar: mostrar tabla de comparación
+        if (syncMode === 'update' && comparisonResult) {
+            return renderComparisonTable();
+        }
 
-                <Button
-                    onClick={fetchCatalog}
-                    variant="contained"
-                    disabled={loading}
-                    startIcon={<SyncIcon />}
-                    sx={{ mb: 3 }}
-                >
-                    {loading ? 'Cargando...' : 'Obtener Catálogo'}
-                </Button>
+        // Modo crear desde cero: mostrar botón de carga
+        return (
+            <Card sx={{ mb: 3 }}>
+                <CardContent>
+                    <Typography variant="h6" gutterBottom>
+                        📡 Obtener Catálogo de Vehículos
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                        Descarga todos los vehículos activos desde la API de Fratelli Automotores
+                    </Typography>
 
-                {catalogData?.success && catalogData?.data && renderCatalogTable()}
-            </CardContent>
-        </Card>
-    );
+                    <Button
+                        onClick={fetchCatalog}
+                        variant="contained"
+                        disabled={loading}
+                        startIcon={<SyncIcon />}
+                        sx={{ mb: 3 }}
+                    >
+                        {loading ? 'Cargando...' : 'Obtener Catálogo'}
+                    </Button>
+
+                    {catalogData?.success && catalogData?.data && renderCatalogTable()}
+                </CardContent>
+            </Card>
+        );
+    };
 
     // Tabla del catálogo (colapsable)
     const renderCatalogTable = () => (
@@ -917,6 +1304,259 @@ El JSON debe tener esta estructura (usa null si no tienes el dato):
         </Accordion>
     );
 
+    // Tabla de comparación (modo sincronizar)
+    const renderComparisonTable = () => (
+        <Card sx={{ mb: 3 }}>
+            <CardContent>
+                <Typography variant="h6" gutterBottom>
+                    🔍 Análisis de Cambios en el Catálogo
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                    Comparación entre la planilla existente y el catálogo actual de la API
+                </Typography>
+
+                {/* Estadísticas */}
+                <Stack direction="row" spacing={2} sx={{ mb: 3, flexWrap: 'wrap' }}>
+                    <Chip
+                        label={`✅ Sin cambios: ${comparisonResult.stats.unchanged}`}
+                        color="success"
+                        variant="outlined"
+                    />
+                    <Chip
+                        label={`🔄 Modificados: ${comparisonResult.stats.modified}`}
+                        color="warning"
+                        variant="outlined"
+                    />
+                    <Chip
+                        label={`🆕 Nuevos: ${comparisonResult.stats.new}`}
+                        color="info"
+                        variant="outlined"
+                    />
+                    <Chip
+                        label={`🗑️ Eliminados: ${comparisonResult.stats.deleted}`}
+                        color="error"
+                        variant="outlined"
+                    />
+                    <Chip
+                        label={`📊 Total final: ${comparisonResult.stats.total}`}
+                        color="primary"
+                    />
+                </Stack>
+
+                <Alert severity="info" sx={{ mb: 3 }}>
+                    <AlertTitle>Resumen</AlertTitle>
+                    <Typography variant="body2">
+                        • <strong>{comparisonResult.stats.unchanged}</strong> vehículos se mantendrán sin cambios (no se enriquecerán)<br />
+                        • <strong>{comparisonResult.stats.modified}</strong> vehículos tienen cambios en precio/km/datos (se actualizarán sin enriquecer)<br />
+                        • <strong>{comparisonResult.stats.new}</strong> vehículos son nuevos (se validarán y enriquecerán)<br />
+                        • <strong>{comparisonResult.stats.deleted}</strong> vehículos fueron eliminados del catálogo (no aparecerán en la salida final)
+                    </Typography>
+                </Alert>
+
+                {/* Acordeones con cada categoría */}
+
+                {/* Vehículos Sin Cambios */}
+                {comparisonResult.unchanged.length > 0 && (
+                    <Accordion>
+                        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                            <Typography variant="subtitle1">
+                                ✅ Vehículos Sin Cambios ({comparisonResult.unchanged.length})
+                            </Typography>
+                        </AccordionSummary>
+                        <AccordionDetails>
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                Estos vehículos se mantendrán exactamente igual que en la planilla existente
+                            </Typography>
+                            <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
+                                <Table size="small" stickyHeader>
+                                    <TableHead>
+                                        <TableRow>
+                                            <TableCell><strong>ID</strong></TableCell>
+                                            <TableCell><strong>Marca</strong></TableCell>
+                                            <TableCell><strong>Modelo</strong></TableCell>
+                                            <TableCell><strong>Año</strong></TableCell>
+                                            <TableCell><strong>Precio</strong></TableCell>
+                                            <TableCell><strong>Km</strong></TableCell>
+                                            <TableCell><strong>Fecha Creación</strong></TableCell>
+                                            <TableCell><strong>Fecha Actualización</strong></TableCell>
+                                        </TableRow>
+                                    </TableHead>
+                                    <TableBody>
+                                        {comparisonResult.unchanged.slice(0, 50).map((vehicle) => (
+                                            <TableRow key={vehicle.id}>
+                                                <TableCell>{vehicle.id}</TableCell>
+                                                <TableCell>{vehicle.marca || '-'}</TableCell>
+                                                <TableCell>{vehicle.modelo || '-'}</TableCell>
+                                                <TableCell>{vehicle.vehiculo_ano || '-'}</TableCell>
+                                                <TableCell>${vehicle.valor?.toLocaleString() || '-'}</TableCell>
+                                                <TableCell>{vehicle.kilometros?.toLocaleString() || '-'}</TableCell>
+                                                <TableCell>{vehicle.fecha_creacion ? new Date(vehicle.fecha_creacion).toLocaleDateString() : '-'}</TableCell>
+                                                <TableCell>{vehicle.fecha_actualizacion ? new Date(vehicle.fecha_actualizacion).toLocaleDateString() : '-'}</TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </TableContainer>
+                            {comparisonResult.unchanged.length > 50 && (
+                                <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                                    Mostrando 50 de {comparisonResult.unchanged.length} vehículos
+                                </Typography>
+                            )}
+                        </AccordionDetails>
+                    </Accordion>
+                )}
+
+                {/* Vehículos Modificados */}
+                {comparisonResult.modified.length > 0 && (
+                    <Accordion>
+                        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                            <Typography variant="subtitle1">
+                                🔄 Vehículos Modificados ({comparisonResult.modified.length})
+                            </Typography>
+                        </AccordionSummary>
+                        <AccordionDetails>
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                Estos vehículos tienen cambios en precio, kilometraje u otros datos
+                            </Typography>
+                            <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
+                                <Table size="small" stickyHeader>
+                                    <TableHead>
+                                        <TableRow>
+                                            <TableCell><strong>ID</strong></TableCell>
+                                            <TableCell><strong>Marca</strong></TableCell>
+                                            <TableCell><strong>Modelo</strong></TableCell>
+                                            <TableCell><strong>Cambios</strong></TableCell>
+                                        </TableRow>
+                                    </TableHead>
+                                    <TableBody>
+                                        {comparisonResult.modified.slice(0, 50).map((item) => (
+                                            <TableRow key={item.api.id}>
+                                                <TableCell>{item.api.id}</TableCell>
+                                                <TableCell>{item.api.brand || '-'}</TableCell>
+                                                <TableCell>{item.api.model || '-'}</TableCell>
+                                                <TableCell>
+                                                    <Stack spacing={0.5}>
+                                                        {item.changes.map((change, idx) => (
+                                                            <Chip
+                                                                key={idx}
+                                                                label={`${change.field}: ${change.oldValue} → ${change.newValue}`}
+                                                                size="small"
+                                                                color="warning"
+                                                                variant="outlined"
+                                                            />
+                                                        ))}
+                                                    </Stack>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </TableContainer>
+                            {comparisonResult.modified.length > 50 && (
+                                <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                                    Mostrando 50 de {comparisonResult.modified.length} vehículos
+                                </Typography>
+                            )}
+                        </AccordionDetails>
+                    </Accordion>
+                )}
+
+                {/* Vehículos Nuevos */}
+                {comparisonResult.new.length > 0 && (
+                    <Accordion>
+                        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                            <Typography variant="subtitle1">
+                                🆕 Vehículos Nuevos ({comparisonResult.new.length})
+                            </Typography>
+                        </AccordionSummary>
+                        <AccordionDetails>
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                Estos vehículos no existen en la planilla y serán validados y enriquecidos
+                            </Typography>
+                            <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
+                                <Table size="small" stickyHeader>
+                                    <TableHead>
+                                        <TableRow>
+                                            <TableCell><strong>ID</strong></TableCell>
+                                            <TableCell><strong>Marca</strong></TableCell>
+                                            <TableCell><strong>Modelo</strong></TableCell>
+                                            <TableCell><strong>Año</strong></TableCell>
+                                            <TableCell><strong>Precio</strong></TableCell>
+                                            <TableCell><strong>Km</strong></TableCell>
+                                            <TableCell><strong>Fecha Creación</strong></TableCell>
+                                            <TableCell><strong>Fecha Actualización</strong></TableCell>
+                                        </TableRow>
+                                    </TableHead>
+                                    <TableBody>
+                                        {comparisonResult.new.slice(0, 50).map((vehicle) => (
+                                            <TableRow key={vehicle.id}>
+                                                <TableCell>{vehicle.id}</TableCell>
+                                                <TableCell>{vehicle.brand || '-'}</TableCell>
+                                                <TableCell>{vehicle.model || '-'}</TableCell>
+                                                <TableCell>{vehicle.year || '-'}</TableCell>
+                                                <TableCell>${vehicle.price?.toLocaleString() || '-'}</TableCell>
+                                                <TableCell>{vehicle.mileage?.toLocaleString() || '-'}</TableCell>
+                                                <TableCell>{vehicle.createdAt ? new Date(vehicle.createdAt).toLocaleDateString() : '-'}</TableCell>
+                                                <TableCell>{vehicle.updatedAt ? new Date(vehicle.updatedAt).toLocaleDateString() : '-'}</TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </TableContainer>
+                            {comparisonResult.new.length > 50 && (
+                                <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                                    Mostrando 50 de {comparisonResult.new.length} vehículos
+                                </Typography>
+                            )}
+                        </AccordionDetails>
+                    </Accordion>
+                )}
+
+                {/* Vehículos Eliminados */}
+                {comparisonResult.deleted.length > 0 && (
+                    <Accordion>
+                        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                            <Typography variant="subtitle1">
+                                🗑️ Vehículos Eliminados ({comparisonResult.deleted.length})
+                            </Typography>
+                        </AccordionSummary>
+                        <AccordionDetails>
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                Estos vehículos estaban en la planilla pero ya no están en el catálogo API (no aparecerán en la salida final)
+                            </Typography>
+                            <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
+                                <Table size="small" stickyHeader>
+                                    <TableHead>
+                                        <TableRow>
+                                            <TableCell><strong>ID</strong></TableCell>
+                                            <TableCell><strong>Marca</strong></TableCell>
+                                            <TableCell><strong>Modelo</strong></TableCell>
+                                            <TableCell><strong>Año</strong></TableCell>
+                                            <TableCell><strong>Fecha Creación</strong></TableCell>
+                                            <TableCell><strong>Fecha Actualización</strong></TableCell>
+                                        </TableRow>
+                                    </TableHead>
+                                    <TableBody>
+                                        {comparisonResult.deleted.map((vehicle) => (
+                                            <TableRow key={vehicle.id}>
+                                                <TableCell>{vehicle.id}</TableCell>
+                                                <TableCell>{vehicle.marca || '-'}</TableCell>
+                                                <TableCell>{vehicle.modelo || '-'}</TableCell>
+                                                <TableCell>{vehicle.vehiculo_ano || '-'}</TableCell>
+                                                <TableCell>{vehicle.fecha_creacion ? new Date(vehicle.fecha_creacion).toLocaleDateString() : '-'}</TableCell>
+                                                <TableCell>{vehicle.fecha_actualizacion ? new Date(vehicle.fecha_actualizacion).toLocaleDateString() : '-'}</TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </TableContainer>
+                        </AccordionDetails>
+                    </Accordion>
+                )}
+            </CardContent>
+        </Card>
+    );
+
     // Paso 3: Enriquecimiento
     const renderEnrichmentStep = () => (
         <Card sx={{ mb: 3 }}>
@@ -968,83 +1608,88 @@ El JSON debe tener esta estructura (usa null si no tienes el dato):
     );
 
     // Tabla de enriquecimiento (colapsable)
-    const renderEnrichmentTable = () => (
-        <Accordion defaultExpanded>
-            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Typography variant="subtitle1">
-                    📡 Datos Enriquecidos ({enrichedData.data?.length || 0} vehículos)
-                </Typography>
-            </AccordionSummary>
-            <AccordionDetails>
-                <Stack spacing={1} sx={{ mb: 2 }}>
-                    <Chip label={`Total procesados: ${enrichedData.data?.length || 0}`} size="small" color="info" />
-                    {enableOpenAI && (
-                        <Chip label={`Enriquecidos con OpenAI`} size="small" color="success" />
-                    )}
-                </Stack>
+    const renderEnrichmentTable = () => {
+        const vehiclesToShow = enrichedData.newVehiclesOnly || enrichedData.data;
+        const isUpdateMode = syncMode === 'update' && comparisonResult;
 
-                <TableContainer component={Paper} sx={{ maxHeight: 500 }}>
-                    <Table size="small" stickyHeader>
-                        <TableHead>
-                            <TableRow>
-                                <TableCell><strong>Vehículo</strong></TableCell>
-                                <TableCell><strong>Versión</strong></TableCell>
-                                <TableCell><strong>Datos Técnicos</strong></TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {enrichedData.data.map((vehicle, index) => {
-                                const hasTechnicalData = vehicle.combustible || vehicle.potencia_hp || vehicle.cilindrada;
+        return (
+            <Accordion defaultExpanded>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                    <Typography variant="subtitle1">
+                        📡 Datos Enriquecidos ({vehiclesToShow?.length || 0} vehículos{isUpdateMode ? ' nuevos' : ''})
+                    </Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                    <Stack spacing={1} sx={{ mb: 2 }}>
+                        <Chip label={`Total ${isUpdateMode ? 'nuevos ' : ''}procesados: ${vehiclesToShow?.length || 0}`} size="small" color="info" />
+                        {enableOpenAI && (
+                            <Chip label={`Enriquecidos con OpenAI`} size="small" color="success" />
+                        )}
+                    </Stack>
 
-                                return (
-                                    <TableRow key={index}>
-                                        <TableCell>
-                                            <Typography variant="body2">
-                                                <strong>{vehicle.brand || '-'} {vehicle.model || '-'}</strong>
-                                                <br />
-                                                <Typography variant="caption" color="text.secondary">
-                                                    {vehicle.year || '-'}
+                    <TableContainer component={Paper} sx={{ maxHeight: 500 }}>
+                        <Table size="small" stickyHeader>
+                            <TableHead>
+                                <TableRow>
+                                    <TableCell><strong>Vehículo</strong></TableCell>
+                                    <TableCell><strong>Versión</strong></TableCell>
+                                    <TableCell><strong>Datos Técnicos</strong></TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {vehiclesToShow.map((vehicle, index) => {
+                                    const hasTechnicalData = vehicle.combustible || vehicle.potencia_hp || vehicle.cilindrada;
+
+                                    return (
+                                        <TableRow key={index}>
+                                            <TableCell>
+                                                <Typography variant="body2">
+                                                    <strong>{vehicle.brand || '-'} {vehicle.model || '-'}</strong>
+                                                    <br />
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        {vehicle.year || '-'}
+                                                    </Typography>
                                                 </Typography>
-                                            </Typography>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Chip
-                                                label={vehicle.version || vehicle.extractedVersion || 'N/A'}
-                                                size="small"
-                                                color="primary"
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            {hasTechnicalData ? (
-                                                <Stack spacing={0.5} sx={{ maxHeight: 100, overflow: 'auto' }}>
-                                                    {vehicle.combustible && (
-                                                        <Typography variant="caption">• Combustible: {vehicle.combustible}</Typography>
-                                                    )}
-                                                    {vehicle.cilindrada && (
-                                                        <Typography variant="caption">• Cilindrada: {vehicle.cilindrada}cc</Typography>
-                                                    )}
-                                                    {vehicle.potencia_hp && (
-                                                        <Typography variant="caption">• Potencia: {vehicle.potencia_hp}HP</Typography>
-                                                    )}
-                                                    {vehicle.transmision && (
-                                                        <Typography variant="caption">• Transmisión: {vehicle.transmision}</Typography>
-                                                    )}
-                                                </Stack>
-                                            ) : (
-                                                <Typography variant="caption" color="text.secondary">
-                                                    Sin datos técnicos
-                                                </Typography>
-                                            )}
-                                        </TableCell>
-                                    </TableRow>
-                                );
-                            })}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
-            </AccordionDetails>
-        </Accordion>
-    );
+                                            </TableCell>
+                                            <TableCell>
+                                                <Chip
+                                                    label={vehicle.version || vehicle.extractedVersion || 'N/A'}
+                                                    size="small"
+                                                    color="primary"
+                                                />
+                                            </TableCell>
+                                            <TableCell>
+                                                {hasTechnicalData ? (
+                                                    <Stack spacing={0.5} sx={{ maxHeight: 100, overflow: 'auto' }}>
+                                                        {vehicle.combustible && (
+                                                            <Typography variant="caption">• Combustible: {vehicle.combustible}</Typography>
+                                                        )}
+                                                        {vehicle.cilindrada && (
+                                                            <Typography variant="caption">• Cilindrada: {vehicle.cilindrada}cc</Typography>
+                                                        )}
+                                                        {vehicle.potencia_hp && (
+                                                            <Typography variant="caption">• Potencia: {vehicle.potencia_hp}HP</Typography>
+                                                        )}
+                                                        {vehicle.transmision && (
+                                                            <Typography variant="caption">• Transmisión: {vehicle.transmision}</Typography>
+                                                        )}
+                                                    </Stack>
+                                                ) : (
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        Sin datos técnicos
+                                                    </Typography>
+                                                )}
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+                </AccordionDetails>
+            </Accordion>
+        );
+    };
 
     // Paso 3: Exportación
     const renderExportStep = () => (
@@ -1148,137 +1793,160 @@ El JSON debe tener esta estructura (usa null si no tienes el dato):
     };
 
     // Vista previa final (colapsable)
-    const renderFinalPreviewTable = () => (
-        <Accordion sx={{ mt: 3 }}>
-            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Typography variant="subtitle1">
-                    👀 Vista Previa de Datos Finales ({enrichedData.data.length} registros - 43 columnas)
-                </Typography>
-            </AccordionSummary>
-            <AccordionDetails>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    Exactamente los mismos datos que se exportarán. Incluye las columnas: featured y favorite.
-                </Typography>
+    const renderFinalPreviewTable = () => {
+        const totalRecords = enrichedData?.data?.length || 0;
+        const totalColumns = 45; // Actualizado con fecha_creacion y fecha_actualizacion
 
-                <TableContainer component={Paper} sx={{ maxHeight: 600, overflowX: 'auto' }}>
-                    <Table size="small" stickyHeader>
-                        <TableHead>
-                            <TableRow>
-                                <TableCell sx={{ minWidth: 80 }}><strong>id</strong></TableCell>
-                                <TableCell sx={{ minWidth: 100 }}><strong>kilometros</strong></TableCell>
-                                <TableCell sx={{ minWidth: 100 }}><strong>vehiculo_ano</strong></TableCell>
-                                <TableCell sx={{ minWidth: 100 }}><strong>valor</strong></TableCell>
-                                <TableCell sx={{ minWidth: 80 }}><strong>moneda</strong></TableCell>
-                                <TableCell sx={{ minWidth: 120 }}><strong>publicacion_web</strong></TableCell>
-                                <TableCell sx={{ minWidth: 140 }}><strong>publicacion_api_call</strong></TableCell>
-                                <TableCell sx={{ minWidth: 100 }}><strong>marca</strong></TableCell>
-                                <TableCell sx={{ minWidth: 100 }}><strong>modelo</strong></TableCell>
-                                <TableCell sx={{ minWidth: 100 }}><strong>modelo_ano</strong></TableCell>
-                                <TableCell sx={{ minWidth: 100 }}><strong>version</strong></TableCell>
-                                <TableCell sx={{ minWidth: 120 }}><strong>tipo_carroceria</strong></TableCell>
-                                <TableCell sx={{ minWidth: 100 }}><strong>origen</strong></TableCell>
-                                <TableCell sx={{ minWidth: 120 }}><strong>motorizacion</strong></TableCell>
-                                <TableCell sx={{ minWidth: 100 }}><strong>combustible</strong></TableCell>
-                                <TableCell sx={{ minWidth: 80 }}><strong>caja</strong></TableCell>
-                                <TableCell sx={{ minWidth: 100 }}><strong>traccion</strong></TableCell>
-                                <TableCell sx={{ minWidth: 80 }}><strong>puertas</strong></TableCell>
-                                <TableCell sx={{ minWidth: 120 }}><strong>segmento_modelo</strong></TableCell>
-                                <TableCell sx={{ minWidth: 100 }}><strong>cilindrada</strong></TableCell>
-                                <TableCell sx={{ minWidth: 100 }}><strong>potencia_hp</strong></TableCell>
-                                <TableCell sx={{ minWidth: 100 }}><strong>torque_nm</strong></TableCell>
-                                <TableCell sx={{ minWidth: 80 }}><strong>airbags</strong></TableCell>
-                                <TableCell sx={{ minWidth: 60 }}><strong>abs</strong></TableCell>
-                                <TableCell sx={{ minWidth: 140 }}><strong>control_estabilidad</strong></TableCell>
-                                <TableCell sx={{ minWidth: 120 }}><strong>climatizador</strong></TableCell>
-                                <TableCell sx={{ minWidth: 100 }}><strong>multimedia</strong></TableCell>
-                                <TableCell sx={{ minWidth: 80 }}><strong>frenos</strong></TableCell>
-                                <TableCell sx={{ minWidth: 100 }}><strong>neumaticos</strong></TableCell>
-                                <TableCell sx={{ minWidth: 140 }}><strong>asistencia_manejo</strong></TableCell>
-                                <TableCell sx={{ minWidth: 120 }}><strong>consumo_ciudad</strong></TableCell>
-                                <TableCell sx={{ minWidth: 120 }}><strong>consumo_ruta</strong></TableCell>
-                                <TableCell sx={{ minWidth: 120 }}><strong>capacidad_baul</strong></TableCell>
-                                <TableCell sx={{ minWidth: 160 }}><strong>capacidad_combustible</strong></TableCell>
-                                <TableCell sx={{ minWidth: 120 }}><strong>velocidad_max</strong></TableCell>
-                                <TableCell sx={{ minWidth: 80 }}><strong>largo</strong></TableCell>
-                                <TableCell sx={{ minWidth: 80 }}><strong>ancho</strong></TableCell>
-                                <TableCell sx={{ minWidth: 80 }}><strong>alto</strong></TableCell>
-                                <TableCell sx={{ minWidth: 120 }}><strong>url_ficha</strong></TableCell>
-                                <TableCell sx={{ minWidth: 140 }}><strong>titulo_legible</strong></TableCell>
-                                <TableCell sx={{ minWidth: 200 }}><strong>ficha_breve</strong></TableCell>
-                                <TableCell sx={{ minWidth: 80 }}><strong>featured</strong></TableCell>
-                                <TableCell sx={{ minWidth: 80 }}><strong>favorite</strong></TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {enrichedData.data.map((vehicle, index) => {
-                                return (
-                                    <TableRow key={index} sx={{ height: 64, '& > *': { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }}>
-                                        <TableCell>{vehicle.id || "-"}</TableCell>
-                                        <TableCell>{vehicle.mileage ? vehicle.mileage.toLocaleString() : "-"}</TableCell>
-                                        <TableCell>{vehicle.year || "-"}</TableCell>
-                                        <TableCell>{vehicle.price ? `$${vehicle.price.toLocaleString()}` : "-"}</TableCell>
-                                        <TableCell>ARS</TableCell>
-                                        <TableCell>{vehicle.id ? `https://www.fratelliautomotores.com.ar/catalogo/${vehicle.id}` : 'si'}</TableCell>
-                                        <TableCell>{vehicle.id ? `https://api.fratelliautomotores.com.ar/api/cars/${vehicle.id}` : 'si'}</TableCell>
-                                        <TableCell>{vehicle.brand || "-"}</TableCell>
-                                        <TableCell>{sanitizeModel(vehicle.model, vehicle.brand, vehicle.version) || "-"}</TableCell>
-                                        <TableCell>{vehicle.year || "-"}</TableCell>
-                                        <TableCell>{vehicle.version || "-"}</TableCell>
-                                        <TableCell>{vehicle.tipo_carroceria || "-"}</TableCell>
-                                        <TableCell>{vehicle.origen || "-"}</TableCell>
-                                        <TableCell>{vehicle.motorizacion || "-"}</TableCell>
-                                        <TableCell>{vehicle.fuel || vehicle.combustible || "-"}</TableCell>
-                                        <TableCell>{vehicle.transmission || vehicle.caja || "-"}</TableCell>
-                                        <TableCell>{vehicle.traccion || "-"}</TableCell>
-                                        <TableCell>{vehicle.doors || vehicle.puertas || "-"}</TableCell>
-                                        <TableCell>{vehicle.segmento_modelo || vehicle.Category?.name || "-"}</TableCell>
-                                        <TableCell>{vehicle.cilindrada || "-"}</TableCell>
-                                        <TableCell>{vehicle.potencia_hp || "-"}</TableCell>
-                                        <TableCell>{vehicle.torque_nm || "-"}</TableCell>
-                                        <TableCell>{vehicle.airbags || "-"}</TableCell>
-                                        <TableCell>{vehicle.abs ? "Sí" : "-"}</TableCell>
-                                        <TableCell>{vehicle.control_estabilidad ? "Sí" : "-"}</TableCell>
-                                        <TableCell>{vehicle.climatizador ? "Sí" : "-"}</TableCell>
-                                        <TableCell>{vehicle.multimedia || "-"}</TableCell>
-                                        <TableCell>{vehicle.frenos || "-"}</TableCell>
-                                        <TableCell>{vehicle.neumaticos || "-"}</TableCell>
-                                        <TableCell>{vehicle.asistencia_manejo || "-"}</TableCell>
-                                        <TableCell>{vehicle.consumo_ciudad || "-"}</TableCell>
-                                        <TableCell>{vehicle.consumo_ruta || "-"}</TableCell>
-                                        <TableCell>{vehicle.capacidad_baul || "-"}</TableCell>
-                                        <TableCell>{vehicle.capacidad_tanque || vehicle.capacidad_combustible || "-"}</TableCell>
-                                        <TableCell>{vehicle.velocidad_maxima || vehicle.velocidad_max || "-"}</TableCell>
-                                        <TableCell>{vehicle.largo || "-"}</TableCell>
-                                        <TableCell>{vehicle.ancho || "-"}</TableCell>
-                                        <TableCell>{vehicle.alto || "-"}</TableCell>
-                                        <TableCell>{vehicle.url_ficha || "-"}</TableCell>
-                                        <TableCell>{`${vehicle.brand} ${sanitizeModel(vehicle.model, vehicle.brand, vehicle.version)} ${vehicle.year} ${vehicle.version || ''}`.trim()}</TableCell>
-                                        <TableCell sx={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                            {vehicle.description || "-"}
-                                        </TableCell>
-                                        <TableCell>
-                                            <Chip
-                                                label={vehicle.featured ? "Sí" : "No"}
-                                                size="small"
-                                                color={vehicle.featured ? "primary" : "default"}
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            <Chip
-                                                label={vehicle.favorite ? "Sí" : "No"}
-                                                size="small"
-                                                color={vehicle.favorite ? "secondary" : "default"}
-                                            />
-                                        </TableCell>
-                                    </TableRow>
-                                );
-                            })}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
-            </AccordionDetails>
-        </Accordion>
-    );
+        return (
+            <Accordion sx={{ mt: 3 }}>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                    <Typography variant="subtitle1">
+                        👀 Vista Previa de Datos Finales ({totalRecords} registros - {totalColumns} columnas)
+                    </Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        Exactamente los mismos datos que se exportarán. Incluye todos los vehículos: sin cambios, modificados y nuevos.
+                    </Typography>
+
+                    <TableContainer component={Paper} sx={{ maxHeight: 600, overflowX: 'auto' }}>
+                        <Table size="small" stickyHeader>
+                            <TableHead>
+                                <TableRow>
+                                    <TableCell sx={{ minWidth: 80 }}><strong>id</strong></TableCell>
+                                    <TableCell sx={{ minWidth: 100 }}><strong>kilometros</strong></TableCell>
+                                    <TableCell sx={{ minWidth: 100 }}><strong>vehiculo_ano</strong></TableCell>
+                                    <TableCell sx={{ minWidth: 100 }}><strong>valor</strong></TableCell>
+                                    <TableCell sx={{ minWidth: 80 }}><strong>moneda</strong></TableCell>
+                                    <TableCell sx={{ minWidth: 120 }}><strong>publicacion_web</strong></TableCell>
+                                    <TableCell sx={{ minWidth: 140 }}><strong>publicacion_api_call</strong></TableCell>
+                                    <TableCell sx={{ minWidth: 100 }}><strong>marca</strong></TableCell>
+                                    <TableCell sx={{ minWidth: 100 }}><strong>modelo</strong></TableCell>
+                                    <TableCell sx={{ minWidth: 100 }}><strong>modelo_ano</strong></TableCell>
+                                    <TableCell sx={{ minWidth: 100 }}><strong>version</strong></TableCell>
+                                    <TableCell sx={{ minWidth: 120 }}><strong>tipo_carroceria</strong></TableCell>
+                                    <TableCell sx={{ minWidth: 100 }}><strong>origen</strong></TableCell>
+                                    <TableCell sx={{ minWidth: 120 }}><strong>motorizacion</strong></TableCell>
+                                    <TableCell sx={{ minWidth: 100 }}><strong>combustible</strong></TableCell>
+                                    <TableCell sx={{ minWidth: 80 }}><strong>caja</strong></TableCell>
+                                    <TableCell sx={{ minWidth: 100 }}><strong>traccion</strong></TableCell>
+                                    <TableCell sx={{ minWidth: 80 }}><strong>puertas</strong></TableCell>
+                                    <TableCell sx={{ minWidth: 120 }}><strong>segmento_modelo</strong></TableCell>
+                                    <TableCell sx={{ minWidth: 100 }}><strong>cilindrada</strong></TableCell>
+                                    <TableCell sx={{ minWidth: 100 }}><strong>potencia_hp</strong></TableCell>
+                                    <TableCell sx={{ minWidth: 100 }}><strong>torque_nm</strong></TableCell>
+                                    <TableCell sx={{ minWidth: 80 }}><strong>airbags</strong></TableCell>
+                                    <TableCell sx={{ minWidth: 60 }}><strong>abs</strong></TableCell>
+                                    <TableCell sx={{ minWidth: 140 }}><strong>control_estabilidad</strong></TableCell>
+                                    <TableCell sx={{ minWidth: 120 }}><strong>climatizador</strong></TableCell>
+                                    <TableCell sx={{ minWidth: 100 }}><strong>multimedia</strong></TableCell>
+                                    <TableCell sx={{ minWidth: 80 }}><strong>frenos</strong></TableCell>
+                                    <TableCell sx={{ minWidth: 100 }}><strong>neumaticos</strong></TableCell>
+                                    <TableCell sx={{ minWidth: 140 }}><strong>asistencia_manejo</strong></TableCell>
+                                    <TableCell sx={{ minWidth: 120 }}><strong>consumo_ciudad</strong></TableCell>
+                                    <TableCell sx={{ minWidth: 120 }}><strong>consumo_ruta</strong></TableCell>
+                                    <TableCell sx={{ minWidth: 120 }}><strong>capacidad_baul</strong></TableCell>
+                                    <TableCell sx={{ minWidth: 160 }}><strong>capacidad_combustible</strong></TableCell>
+                                    <TableCell sx={{ minWidth: 120 }}><strong>velocidad_max</strong></TableCell>
+                                    <TableCell sx={{ minWidth: 80 }}><strong>largo</strong></TableCell>
+                                    <TableCell sx={{ minWidth: 80 }}><strong>ancho</strong></TableCell>
+                                    <TableCell sx={{ minWidth: 80 }}><strong>alto</strong></TableCell>
+                                    <TableCell sx={{ minWidth: 120 }}><strong>url_ficha</strong></TableCell>
+                                    <TableCell sx={{ minWidth: 140 }}><strong>titulo_legible</strong></TableCell>
+                                    <TableCell sx={{ minWidth: 200 }}><strong>ficha_breve</strong></TableCell>
+                                    <TableCell sx={{ minWidth: 80 }}><strong>featured</strong></TableCell>
+                                    <TableCell sx={{ minWidth: 80 }}><strong>favorite</strong></TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {enrichedData.data.map((vehicle, index) => {
+                                    return (
+                                        <TableRow
+                                            key={index}
+                                            sx={{
+                                                height: 64,
+                                                '& > *': { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+                                                backgroundColor: vehicle._isNew
+                                                    ? 'rgba(76, 175, 80, 0.1)'
+                                                    : vehicle._isModified
+                                                        ? 'rgba(255, 193, 7, 0.1)'
+                                                        : 'inherit',
+                                                '&:hover': {
+                                                    backgroundColor: vehicle._isNew
+                                                        ? 'rgba(76, 175, 80, 0.2)'
+                                                        : vehicle._isModified
+                                                            ? 'rgba(255, 193, 7, 0.2)'
+                                                            : 'rgba(0, 0, 0, 0.04)'
+                                                }
+                                            }}
+                                        >
+                                            <TableCell>{vehicle.id || "-"}</TableCell>
+                                            <TableCell>{vehicle.kilometros ? vehicle.kilometros.toLocaleString() : "-"}</TableCell>
+                                            <TableCell>{vehicle.vehiculo_ano || "-"}</TableCell>
+                                            <TableCell>{vehicle.valor ? `$${vehicle.valor.toLocaleString()}` : "-"}</TableCell>
+                                            <TableCell>ARS</TableCell>
+                                            <TableCell>{vehicle.publicacion_web || (vehicle.id ? `https://www.fratelliautomotores.com.ar/catalogo/${vehicle.id}` : 'si')}</TableCell>
+                                            <TableCell>{vehicle.publicacion_api_call || (vehicle.id ? `https://api.fratelliautomotores.com.ar/api/cars/${vehicle.id}` : 'si')}</TableCell>
+                                            <TableCell>{vehicle.marca || "-"}</TableCell>
+                                            <TableCell>{vehicle.modelo || "-"}</TableCell>
+                                            <TableCell>{vehicle.modelo_ano || "-"}</TableCell>
+                                            <TableCell>{vehicle.version || "-"}</TableCell>
+                                            <TableCell>{vehicle.tipo_carroceria || "-"}</TableCell>
+                                            <TableCell>{vehicle.origen || "-"}</TableCell>
+                                            <TableCell>{vehicle.motorizacion || "-"}</TableCell>
+                                            <TableCell>{vehicle.combustible || "-"}</TableCell>
+                                            <TableCell>{vehicle.caja || "-"}</TableCell>
+                                            <TableCell>{vehicle.traccion || "-"}</TableCell>
+                                            <TableCell>{vehicle.puertas || "-"}</TableCell>
+                                            <TableCell>{vehicle.segmento_modelo || "-"}</TableCell>
+                                            <TableCell>{vehicle.cilindrada || "-"}</TableCell>
+                                            <TableCell>{vehicle.potencia_hp || "-"}</TableCell>
+                                            <TableCell>{vehicle.torque_nm || "-"}</TableCell>
+                                            <TableCell>{vehicle.airbags || "-"}</TableCell>
+                                            <TableCell>{vehicle.abs ? "Sí" : "-"}</TableCell>
+                                            <TableCell>{vehicle.control_estabilidad ? "Sí" : "-"}</TableCell>
+                                            <TableCell>{vehicle.climatizador ? "Sí" : "-"}</TableCell>
+                                            <TableCell>{vehicle.multimedia || "-"}</TableCell>
+                                            <TableCell>{vehicle.frenos || "-"}</TableCell>
+                                            <TableCell>{vehicle.neumaticos || "-"}</TableCell>
+                                            <TableCell>{vehicle.asistencia_manejo || "-"}</TableCell>
+                                            <TableCell>{vehicle.consumo_ciudad || "-"}</TableCell>
+                                            <TableCell>{vehicle.consumo_ruta || "-"}</TableCell>
+                                            <TableCell>{vehicle.capacidad_baul || "-"}</TableCell>
+                                            <TableCell>{vehicle.capacidad_combustible || "-"}</TableCell>
+                                            <TableCell>{vehicle.velocidad_max || "-"}</TableCell>
+                                            <TableCell>{vehicle.largo || "-"}</TableCell>
+                                            <TableCell>{vehicle.ancho || "-"}</TableCell>
+                                            <TableCell>{vehicle.alto || "-"}</TableCell>
+                                            <TableCell>{vehicle.url_ficha || "-"}</TableCell>
+                                            <TableCell>{vehicle.titulo_legible || "-"}</TableCell>
+                                            <TableCell sx={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                {vehicle.ficha_breve || "-"}
+                                            </TableCell>
+                                            <TableCell>
+                                                <Chip
+                                                    label={vehicle.featured ? "Sí" : "No"}
+                                                    size="small"
+                                                    color={vehicle.featured ? "primary" : "default"}
+                                                />
+                                            </TableCell>
+                                            <TableCell>
+                                                <Chip
+                                                    label={vehicle.favorite ? "Sí" : "No"}
+                                                    size="small"
+                                                    color={vehicle.favorite ? "secondary" : "default"}
+                                                />
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+                </AccordionDetails>
+            </Accordion>
+        );
+    };
 
     return (
         <Container maxWidth="xl" sx={{ py: 4 }}>
@@ -1292,81 +1960,225 @@ El JSON debe tener esta estructura (usa null si no tienes el dato):
                 </Typography>
             </Box>
 
+            {/* Selección de Modo (Paso inicial) */}
+            {activeStep === -1 && (
+                <Card sx={{ mb: 4 }}>
+                    <CardContent>
+                        <Typography variant="h5" gutterBottom sx={{ mb: 3 }}>
+                            Selecciona el modo de sincronización
+                        </Typography>
+
+                        <Stack spacing={3}>
+                            {/* Opción: Crear desde cero */}
+                            <Card
+                                variant="outlined"
+                                sx={{
+                                    cursor: 'pointer',
+                                    transition: 'all 0.3s',
+                                    '&:hover': {
+                                        borderColor: 'primary.main',
+                                        boxShadow: 3
+                                    }
+                                }}
+                                onClick={() => handleSelectMode('new')}
+                            >
+                                <CardContent>
+                                    <Stack direction="row" spacing={2} alignItems="center">
+                                        <Box sx={{
+                                            p: 2,
+                                            borderRadius: 2,
+                                            bgcolor: 'white',
+                                            border: 1,
+                                            borderColor: 'primary.light',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center'
+                                        }}>
+                                            <CloudDownloadIcon sx={{ fontSize: 40, color: 'primary.main' }} />
+                                        </Box>
+                                        <Box sx={{ flex: 1 }}>
+                                            <Typography variant="h6" gutterBottom>
+                                                🆕 Crear catálogo desde cero
+                                            </Typography>
+                                            <Typography variant="body2" color="text.secondary">
+                                                Descarga todos los vehículos del catálogo y procesa toda la información desde el inicio.
+                                                Ideal para la primera vez o cuando quieres regenerar todo.
+                                            </Typography>
+                                        </Box>
+                                        <EastIcon sx={{ color: 'text.secondary' }} />
+                                    </Stack>
+                                </CardContent>
+                            </Card>
+
+                            {/* Opción: Sincronizar con planilla existente */}
+                            <Card
+                                variant="outlined"
+                                sx={{
+                                    cursor: 'pointer',
+                                    transition: 'all 0.3s',
+                                    '&:hover': {
+                                        borderColor: 'success.main',
+                                        boxShadow: 3
+                                    }
+                                }}
+                                onClick={() => handleSelectMode('update')}
+                            >
+                                <CardContent>
+                                    <Stack direction="row" spacing={2} alignItems="center">
+                                        <Box sx={{
+                                            p: 2,
+                                            borderRadius: 2,
+                                            bgcolor: 'white',
+                                            border: 1,
+                                            borderColor: 'success.main',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center'
+                                        }}>
+                                            <SyncIcon sx={{ fontSize: 40, color: 'success.main' }} />
+                                        </Box>
+                                        <Box sx={{ flex: 1 }}>
+                                            <Typography variant="h6" gutterBottom>
+                                                🔄 Sincronizar con planilla existente
+                                            </Typography>
+                                            <Typography variant="body2" color="text.secondary">
+                                                Lee una planilla de Google Sheets existente y solo procesa los vehículos nuevos o modificados.
+                                                Ahorra tiempo y tokens de OpenAI. Ideal para actualizaciones diarias.
+                                            </Typography>
+                                        </Box>
+                                        <EastIcon sx={{ color: 'text.secondary' }} />
+                                    </Stack>
+                                </CardContent>
+                            </Card>
+                        </Stack>
+                    </CardContent>
+                </Card>
+            )}
+
+            {/* Input de URL de Google Sheets (solo en modo update) */}
+            {syncMode === 'update' && activeStep === 0 && !comparisonResult && (
+                <Card sx={{ mb: 4 }}>
+                    <CardContent>
+                        <Typography variant="h6" gutterBottom>
+                            📋 Ingresa la URL de tu planilla de Google Sheets
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                            La planilla debe tener el mismo formato que la exportación (con columna "id" como primera columna).
+                            Asegúrate de que los permisos sean "Cualquiera con el enlace puede ver".
+                        </Typography>
+
+                        <TextField
+                            fullWidth
+                            label="URL de Google Sheets"
+                            placeholder="https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit"
+                            value={sheetUrl}
+                            onChange={(e) => setSheetUrl(e.target.value)}
+                            disabled={loading}
+                            sx={{ mb: 2 }}
+                        />
+
+                        <Stack direction="row" spacing={2}>
+                            <Button
+                                variant="contained"
+                                onClick={loadExistingSheet}
+                                disabled={loading || !sheetUrl.trim()}
+                                startIcon={loading ? <CircularProgress size={20} /> : <SyncIcon />}
+                            >
+                                {loading ? 'Leyendo planilla...' : 'Leer y Comparar'}
+                            </Button>
+                            <Button
+                                variant="outlined"
+                                onClick={() => {
+                                    setSyncMode(null);
+                                    setActiveStep(-1);
+                                    setSheetUrl('');
+                                }}
+                                disabled={loading}
+                            >
+                                Volver
+                            </Button>
+                        </Stack>
+                    </CardContent>
+                </Card>
+            )}
+
             {/* Stepper */}
-            <Card sx={{ mb: 4 }}>
-                <CardContent>
-                    <Stepper activeStep={activeStep} orientation="vertical">
-                        {steps.map((step, index) => (
-                            <Step key={step.label} completed={index < activeStep}>
-                                <StepLabel
-                                    StepIconComponent={() => (
-                                        <IconButton
-                                            sx={{
-                                                border: 1,
-                                                borderRadius: 2,
-                                                color: index <= activeStep ? 'primary.main' : 'text.secondary',
-                                                backgroundColor: 'transparent',
-                                                '&:hover': { backgroundColor: 'transparent' }
-                                            }}
-                                            size="small"
-                                            disabled
-                                        >
-                                            {step.icon}
-                                        </IconButton>
-                                    )}
-                                >
-                                    <Box>
-                                        <Typography variant="h6" color={index <= activeStep ? 'primary.main' : 'text.secondary'}>
-                                            {step.label}
-                                        </Typography>
-                                        <Typography variant="body2" color="text.secondary">
-                                            {step.description}
-                                        </Typography>
-                                    </Box>
-                                </StepLabel>
-                                <StepContent>
-                                    {index === activeStep && (
-                                        <Box sx={{ mt: 2, mb: 2 }}>
-                                            {renderStepContent(index)}
+            {activeStep >= 0 && (
+                <Card sx={{ mb: 4 }}>
+                    <CardContent>
+                        <Stepper activeStep={activeStep} orientation="vertical">
+                            {steps.map((step, index) => (
+                                <Step key={step.label} completed={index < activeStep}>
+                                    <StepLabel
+                                        StepIconComponent={() => (
+                                            <IconButton
+                                                sx={{
+                                                    border: 1,
+                                                    borderRadius: 2,
+                                                    color: index <= activeStep ? 'primary.main' : 'text.secondary',
+                                                    backgroundColor: 'transparent',
+                                                    '&:hover': { backgroundColor: 'transparent' }
+                                                }}
+                                                size="small"
+                                                disabled
+                                            >
+                                                {step.icon}
+                                            </IconButton>
+                                        )}
+                                    >
+                                        <Box>
+                                            <Typography variant="h6" color={index <= activeStep ? 'primary.main' : 'text.secondary'}>
+                                                {step.label}
+                                            </Typography>
+                                            <Typography variant="body2" color="text.secondary">
+                                                {step.description}
+                                            </Typography>
+                                        </Box>
+                                    </StepLabel>
+                                    <StepContent>
+                                        {index === activeStep && (
+                                            <Box sx={{ mt: 2, mb: 2 }}>
+                                                {renderStepContent(index)}
 
-                                            {/* Navigation buttons */}
-                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 3 }}>
-                                                <Button
-                                                    startIcon={<KeyboardBackspaceIcon />}
-                                                    disabled={activeStep === 0}
-                                                    onClick={handleBack}
-                                                    sx={{
-                                                        color: 'text.primary',
-                                                        '&:hover': { background: 'transparent' },
-                                                        textTransform: 'none',
-                                                    }}
-                                                >
-                                                    Atrás
-                                                </Button>
-
-                                                {activeStep < steps.length - 1 && (
+                                                {/* Navigation buttons */}
+                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 3 }}>
                                                     <Button
-                                                        endIcon={<EastIcon />}
-                                                        onClick={handleNext}
-                                                        disabled={!canProceedToNext()}
-                                                        variant="contained"
+                                                        startIcon={<KeyboardBackspaceIcon />}
+                                                        disabled={activeStep === 0}
+                                                        onClick={handleBack}
                                                         sx={{
-                                                            borderRadius: 2,
+                                                            color: 'text.primary',
+                                                            '&:hover': { background: 'transparent' },
                                                             textTransform: 'none',
                                                         }}
                                                     >
-                                                        Siguiente
+                                                        Atrás
                                                     </Button>
-                                                )}
+
+                                                    {activeStep < steps.length - 1 && (
+                                                        <Button
+                                                            endIcon={<EastIcon />}
+                                                            onClick={handleNext}
+                                                            disabled={!canProceedToNext()}
+                                                            variant="contained"
+                                                            sx={{
+                                                                borderRadius: 2,
+                                                                textTransform: 'none',
+                                                            }}
+                                                        >
+                                                            Siguiente
+                                                        </Button>
+                                                    )}
+                                                </Box>
                                             </Box>
-                                        </Box>
-                                    )}
-                                </StepContent>
-                            </Step>
-                        ))}
-                    </Stepper>
-                </CardContent>
-            </Card>
+                                        )}
+                                    </StepContent>
+                                </Step>
+                            ))}
+                        </Stepper>
+                    </CardContent>
+                </Card>
+            )}
 
             {/* Mensajes de estado */}
             {message && (

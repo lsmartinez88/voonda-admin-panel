@@ -174,7 +174,7 @@ class FratelliCatalogService {
 
         return {
             // Datos originales del catálogo
-            id: catalogVehicle.id,
+            id: String(catalogVehicle.id).trim(),
             brand: catalogVehicle.brand,
             model: catalogVehicle.model,
             year: catalogVehicle.year,
